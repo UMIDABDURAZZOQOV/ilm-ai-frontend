@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ilm AI — Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f0f1a;
+      color: #fff;
+      min-height: 100vh;
+    }
+
+    /* NAVBAR */
+    .navbar {
+      background: rgba(255,255,255,0.05);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding: 16px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .navbar .logo {
+      font-size: 20px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #a5b4fc, #e879f9);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .navbar .user-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+      color: rgba(255,255,255,0.7);
+    }
+    .btn-logout {
+      padding: 8px 16px;
+      background: rgba(239,68,68,0.2);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 8px;
+      color: #fca5a5;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .btn-logout:hover { background: rgba(239,68,68,0.3); }
+
+    /* LAYOUT */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .card h2 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #a5b4fc;
+    }
+
+    /* UPLOAD */
+    .upload-area {
+      border: 2px dashed rgba(255,255,255,0.2);
+      border-radius: 12px;
+      padding: 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      margin-bottom: 16px;
+    }
+    .upload-area:hover { border-color: #6366f1; }
+    .upload-area p { color: rgba(255,255,255,0.5); font-size: 14px; }
+    .upload-area input { display: none; }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .status-msg {
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      display: none;
+    }
+    .status-success {
+      background: rgba(34,197,94,0.15);
+      border: 1px solid rgba(34,197,94,0.3);
+      color: #86efac;
+    }
+    .status-error {
+      background: rgba(239,68,68,0.15);
+      border: 1px solid rgba(239,68,68,0.3);
+      color: #fca5a5;
+    }
+
+    /* FILES LIST */
+    .files-list {
+      list-style: none;
+      margin-top: 8px;
+    }
+    .files-list li {
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.8);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .files-list li::before { content: "📄"; }
+
+    /* CHAT */
+    .chat-card {
+      grid-column: 1 / -1;
+    }
+
+    .chat-messages {
+      height: 320px;
+      overflow-y: auto;
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 4px;
+    }
+
+    .chat-messages::-webkit-scrollbar { width: 4px; }
+    .chat-messages::-webkit-scrollbar-track { background: transparent; }
+    .chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+
+    .msg {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .msg-user {
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      align-self: flex-end;
+    }
+    .msg-ai {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.1);
+      align-self: flex-start;
+      color: rgba(255,255,255,0.9);
+    }
+    .msg-system {
+      align-self: center;
+      background: rgba(255,255,255,0.05);
+      color: rgba(255,255,255,0.4);
+      font-size: 12px;
+      padding: 6px 12px;
+    }
+
+    .chat-input-row {
+      display: flex;
+      gap: 10px;
+    }
+    .chat-input-row input {
+      flex: 1;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+    }
+    .chat-input-row input:focus { border-color: #6366f1; }
+    .chat-input-row input::placeholder { color: rgba(255,255,255,0.3); }
+    .btn-send {
+      padding: 12px 20px;
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .empty-state {
+      text-align: center;
+      color: rgba(255,255,255,0.3);
+      font-size: 14px;
+      margin: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="logo">📚 Ilm AI</div>
+    <div class="user-info">
+      <span id="userName">Loading...</span>
+      <button class="btn-logout" onclick="logout()">Logout</button>
+    </div>
+  </nav>
+
+  <div class="container">
+
+    <!-- UPLOAD CARD -->
+    <div class="card">
+      <h2>📤 Upload Materials</h2>
+      <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+        <p>Click to upload PDF or TXT file</p>
+        <p id="selectedFile" style="margin-top:8px; color:#a5b4fc;"></p>
+        <input type="file" id="fileInput" accept=".pdf,.txt" onchange="onFileSelect(event)" />
+      </div>
+      <button class="btn" onclick="uploadFile()" id="uploadBtn">Upload & Index</button>
+      <div class="status-msg" id="uploadStatus"></div>
+    </div>
+
+    <!-- FILES CARD -->
+    <div class="card">
+      <h2>📁 My Materials</h2>
+      <ul class="files-list" id="filesList">
+        <li style="color:rgba(255,255,255,0.3); list-style:none;">No files uploaded yet</li>
+      </ul>
+      <button class="btn" style="margin-top:12px; background: rgba(255,255,255,0.1);" onclick="loadFiles()">Refresh</button>
+    </div>
+
+    <!-- CHAT CARD -->
+    <div class="card chat-card">
+      <h2>💬 Ask Your Materials</h2>
+      <div class="chat-messages" id="chatMessages">
+        <div class="msg msg-system">Upload a file and start asking questions!</div>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="Ask anything from your materials..." onkeydown="if(event.key==='Enter') sendMessage()" />
+        <button class="btn-send" onclick="sendMessage()" id="sendBtn">Ask</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const API = "http://localhost:8000";
+    let currentUser = null;
+    let selectedFile = null;
+
+  
+    window.onload = function() {
+      const user = localStorage.getItem("ilm_current_user");
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+      currentUser = JSON.parse(user);
+      document.getElementById("userName").textContent = "👋 " + currentUser.name;
+      loadFiles();
+    };
+
+    function logout() {
+      localStorage.removeItem("ilm_current_user");
+      window.location.href = "login.html";
+    }
+
+    function onFileSelect(event) {
+      selectedFile = event.target.files[0];
+      if (selectedFile) {
+        document.getElementById("selectedFile").textContent = "Selected: " + selectedFile.name;
+      }
+    }
+
+    async function uploadFile() {
+      if (!selectedFile) {
+        showStatus("uploadStatus", "Please select a file first!", "error");
+        return;
+      }
+
+      const btn = document.getElementById("uploadBtn");
+      btn.disabled = true;
+      btn.textContent = "Uploading...";
+
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      try {
+        const res = await fetch(`${API}/files/upload?user_id=${currentUser.id}`, {
+          method: "POST",
+          body: formData
+        });
+        const data = await res.json();
+        showStatus("uploadStatus", `✅ ${data.filename} uploaded! ${data.chunks} chunks indexed.`, "success");
+        loadFiles();
+        selectedFile = null;
+        document.getElementById("selectedFile").textContent = "";
+      } catch (err) {
+        showStatus("uploadStatus", "❌ Upload failed. Check if backend is running.", "error");
+      }
+
+      btn.disabled = false;
+      btn.textContent = "Upload & Index";
+    }
+
+    async function loadFiles() {
+      try {
+        const res = await fetch(`${API}/files/list?user_id=${currentUser.id}`);
+        const data = await res.json();
+        const list = document.getElementById("filesList");
+
+        if (data.files && data.files.length > 0) {
+          list.innerHTML = data.files.map(f => `<li>${f}</li>`).join("");
+        } else {
+          list.innerHTML = '<li style="color:rgba(255,255,255,0.3);">No files uploaded yet</li>';
+        }
+      } catch (err) {
+        console.log("Could not load files");
+      }
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById("chatInput");
+      const question = input.value.trim();
+      if (!question) return;
+
+      addMessage(question, "user");
+      input.value = "";
+
+      const sendBtn = document.getElementById("sendBtn");
+      sendBtn.disabled = true;
+      sendBtn.textContent = "...";
+
+      addMessage("Thinking...", "ai", "thinkingMsg");
+
+      try {
+        const res = await fetch(`${API}/chat/ask`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: currentUser.id, question })
+        });
+        const data = await res.json();
+
+        const thinking = document.getElementById("thinkingMsg");
+        if (thinking) thinking.remove();
+
+        addMessage(data.answer, "ai");
+      } catch (err) {
+        const thinking = document.getElementById("thinkingMsg");
+        if (thinking) thinking.remove();
+        addMessage("❌ Could not connect to backend.", "ai");
+      }
+
+      sendBtn.disabled = false;
+      sendBtn.textContent = "Ask";
+    }
+
+    function addMessage(text, type, id) {
+      const messages = document.getElementById("chatMessages");
+      const div = document.createElement("div");
+      div.className = `msg msg-${type}`;
+      div.textContent = text;
+      if (id) div.id = id;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+
+      // Remove empty state
+      const empty = messages.querySelector(".msg-system");
+      if (empty && type === "user") empty.remove();
+    }
+
+    function showStatus(id, msg, type) {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.className = `status-msg status-${type}`;
+      el.style.display = "block";
+      setTimeout(() => { el.style.display = "none"; }, 4000);
+    }
+  </script>
+</body>
+</html>
