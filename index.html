@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ilm AI — Personal AI Learning Companion</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html" class="logo">
+        <span class="logo-mark">📚</span>
+        <span data-i18n="brand">Ilm AI</span>
+      </a>
+      <div class="nav-links">
+        <a href="#features" data-i18n="nav_features">Features</a>
+        <a href="#how" data-i18n="nav_how">How it works</a>
+        <div class="lang-switch">
+          <button type="button" class="lang-btn" data-lang="en">EN</button>
+          <button type="button" class="lang-btn active" data-lang="uz">UZ</button>
+          <button type="button" class="lang-btn" data-lang="ru">RU</button>
+        </div>
+        <a href="login.html" data-i18n="nav_login">Log in</a>
+        <a href="signup.html" class="btn btn-primary" data-i18n="nav_signup">Get started</a>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <span class="hero-badge" data-i18n="tagline">Your personal AI learning companion</span>
+      <h1 data-i18n="hero_title">Learn anything from your own materials</h1>
+      <p data-i18n="hero_sub">Upload PDFs and notes...</p>
+      <div class="hero-actions">
+        <a href="signup.html" class="btn btn-primary" data-i18n="hero_cta">Start learning free</a>
+        <a href="#how" class="btn btn-ghost" data-i18n="hero_secondary">See how it works</a>
+      </div>
+    </header>
+
+    <section class="section" id="features">
+      <h2 class="section-title" data-i18n="nav_features">Features</h2>
+      <p class="section-sub" data-i18n="tagline">Your personal AI learning companion</p>
+      <div class="grid-3">
+        <article class="card">
+          <div class="card-icon">📤</div>
+          <h3 data-i18n="feat_upload_title">Upload & index</h3>
+          <p data-i18n="feat_upload_desc">PDFs and text files are chunked and embedded.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">💬</div>
+          <h3 data-i18n="feat_chat_title">AI companion</h3>
+          <p data-i18n="feat_chat_desc">Answers cite your materials only.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">📝</div>
+          <h3 data-i18n="feat_quiz_title">Quiz mode</h3>
+          <p data-i18n="feat_quiz_desc">Fresh questions at multiple difficulty levels.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🧭</div>
+          <h3 data-i18n="feat_plan_title">Study plans</h3>
+          <p data-i18n="feat_plan_desc">Day-by-day plans for your goals.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">✈️</div>
+          <h3 data-i18n="feat_tg_title">Telegram bot</h3>
+          <p data-i18n="feat_tg_desc">Reminders, quizzes, and streaks.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="how">
+      <h2 class="section-title" data-i18n="nav_how">How it works</h2>
+      <div class="steps container">
+        <div class="step">
+          <div class="step-num">1</div>
+          <p data-i18n="how_1">Sign up & upload</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <p data-i18n="how_2">Chat, quiz, plan</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <p data-i18n="how_3">Link Telegram</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p data-i18n="footer">Built for learners...</p>
+    </footer>
+  </div>
+  <script src="js/i18n.js"></script>
+  <script>
+    if (localStorage.getItem('ilm_session')) location.href = 'dashboard.html';
+  </script>
+</body>
+</html>
