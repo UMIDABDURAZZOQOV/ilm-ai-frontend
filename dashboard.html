@@ -251,6 +251,46 @@
       <button class="btn" style="margin-top:12px; background: rgba(255,255,255,0.1);" onclick="loadFiles()">Refresh</button>
     </div>
 
+    <!-- PLAN CARD -->
+    <div class="card">
+      <h2>🧭 Generate Study Plan</h2>
+      <div class="form-group">
+        <label>Goal</label>
+        <input type="text" id="planGoal" placeholder="What do you want to learn?" />
+      </div>
+      <div class="form-group">
+        <label>Target Date</label>
+        <input type="date" id="planTargetDate" />
+      </div>
+      <div class="form-group">
+        <label>Daily Study Hours</label>
+        <input type="number" id="planDailyHours" min="0.5" step="0.5" value="1" />
+      </div>
+      <button class="btn" onclick="generatePlan()" id="planBtn">Generate Plan</button>
+      <div class="status-msg" id="planStatus"></div>
+      <div id="planResult" style="margin-top:16px; display:none;"></div>
+    </div>
+
+    <!-- QUIZ CARD -->
+    <div class="card">
+      <h2>📝 Generate Quiz</h2>
+      <div class="form-group">
+        <label>Difficulty</label>
+        <select id="quizDifficulty" style="width:100%; padding:12px 16px; background: rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.1); border-radius:10px; color:#fff;">
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Number of Questions</label>
+        <input type="number" id="quizCount" min="1" max="10" value="5" />
+      </div>
+      <button class="btn" onclick="generateQuiz()" id="quizBtn">Generate Quiz</button>
+      <div class="status-msg" id="quizStatus"></div>
+      <div id="quizResult" style="margin-top:16px; display:none;"></div>
+    </div>
+
     <!-- CHAT CARD -->
     <div class="card chat-card">
       <h2>💬 Ask Your Materials</h2>
@@ -389,6 +429,131 @@
       // Remove empty state
       const empty = messages.querySelector(".msg-system");
       if (empty && type === "user") empty.remove();
+    }
+
+    async function generatePlan() {
+      const goal = document.getElementById('planGoal').value.trim();
+      const targetDate = document.getElementById('planTargetDate').value;
+      const dailyHours = parseFloat(document.getElementById('planDailyHours').value);
+      const statusId = 'planStatus';
+      const resultContainer = document.getElementById('planResult');
+
+      if (!goal || !targetDate || !dailyHours) {
+        showStatus(statusId, 'Please fill out all plan fields.', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('planBtn');
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+
+      try {
+        const res = await fetch(`${API}/plan/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: currentUser.id, goal, target_date: targetDate, daily_hours: dailyHours })
+        });
+        const data = await res.json();
+
+        if (data.error) {
+          showStatus(statusId, `⚠ ${data.error}`, 'error');
+          resultContainer.style.display = 'none';
+        } else {
+          showStatus(statusId, '✅ Plan generated successfully.', 'success');
+          displayPlan(data);
+        }
+      } catch (err) {
+        showStatus(statusId, '❌ Could not generate plan. Check backend.', 'error');
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Generate Plan';
+    }
+
+    function displayPlan(plan) {
+      const resultContainer = document.getElementById('planResult');
+      resultContainer.style.display = 'block';
+      resultContainer.innerHTML = `
+        <div style="background: rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:16px;">
+          <strong>Summary:</strong>
+          <p style="margin:8px 0; color: rgba(255,255,255,0.8);">${plan.summary || 'No summary provided.'}</p>
+          <strong>Target date:</strong> <span style="color:#a5b4fc;">${plan.target_date}</span>
+          <div style="margin-top:12px;">
+            <strong>Weekly breakdown:</strong>
+            ${plan.weekly_breakdown ? plan.weekly_breakdown.map(week => `
+              <div style="margin-top:10px; padding:10px; border:1px solid rgba(255,255,255,0.1); border-radius:10px;">
+                <div style="font-weight:600;">Week ${week.week}: ${week.focus}</div>
+                ${week.days ? week.days.map(day => `
+                  <div style="margin-top:8px;">
+                    <div style="font-size:13px; font-weight:600;">Day ${day.day} — ${day.date}</div>
+                    <div style="font-size:13px; color: rgba(255,255,255,0.75);">${day.topic} • ${day.material}</div>
+                    <div style="font-size:13px; color: rgba(255,255,255,0.7);">Tasks: ${day.tasks ? day.tasks.join(', ') : 'N/A'}</div>
+                  </div>
+                `).join('') : ''}
+              </div>
+            `).join('') : '<p style="color: rgba(255,255,255,0.7);">No weekly plan returned.</p>'}
+          </div>
+        </div>
+      `;
+    }
+
+    async function generateQuiz() {
+      const difficulty = document.getElementById('quizDifficulty').value;
+      const numQuestions = parseInt(document.getElementById('quizCount').value, 10);
+      const statusId = 'quizStatus';
+      const resultContainer = document.getElementById('quizResult');
+
+      if (!difficulty || !numQuestions || numQuestions < 1) {
+        showStatus(statusId, 'Please select difficulty and number of questions.', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('quizBtn');
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+
+      try {
+        const res = await fetch(`${API}/quiz/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: currentUser.id, difficulty, num_questions: numQuestions })
+        });
+        const data = await res.json();
+
+        if (data.error) {
+          showStatus(statusId, `⚠ ${data.error}`, 'error');
+          resultContainer.style.display = 'none';
+        } else {
+          showStatus(statusId, '✅ Quiz generated successfully.', 'success');
+          displayQuiz(data);
+        }
+      } catch (err) {
+        showStatus(statusId, '❌ Could not generate quiz. Check backend.', 'error');
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Generate Quiz';
+    }
+
+    function displayQuiz(quizData) {
+      const resultContainer = document.getElementById('quizResult');
+      resultContainer.style.display = 'block';
+      if (!quizData.questions || !quizData.questions.length) {
+        resultContainer.innerHTML = '<p style="color: rgba(255,255,255,0.7);">No quiz questions were generated.</p>';
+        return;
+      }
+
+      resultContainer.innerHTML = quizData.questions.map((q, index) => `
+        <div style="margin-bottom:16px; padding:16px; border:1px solid rgba(255,255,255,0.1); border-radius:12px;">
+          <div style="font-weight:600; margin-bottom:8px;">Q${index + 1}: ${q.question}</div>
+          <div style="color: rgba(255,255,255,0.8); margin-bottom:8px;">Type: ${q.type || 'n/a'}</div>
+          <ul style="list-style:none; padding-left:0; color: rgba(255,255,255,0.85);">
+            ${q.options ? q.options.map(option => `<li style="margin-bottom:4px;">• ${option}</li>`).join('') : ''}
+          </ul>
+          <div style="margin-top:8px; color: rgba(255,255,255,0.7);">Correct answer: ${q.correct_answer || 'n/a'}</div>
+          <div style="margin-top:8px; color: rgba(255,255,255,0.7);">Explanation: ${q.explanation || 'No explanation provided.'}</div>
+        </div>
+      `).join('');
     }
 
     function showStatus(id, msg, type) {
