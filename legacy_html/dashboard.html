@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Ilm AI</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+  <div class="dash-layout">
+    <aside class="sidebar" id="sidebar">
+      <a href="index.html" class="logo">
+        <span class="logo-mark">📚</span>
+        <span data-i18n="brand">Ilm AI</span>
+      </a>
+      <button type="button" class="nav-item active" data-panel="upload">📤 <span data-i18n="dash_upload">Upload</span></button>
+      <button type="button" class="nav-item" data-panel="chat">💬 <span data-i18n="dash_chat">Chat</span></button>
+      <button type="button" class="nav-item" data-panel="quiz">📝 <span data-i18n="dash_quiz">Quiz</span></button>
+      <button type="button" class="nav-item" data-panel="plan">🧭 <span data-i18n="dash_plan">Plan</span></button>
+      <button type="button" class="nav-item" data-panel="telegram">✈️ <span data-i18n="dash_telegram">Telegram</span></button>
+      <div style="flex:1"></div>
+      <div class="lang-switch" style="margin:12px 0">
+        <button type="button" class="lang-btn" data-lang="en">EN</button>
+        <button type="button" class="lang-btn active" data-lang="uz">UZ</button>
+        <button type="button" class="lang-btn" data-lang="ru">RU</button>
+      </div>
+      <button type="button" class="nav-item" id="logoutBtn">🚪 <span data-i18n="dash_logout">Log out</span></button>
+    </aside>
+
+    <main class="dash-main">
+      <div class="dash-header">
+        <div>
+          <button type="button" class="mobile-menu-btn" id="menuBtn">☰ Menu</button>
+          <h1 id="greeting">Dashboard</h1>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="label" data-i18n="dash_files">Materials</div>
+          <div class="value" id="statFiles">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="label" data-i18n="streak_label">Streak</div>
+          <div class="value" id="statStreak">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Telegram</div>
+          <div class="value" id="statTg" style="font-size:1rem">—</div>
+        </div>
+      </div>
+
+      <!-- UPLOAD -->
+      <section class="panel active" id="panel-upload">
+        <div class="panel-grid">
+          <div class="card">
+            <h3 style="margin-bottom:16px" data-i18n="dash_upload">Upload materials</h3>
+            <div class="upload-zone" id="uploadZone">
+              <p data-i18n="upload_hint">Click or drag PDF / TXT</p>
+              <p id="selectedFile" style="margin-top:8px;color:#a5b4fc"></p>
+              <input type="file" id="fileInput" accept=".pdf,.txt" />
+            </div>
+            <button type="button" class="btn btn-primary btn-block" id="uploadBtn" data-i18n="upload_btn">Upload</button>
+            <div class="status-toast" id="uploadStatus"></div>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom:16px" data-i18n="dash_files">My materials</h3>
+            <ul class="file-list" id="filesList"></ul>
+            <button type="button" class="btn btn-ghost btn-block" id="refreshFiles" data-i18n="refresh">Refresh</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- CHAT -->
+      <section class="panel" id="panel-chat">
+        <div class="card chat-box">
+          <div class="chat-messages" id="chatMessages">
+            <div class="msg msg-system">Upload a file and ask a question.</div>
+          </div>
+          <div class="chat-input-row">
+            <input type="text" id="chatInput" data-i18n="ask_placeholder" placeholder="Ask..." />
+            <button type="button" class="btn btn-primary" id="sendBtn" data-i18n="ask_btn">Ask</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- QUIZ -->
+      <section class="panel" id="panel-quiz">
+        <div class="card" style="max-width:640px">
+          <div class="form-group">
+            <label data-i18n="difficulty">Difficulty</label>
+            <select id="quizDifficulty">
+              <option value="easy" data-i18n="easy">Easy</option>
+              <option value="medium" selected data-i18n="medium">Medium</option>
+              <option value="hard" data-i18n="hard">Hard</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label data-i18n="num_questions">Questions</label>
+            <input type="number" id="quizCount" min="1" max="10" value="5" />
+          </div>
+          <button type="button" class="btn btn-primary" id="quizBtn" data-i18n="generate_quiz">Generate quiz</button>
+          <div class="status-toast" id="quizStatus"></div>
+          <div id="quizResult" style="margin-top:16px"></div>
+        </div>
+      </section>
+
+      <!-- PLAN -->
+      <section class="panel" id="panel-plan">
+        <div class="card" style="max-width:640px">
+          <div class="form-group">
+            <label data-i18n="goal">Goal</label>
+            <input type="text" id="planGoal" placeholder="e.g. Pass the exam" />
+          </div>
+          <div class="form-group">
+            <label data-i18n="target_date">Target date</label>
+            <input type="date" id="planTargetDate" />
+          </div>
+          <div class="form-group">
+            <label data-i18n="daily_hours">Hours per day</label>
+            <input type="number" id="planDailyHours" min="0.5" step="0.5" value="1" />
+          </div>
+          <button type="button" class="btn btn-primary" id="planBtn" data-i18n="generate_plan">Generate plan</button>
+          <div class="status-toast" id="planStatus"></div>
+          <div id="planResult" style="margin-top:16px"></div>
+        </div>
+      </section>
+
+      <!-- TELEGRAM -->
+      <section class="panel" id="panel-telegram">
+        <div class="card" style="max-width:560px">
+          <h3 style="margin-bottom:12px" data-i18n="dash_telegram">Telegram</h3>
+          <p id="tgStatus" style="margin-bottom:12px;color:var(--muted)">...</p>
+          <p data-i18n="tg_hint" style="font-size:0.9rem;color:var(--muted);line-height:1.7">
+            Open your bot → /link → use this email & password
+          </p>
+          <div style="margin-top:20px;padding:16px;background:rgba(255,255,255,0.03);border-radius:12px">
+            <strong>Email:</strong> <span id="tgEmail">—</span>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

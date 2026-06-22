@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Log in — Ilm AI</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+  <div class="auth-page">
+    <div style="position:absolute;top:20px;right:20px;z-index:2" class="lang-switch">
+      <button type="button" class="lang-btn" data-lang="en">EN</button>
+      <button type="button" class="lang-btn active" data-lang="uz">UZ</button>
+      <button type="button" class="lang-btn" data-lang="ru">RU</button>
+    </div>
+
+    <div class="auth-card">
+      <a href="index.html" class="logo">
+        <span class="logo-mark">📚</span>
+        <span data-i18n="brand">Ilm AI</span>
+      </a>
+      <h2 style="text-align:center;font-size:1.5rem;margin-bottom:4px" data-i18n="login_title">Welcome back</h2>
+      <p class="auth-sub" data-i18n="login_sub">Log in to your learning space</p>
+
+      <div class="alert alert-error" id="errorMsg"></div>
+
+      <div class="form-group">
+        <label data-i18n="email">Email</label>
+        <input type="email" id="email" placeholder="learner@example.com" autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <label data-i18n="password">Password</label>
+        <input type="password" id="password" autocomplete="current-password" />
+      </div>
+
+      <button type="button" class="btn btn-primary btn-block" id="loginBtn" data-i18n="login_btn">Log in</button>
+
+      <p class="auth-footer">
+        <span data-i18n="no_account">Don't have an account?</span>
+        <a href="signup.html" data-i18n="signup_link">Sign up</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/i18n.js"></script>
+  <script>
+    localStorage.removeItem('ilm_current_user');
+    localStorage.removeItem('ilm_users');
+    if (getSession()) location.href = 'dashboard.html';
+
+    const errorMsg = document.getElementById('errorMsg');
+    const loginBtn = document.getElementById('loginBtn');
+
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorMsg.style.display = 'block';
+    }
+
+    async function login() {
+      errorMsg.style.display = 'none';
+      const email = document.getElementById('email').value.trim().toLowerCase();
+      const password = document.getElementById('password').value;
+
+      if (!email || !password) {
+        showError(t('err_fill'));
+        return;
+      }
+
+      loginBtn.disabled = true;
+      loginBtn.textContent = '...';
+
+      try {
+        const data = await apiPost('/auth/login', { email, password });
+        setSession(data);
+        window.location.href = 'dashboard.html';
+      } catch (e) {
+        showError(e.message === 'Failed to fetch' ? t('err_network') : e.message);
+      }
+
+      loginBtn.disabled = false;
+      loginBtn.textContent = t('login_btn');
+    }
+
+    loginBtn.addEventListener('click', login);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') login();
+    });
+  </script>
+</body>
+</html>
