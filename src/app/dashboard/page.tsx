@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
+import SatIeltsDashboard from "./sat-ielts/SatIeltsDashboard";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 function DashboardContent() {
@@ -604,6 +605,7 @@ function DashboardContent() {
     { id: "files", label: t("dash_files"), icon: FileText },
     { id: "chat", label: t("dash_chat"), icon: MessageSquare },
     { id: "quiz", label: t("dash_quiz"), icon: GraduationCap },
+    { id: "sat-ielts", label: "SAT / IELTS", icon: GraduationCap },
     { id: "plans", label: t("dash_plan"), icon: Calendar },
     { id: "flashcards", label: t("dash_flashcards"), icon: Zap },
     { id: "gaps", label: t("dash_gaps"), icon: Brain },
@@ -983,10 +985,23 @@ function DashboardContent() {
                             </button>
                             <button
                               onClick={() => {
+                                // Stop any ongoing speech
+                                window.speechSynthesis.cancel();
                                 const utterance = new SpeechSynthesisUtterance(msg.content);
+                                // Pick best available voice
+                                const voices = window.speechSynthesis.getVoices();
+                                const preferred = voices.find(v =>
+                                  v.lang.startsWith("en") && v.name.toLowerCase().includes("female")
+                                ) || voices.find(v => v.lang.startsWith("en"))
+                                  || voices.find(v => v.lang.startsWith("ru"))
+                                  || voices[0];
+                                if (preferred) utterance.voice = preferred;
+                                utterance.rate = 0.95;
+                                utterance.pitch = 1.05;
+                                utterance.volume = 1;
                                 window.speechSynthesis.speak(utterance);
                               }}
-                              className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                              className="p-2 text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
                               title="Listen"
                             >
                               <Volume2 className="h-4 w-4" />
@@ -1453,7 +1468,26 @@ function DashboardContent() {
                 </div>
                 {gapsResult && (
                   <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800">
-                    {typeof gapsResult === "string" ? (
+                    {!gapsResult.ready ? (
+                      <div className="text-center py-4">
+                        <AlertCircle className="h-10 w-10 text-amber-500 mx-auto mb-3" />
+                        <p className="font-semibold text-amber-600 dark:text-amber-400 mb-1">
+                          Not enough data yet
+                        </p>
+                        <p className="text-sm text-slate-500">
+                          {gapsResult.message || "Complete at least 2 quiz sessions to generate a Gaps Report."}
+                        </p>
+                        <p className="text-xs text-slate-400 mt-2">
+                          Sessions completed: {gapsResult.sessions_completed ?? 0} / 2 required
+                        </p>
+                        <button
+                          onClick={() => setActivePanel("quiz")}
+                          className="mt-4 px-5 py-2 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-blue-600 transition-all"
+                        >
+                          Go to Quiz →
+                        </button>
+                      </div>
+                    ) : typeof gapsResult === "string" ? (
                       <pre className="whitespace-pre-wrap text-sm">{gapsResult}</pre>
                     ) : (
                       <div className="space-y-6">
@@ -1709,6 +1743,12 @@ function DashboardContent() {
               </motion.div>
             )}
 
+            {activePanel === "sat-ielts" && (
+              <motion.div key="sat-ielts" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                <SatIeltsDashboard user={{ ...user, is_premium: subscriptionStatus?.is_premium || false }} />
+              </motion.div>
+            )}
+
             {activePanel === "telegram" && (
               <motion.div
                 key="telegram"
@@ -1735,9 +1775,17 @@ function DashboardContent() {
 
                   <div className="space-y-6">
                     <div className="p-6 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
-                      <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                      <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300 mb-3">
                         {t("tg_hint")}
                       </p>
+                      {!stats.tgLinked && (
+                        <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                          <p className="font-semibold">How to link:</p>
+                          <p>1. Open the bot: <strong>@ILM_AI_HELPER_bot</strong></p>
+                          <p>2. Send <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">/link</code></p>
+                          <p>3. Enter your email and password</p>
+                        </div>
+                      )}
                     </div>
 
                     <div className="grid gap-4">
@@ -1756,9 +1804,15 @@ function DashboardContent() {
                         </span>
                       </div>
                       <div className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                        <label className="block text-sm font-medium text-slate-500 mb-2">
+                        <label className="block text-sm font-medium text-slate-500 mb-1">
                           Daily Reminder Time
                         </label>
+                        <p className="text-xs text-slate-400 mb-2">⏰ Tashkent time (UTC+5)</p>
+                        {!stats.tgLinked && (
+                          <p className="text-xs text-amber-500 mb-2">
+                            ⚠️ Link your Telegram account first to receive reminders
+                          </p>
+                        )}
                         <div className="flex gap-3">
                           <input
                             type="time"
@@ -1784,13 +1838,13 @@ function DashboardContent() {
 
                     {!stats.tgLinked && (
                       <a
-                        href="https://t.me/ai_incubator_bot"
+                        href="https://web.telegram.org/a/#8931717698"
                         target="_blank"
                         rel="noreferrer"
                         className="w-full py-4 bg-[#0088cc] text-white rounded-xl font-bold hover:bg-[#0077b5] transition-all flex items-center justify-center gap-2"
                       >
                         <Send className="h-5 w-5" />
-                        Open Telegram Bot
+                        Open Telegram Bot (@ILM_AI_HELPER_bot)
                       </a>
                     )}
                   </div>

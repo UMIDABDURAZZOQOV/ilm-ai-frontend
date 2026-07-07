@@ -50,9 +50,24 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    const redirectUri = `${window.location.origin}/auth/google-callback`;
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/auth/google-login?redirect_uri=${encodeURIComponent(redirectUri)}`;
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const redirectUri = `${window.location.origin}/auth/google-callback`;
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+      const res = await fetch(`${apiUrl}/auth/google-login?redirect_uri=${encodeURIComponent(redirectUri)}`);
+      const data = await res.json();
+      if (data.auth_url) {
+        window.location.href = data.auth_url;
+      } else {
+        setError("Google login manzilini olishda xato.");
+      }
+    } catch (err: any) {
+      setError("Google login ishlamadi: " + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
