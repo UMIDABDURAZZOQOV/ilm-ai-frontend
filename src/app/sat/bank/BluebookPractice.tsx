@@ -51,7 +51,16 @@ export default function BluebookPractice({
   const isCorrect = picked != null && picked === q?.correct_answer;
   const msgs = aiMsgs[q?.id] ?? [];
 
-  const passage = useMemo(() => q?.passage?.trim() || "", [q]);
+  const passage = useMemo(() => {
+    const p = (q?.passage ?? "").trim();
+    return p === "null" ? "" : p;
+  }, [q]);
+  // Some seeded questions carry a stray leading "null" (a passage placeholder).
+  const promptText = useMemo(() => {
+    let t = q?.question_text ?? "";
+    if (t.slice(0, 4).toLowerCase() === "null") t = t.slice(4).replace(/^[\r\n \t]+/, "");
+    return t;
+  }, [q]);
 
   if (!q) {
     return (
@@ -136,7 +145,7 @@ export default function BluebookPractice({
           </div>
 
           {/* Prompt */}
-          <MathText className="font-serif-sat text-[16.5px] leading-[1.6] font-semibold text-op-ink">{q.question_text}</MathText>
+          <MathText className="font-serif-sat text-[16.5px] leading-[1.6] font-semibold text-op-ink">{promptText}</MathText>
 
           {/* Choices */}
           {q.options ? (
