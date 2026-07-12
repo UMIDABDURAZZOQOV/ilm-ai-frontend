@@ -37,22 +37,44 @@ export default function QuestionBankPage() {
     };
   }, [user]);
 
-  // Open the Bluebook-style browser for a domain (optionally narrowed to a skill).
+  // Open the Bluebook-style browser for one domain, narrowed to a skill.
   async function handleStart(domain: string, skill: string | null, key: string) {
     if (!user || starting) return;
     setStarting(key);
     setError(null);
     try {
-      const res = await listQuestions({ exam_type: "SAT", domain, limit: 100 });
+      const res = await listQuestions({ exam_type: "SAT", domain, limit: 500 });
       let qs = res.questions;
-      if (skill) qs = qs.filter((q) => q.skill === skill);
-      if (qs.length === 0) qs = res.questions; // fall back to the whole domain
+      if (skill) {
+        const bySkill = qs.filter((q) => q.skill === skill);
+        if (bySkill.length > 0) qs = bySkill; // else fall back to the whole domain
+      }
       if (qs.length === 0) {
         setError("No questions available for this topic yet.");
-        setStarting(null);
         return;
       }
       setPractice({ questions: qs, title: skill || domain });
+    } catch (err: any) {
+      setError(err.message || "Could not load questions.");
+    } finally {
+      setStarting(null);
+    }
+  }
+
+  // "Practice all topics" — every question across all of a section's domains.
+  async function practiceAll(sectionName: string, domains: string[], key: string) {
+    if (!user || starting) return;
+    setStarting(key);
+    setError(null);
+    try {
+      const res = await listQuestions({ exam_type: "SAT", limit: 2000 });
+      const set = new Set(domains);
+      const qs = res.questions.filter((q) => set.has(q.domain));
+      if (qs.length === 0) {
+        setError("No questions available yet.");
+        return;
+      }
+      setPractice({ questions: qs, title: sectionName });
     } catch (err: any) {
       setError(err.message || "Could not load questions.");
     } finally {
@@ -156,7 +178,7 @@ export default function QuestionBankPage() {
               <div className="text-[14px] text-op-slate">{activeSection} · {section?.domains.reduce((sum, d) => sum + d.question_count, 0) ?? 0} questions</div>
             </div>
             <button
-              onClick={() => handleStart(activeSection, null, activeSection)}
+              onClick={() => practiceAll(activeSection, section?.domains.map((d) => d.domain) ?? [], activeSection)}
               disabled={starting !== null}
               className="bg-op-panel text-op-ink text-[14px] font-extrabold px-6 py-3 rounded-[12px] hover:bg-[#E2E8EB] disabled:opacity-40 transition-colors shrink-0"
             >
