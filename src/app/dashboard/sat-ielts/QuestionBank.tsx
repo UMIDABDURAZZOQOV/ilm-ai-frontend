@@ -23,6 +23,7 @@ import {
   getSkillTree,
   SkillTreeResponse,
 } from "@/lib/satIeltsApi";
+import { MathText } from "@/components/MathText";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -237,7 +238,7 @@ export default function QuestionBank({ userId, examType }: QuestionBankProps) {
                 className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 space-y-2"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-slate-300 truncate">{domain}</span>
+                  <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate">{domain}</span>
                   <span className="text-xs text-slate-500">{stats.attempted}/{stats.total}</span>
                 </div>
                 <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
@@ -264,7 +265,7 @@ export default function QuestionBank({ userId, examType }: QuestionBankProps) {
       >
         <div className="flex items-center gap-2 mb-3">
           <Filter className="h-4 w-4 text-blue-400" />
-          <span className="text-sm font-medium text-slate-300">Filters</span>
+          <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Filters</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -376,9 +377,9 @@ export default function QuestionBank({ userId, examType }: QuestionBankProps) {
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-slate-200 line-clamp-2">
+                      <MathText className="block text-sm text-slate-800 dark:text-slate-200 line-clamp-2">
                         {question.question_text}
-                      </p>
+                      </MathText>
                     </div>
                   </div>
                 </motion.button>
@@ -390,17 +391,17 @@ export default function QuestionBank({ userId, examType }: QuestionBankProps) {
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      className="border-t border-slate-800 p-4 space-y-4"
+                      className="border-t border-slate-200 dark:border-slate-800 p-4 space-y-4"
                     >
                       {/* Full Question Text */}
-                      <div className="bg-slate-800/50 rounded-xl p-4">
-                        <p className="text-sm text-slate-200 whitespace-pre-wrap">{question.question_text}</p>
+                      <div className="bg-slate-100 dark:bg-slate-800/50 rounded-xl p-4">
+                        <MathText className="text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap font-serif-sat">{question.question_text}</MathText>
                       </div>
 
                       {/* Options (MCQ) */}
                       {question.question_type === "mcq" && question.options && (
                         <div className="space-y-2">
-                          <p className="text-sm font-medium text-slate-300">Select your answer:</p>
+                          <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Select your answer:</p>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             {question.options.map((option, idx) => {
                               const isSelected = userAnswer === option;
@@ -422,10 +423,10 @@ export default function QuestionBank({ userId, examType }: QuestionBankProps) {
                                         : "bg-blue-500/20 border-blue-500/50 text-blue-400"
                                       : answerShown && isCorrectOption
                                       ? "bg-green-500/10 border-green-500/30 text-green-400"
-                                      : "bg-slate-800/50 border-slate-700/50 text-slate-300 hover:bg-slate-700/50"
+                                      : "bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-700/50"
                                   }`}
                                 >
-                                  <span className="font-medium">{option}</span>
+                                  <MathText className="font-medium">{option}</MathText>
                                   {answerShown && isCorrectOption && (
                                     <CheckCircle2 className="inline ml-2 h-4 w-4 text-green-400" />
                                   )}
@@ -473,14 +474,14 @@ export default function QuestionBank({ userId, examType }: QuestionBankProps) {
                                 {isCorrect ? "Correct!" : "Incorrect"}
                               </span>
                             </div>
-                            <p className="text-sm text-slate-300">
+                            <p className="text-sm text-slate-600 dark:text-slate-300">
                               <span className="font-medium">Correct answer:</span> {question.correct_answer}
                             </p>
                           </div>
 
                           {question.rubric && (
                             <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
-                              <p className="text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+                              <p className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2 flex items-center gap-2">
                                 <BookOpen className="h-4 w-4 text-blue-400" /> Explanation
                               </p>
                               <p className="text-sm text-slate-400 whitespace-pre-wrap">{question.rubric}</p>

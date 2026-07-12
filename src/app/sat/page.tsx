@@ -123,7 +123,7 @@ export default function SatHomePage() {
             <div className="text-lg font-bold mb-4">☰ Today's Study Plan</div>
             <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-8 flex flex-col items-center gap-3 text-slate-400 text-sm">
               No plan yet — create one to see today's sessions here.
-              <Link href="/sat/planner" className="bg-blue-500 text-white text-sm font-bold px-4 py-2 rounded-lg">
+              <Link href="/sat/planner" className="bg-op-blue hover:bg-op-blueHover text-white text-sm font-bold px-4 py-2 rounded-lg">
                 Create my study plan
               </Link>
             </div>
@@ -181,7 +181,7 @@ export default function SatHomePage() {
                   {predicted ? "Predicted score" : "Take the diagnostic to see your predicted score"}
                 </div>
                 {!predicted && (
-                  <Link href="/sat/bank" className="inline-block mt-3 bg-blue-500 text-white text-sm font-bold px-4 py-2 rounded-lg">
+                  <Link href="/sat/bank" className="inline-block mt-3 bg-op-blue hover:bg-op-blueHover text-white text-sm font-bold px-4 py-2 rounded-lg">
                     Start diagnostic
                   </Link>
                 )}
@@ -203,7 +203,7 @@ export default function SatHomePage() {
                   </span>
                 ))}
               </div>
-              <Link href="/sat/bank" className="inline-flex items-center gap-1 mt-4 text-sm font-bold text-blue-500">
+              <Link href="/sat/bank" className="inline-flex items-center gap-1 mt-4 text-sm font-bold text-op-blue">
                 Practice these <ArrowRight className="h-4 w-4" />
               </Link>
             </div>

@@ -120,7 +120,7 @@ export default function DiagnosticTest({ userId, examType, onComplete }: Diagnos
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 border border-slate-700/50 rounded-3xl p-8 shadow-2xl shadow-blue-900/10 backdrop-blur-xl max-w-2xl mx-auto"
+        className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 border border-slate-200 dark:border-slate-700/50 rounded-3xl p-8 shadow-2xl shadow-blue-900/10 backdrop-blur-xl max-w-2xl mx-auto"
       >
         <div className="text-center space-y-6">
           <div className="h-20 w-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto">
@@ -136,21 +136,21 @@ export default function DiagnosticTest({ userId, examType, onComplete }: Diagnos
 
           <div className="grid grid-cols-3 gap-4 py-6">
             <div className="text-center">
-              <div className="h-12 w-12 bg-slate-800/50 rounded-xl flex items-center justify-center mx-auto mb-2">
+              <div className="h-12 w-12 bg-slate-100 dark:bg-slate-800/50 rounded-xl flex items-center justify-center mx-auto mb-2">
                 <Target className="h-6 w-6 text-blue-400" />
               </div>
               <p className="text-sm font-medium text-white">20 Questions</p>
               <p className="text-xs text-slate-500">Balanced mix</p>
             </div>
             <div className="text-center">
-              <div className="h-12 w-12 bg-slate-800/50 rounded-xl flex items-center justify-center mx-auto mb-2">
+              <div className="h-12 w-12 bg-slate-100 dark:bg-slate-800/50 rounded-xl flex items-center justify-center mx-auto mb-2">
                 <BarChart3 className="h-6 w-6 text-green-400" />
               </div>
               <p className="text-sm font-medium text-white">All Domains</p>
               <p className="text-xs text-slate-500">Math & RW</p>
             </div>
             <div className="text-center">
-              <div className="h-12 w-12 bg-slate-800/50 rounded-xl flex items-center justify-center mx-auto mb-2">
+              <div className="h-12 w-12 bg-slate-100 dark:bg-slate-800/50 rounded-xl flex items-center justify-center mx-auto mb-2">
                 <Clock className="h-6 w-6 text-yellow-400" />
               </div>
               <p className="text-sm font-medium text-white">Untimed</p>
@@ -194,7 +194,7 @@ export default function DiagnosticTest({ userId, examType, onComplete }: Diagnos
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 border border-slate-700/50 rounded-3xl p-6 shadow-2xl shadow-blue-900/10 backdrop-blur-xl max-w-3xl mx-auto"
+        className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 border border-slate-200 dark:border-slate-700/50 rounded-3xl p-6 shadow-2xl shadow-blue-900/10 backdrop-blur-xl max-w-3xl mx-auto"
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -226,7 +226,7 @@ export default function DiagnosticTest({ userId, examType, onComplete }: Diagnos
 
         {/* Question */}
         <div className="space-y-6">
-          <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+          <div className="bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-6">
             <div className="flex items-center gap-2 mb-4">
               <span className={`px-2 py-0.5 rounded-md text-xs font-medium border ${
                 question.difficulty === "easy"
@@ -257,7 +257,7 @@ export default function DiagnosticTest({ userId, examType, onComplete }: Diagnos
                     className={`p-4 rounded-xl text-left transition-all border ${
                       isSelected
                         ? "bg-blue-500/20 border-blue-500/50 text-blue-400"
-                        : "bg-slate-800/50 border-slate-700/50 text-slate-300 hover:bg-slate-700/50"
+                        : "bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-700/50"
                     }`}
                   >
                     <span className="font-medium">{option}</span>
@@ -279,7 +279,7 @@ export default function DiagnosticTest({ userId, examType, onComplete }: Diagnos
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 border border-slate-700/50 rounded-3xl p-8 shadow-2xl shadow-blue-900/10 backdrop-blur-xl max-w-2xl mx-auto"
+        className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 border border-slate-200 dark:border-slate-700/50 rounded-3xl p-8 shadow-2xl shadow-blue-900/10 backdrop-blur-xl max-w-2xl mx-auto"
       >
         <div className="text-center space-y-6">
           <div className={`h-20 w-20 rounded-2xl flex items-center justify-center mx-auto ${
@@ -303,8 +303,8 @@ export default function DiagnosticTest({ userId, examType, onComplete }: Diagnos
 
           {/* Score breakdown by domain */}
           {result.section_scores && (
-            <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
-              <p className="text-sm font-medium text-slate-300 mb-3">Performance by Domain</p>
+            <div className="bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-4">
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-3">Performance by Domain</p>
               <div className="space-y-2">
                 {Object.entries(result.section_scores).map(([domain, score]) => (
                   <div key={domain} className="flex items-center gap-3">
@@ -317,7 +317,7 @@ export default function DiagnosticTest({ userId, examType, onComplete }: Diagnos
                         style={{ width: `${score}%` }}
                       />
                     </div>
-                    <span className="text-xs text-slate-300 w-10 text-right">{Math.round(score)}%</span>
+                    <span className="text-xs text-slate-600 dark:text-slate-300 w-10 text-right">{Math.round(score)}%</span>
                   </div>
                 ))}
               </div>

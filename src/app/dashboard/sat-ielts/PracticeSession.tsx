@@ -164,7 +164,7 @@ export default function PracticeSession({
         className="space-y-4"
       >
         {/* Score summary */}
-        <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 text-center">
+        <div className="bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 text-center">
           <p className="text-slate-400 text-sm mb-2">Session Complete</p>
           <p className="text-5xl font-black text-white mb-1">
             {Math.round(result.score_pct)}%
@@ -191,7 +191,7 @@ export default function PracticeSession({
                 ) : (
                   <XCircle className="h-4 w-4 text-red-400 mt-0.5 shrink-0" />
                 )}
-                <p className="text-slate-200 font-medium">
+                <p className="text-slate-800 dark:text-slate-200 font-medium">
                   Q{i + 1}. {pq.question_text}
                 </p>
               </div>
@@ -277,7 +277,7 @@ export default function PracticeSession({
             <span className="text-sm font-bold text-slate-600 dark:text-slate-400">🔖 Mark for Review</span>
             <button
               onClick={toggleFlag}
-              className="ml-auto text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+              className="ml-auto text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-600 dark:text-slate-300"
             >
               ⚑ Report
             </button>
@@ -562,7 +562,7 @@ export default function PracticeSession({
                 <h3 className="text-lg font-bold">Question Navigator</h3>
                 <button
                   onClick={() => setShowQuestionGrid(false)}
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-600 dark:text-slate-300 transition-colors"
                 >
                   ✕
                 </button>

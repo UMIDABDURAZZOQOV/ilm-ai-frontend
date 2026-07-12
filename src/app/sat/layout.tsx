@@ -67,6 +67,16 @@ export default function SatLayout({ children }: { children: React.ReactNode }) {
     if (!isLoading && !user) router.push("/login");
   }, [user, isLoading, router]);
 
+  // The SAT platform uses the OnePrep look, which is always light — force light
+  // mode for this whole section regardless of the app's global dark theme, and
+  // restore the user's choice when they navigate away.
+  useEffect(() => {
+    const root = document.documentElement;
+    const wasDark = root.classList.contains("dark");
+    root.classList.remove("dark");
+    return () => { if (wasDark) root.classList.add("dark"); };
+  }, []);
+
   useEffect(() => {
     setMobileOpen(false);
     setSwitcherOpen(false);
