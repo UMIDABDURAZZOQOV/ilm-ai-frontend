@@ -6,6 +6,7 @@ import { Loader2, Flag, ArrowLeft, Sparkles, Send } from "lucide-react";
 import type { Question } from "@/lib/satIeltsApi";
 import { askAssistant } from "@/lib/assistantApi";
 import { MathText } from "@/components/MathText";
+import { MarkdownText } from "@/components/MarkdownText";
 
 // OnePrep-style single-question practice (Bluebook look): browse the question
 // bank one item at a time — passage on the left, question + A–D choices on the
@@ -210,7 +211,7 @@ export default function BluebookPractice({
                 ) : (
                   <div key={i} className="flex gap-2 items-start">
                     <span className="shrink-0 w-6 h-6 rounded-full bg-op-sky flex items-center justify-center"><Sparkles className="h-3.5 w-3.5 text-op-skyText" /></span>
-                    <MathText className="text-[14px] leading-[1.65] text-op-ink whitespace-pre-wrap">{m.text}</MathText>
+                    <MarkdownText className="text-[14px] leading-[1.65] text-op-ink flex-1 min-w-0">{m.text}</MarkdownText>
                   </div>
                 )
               ))}

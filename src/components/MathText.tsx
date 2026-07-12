@@ -19,9 +19,10 @@ const SYMBOLS: [RegExp, string][] = [
   [/\btheta\b/g, "θ"],
   [/\bdegrees?\b/g, "°"],
   [/\bdeg\b/g, "°"],
-  [/\*/g, "×"],
   [/(\d)\s*\/\s*(\d)/g, "$1⁄$2"], // simple numeric fractions: 3/4 -> 3⁄4
 ];
+// NOTE: we deliberately do NOT convert "*" to "×" — it collides with markdown
+// bold/italic (**...**, *...*) and mangles AI-tutor prose.
 
 function applySymbols(s: string): string {
   let out = s;

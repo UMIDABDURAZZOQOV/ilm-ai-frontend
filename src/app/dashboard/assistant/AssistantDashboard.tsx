@@ -11,6 +11,7 @@ import {
   type AssistantMessage,
 } from "@/lib/assistantApi";
 import LiveVoiceOverlay from "./LiveVoiceOverlay";
+import { MarkdownText } from "@/components/MarkdownText";
 
 interface User {
   id: number;
@@ -191,13 +192,13 @@ export default function AssistantDashboard({ user, onNavigate }: AssistantDashbo
               <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div className={`group max-w-[80%] flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
                   <div
-                    className={`px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap ${
+                    className={`px-4 py-2.5 rounded-2xl text-sm ${
                       msg.role === "user"
-                        ? "bg-primary text-white rounded-tr-none"
+                        ? "bg-primary text-white rounded-tr-none whitespace-pre-wrap"
                         : "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-tl-none"
                     }`}
                   >
-                    {msg.content}
+                    {msg.role === "user" ? msg.content : <MarkdownText>{msg.content}</MarkdownText>}
                   </div>
                   {msg.role === "assistant" && (
                     <button

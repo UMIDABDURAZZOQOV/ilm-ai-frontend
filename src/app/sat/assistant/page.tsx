@@ -6,6 +6,7 @@ import { GraduationCap, Send, Loader2, Sparkles, Mic, ChevronRight, Trash2 } fro
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/hooks/useI18n";
 import { apiFetch } from "@/lib/api";
+import { MarkdownText } from "@/components/MarkdownText";
 
 // Specializes the shared assistant endpoint for the SAT without any backend change.
 const SAT_SYSTEM =
@@ -113,12 +114,12 @@ export default function SatAssistantPage() {
           </div>
           {messages.map((m, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed whitespace-pre-wrap ${
+              <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed ${
                 m.role === "user"
-                  ? "bg-[#0d3b4f] text-white"
+                  ? "bg-[#0d3b4f] text-white whitespace-pre-wrap"
                   : "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100"
               }`}>
-                {m.content}
+                {m.role === "user" ? m.content : <MarkdownText>{m.content}</MarkdownText>}
               </div>
             </motion.div>
           ))}
