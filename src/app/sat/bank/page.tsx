@@ -1,28 +1,29 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Loader2, BookOpen, FunctionSquare, Play, Filter, ArrowRight } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useI18n } from "@/hooks/useI18n";
 import {
   getSkillTree,
-  startSession,
+  listQuestions,
   type SkillTreeResponse,
   type SkillProgress,
+  type Question,
 } from "@/lib/satIeltsApi";
-import QuestionBank from "@/app/dashboard/sat-ielts/QuestionBank";
-import DiagnosticTest from "@/app/dashboard/sat-ielts/DiagnosticTest";
+import BluebookPractice from "./BluebookPractice";
 
 export default function QuestionBankPage() {
   const { user } = useAuth();
-  const router = useRouter();
+  const { lang } = useI18n();
   const [tree, setTree] = useState<SkillTreeResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [starting, setStarting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"skills" | "questions" | "diagnostic">("skills");
+  // OnePrep-style single-question practice opened from a topic/skill.
+  const [practice, setPractice] = useState<{ questions: Question[]; title: string } | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -36,29 +37,39 @@ export default function QuestionBankPage() {
     };
   }, [user]);
 
+  // Open the Bluebook-style browser for a domain (optionally narrowed to a skill).
   async function handleStart(domain: string, skill: string | null, key: string) {
     if (!user || starting) return;
     setStarting(key);
     setError(null);
     try {
-      const res = await startSession({
-        user_id: user.id,
-        exam_type: "SAT",
-        domain,
-        skill,
-        difficulty: "medium",
-        num_questions: 10,
-        timed: false,
-      });
-      sessionStorage.setItem(
-        "sat_session",
-        JSON.stringify({ session: res, mode: "practice", label: skill || domain })
-      );
-      router.push("/sat/session");
+      const res = await listQuestions({ exam_type: "SAT", domain, limit: 100 });
+      let qs = res.questions;
+      if (skill) qs = qs.filter((q) => q.skill === skill);
+      if (qs.length === 0) qs = res.questions; // fall back to the whole domain
+      if (qs.length === 0) {
+        setError("No questions available for this topic yet.");
+        setStarting(null);
+        return;
+      }
+      setPractice({ questions: qs, title: skill || domain });
     } catch (err: any) {
-      setError(err.message || "Could not start practice.");
+      setError(err.message || "Could not load questions.");
+    } finally {
       setStarting(null);
     }
+  }
+
+  if (practice && user) {
+    return (
+      <BluebookPractice
+        questions={practice.questions}
+        userId={user.id}
+        title={practice.title}
+        language={lang}
+        onExit={() => setPractice(null)}
+      />
+    );
   }
 
   if (loading) {
@@ -77,7 +88,7 @@ export default function QuestionBankPage() {
 
   return (
     <div className="space-y-6">
-      {viewMode === "skills" && !activeSection ? (
+      {!activeSection ? (
         <>
           <h1 className="text-[30px] font-extrabold tracking-tight">🗃 Question Bank</h1>
 
@@ -122,7 +133,7 @@ export default function QuestionBankPage() {
             SAT® is a trademark of the College Board, used for identification purposes only. This platform is not affiliated with or endorsed by the College Board.
           </div>
         </>
-      ) : viewMode === "skills" && activeSection ? (
+      ) : (
         <>
           <button
             onClick={() => setActiveSection(null)}
@@ -130,16 +141,7 @@ export default function QuestionBankPage() {
           >
             ‹ Back to Question Bank
           </button>
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <h1 className="text-[30px] sm:text-[34px] font-extrabold tracking-tight">{activeSection}</h1>
-            <button
-              onClick={() => setViewMode(viewMode === "skills" ? "questions" : viewMode === "questions" ? "diagnostic" : "skills")}
-              className="flex items-center gap-2 px-4 py-2.5 border border-op-line rounded-[10px] text-[13.5px] font-bold text-op-slate hover:bg-op-panel transition-colors shrink-0"
-            >
-              <Filter className="h-4 w-4" />
-              {viewMode === "skills" ? "Browse Questions" : viewMode === "questions" ? "Diagnostic Test" : "Skill Tree"}
-            </button>
-          </div>
+          <h1 className="text-[30px] sm:text-[34px] font-extrabold tracking-tight">{activeSection}</h1>
 
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3">
@@ -202,26 +204,6 @@ export default function QuestionBankPage() {
               </motion.div>
             ))}
           </div>
-        </>
-      ) : viewMode === "questions" ? (
-        <>
-          <div className="flex items-center gap-4">
-            <button onClick={() => setViewMode("skills")} className="text-[14.5px] font-bold text-op-slate hover:text-op-ink">
-              ‹ Back to Question Bank
-            </button>
-            <h1 className="text-[30px] font-extrabold tracking-tight flex-1">Browse Questions</h1>
-          </div>
-          <QuestionBank userId={user!.id} examType="SAT" />
-        </>
-      ) : (
-        <>
-          <div className="flex items-center gap-4">
-            <button onClick={() => setViewMode("skills")} className="text-[14.5px] font-bold text-op-slate hover:text-op-ink">
-              ‹ Back to Question Bank
-            </button>
-            <h1 className="text-[30px] font-extrabold tracking-tight flex-1">Diagnostic Test</h1>
-          </div>
-          <DiagnosticTest userId={user!.id} examType="SAT" onComplete={() => {}} />
         </>
       )}
     </div>
