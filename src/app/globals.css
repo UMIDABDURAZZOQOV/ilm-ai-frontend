@@ -4,18 +4,46 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
+/* Light is the default (no .dark class); .dark overrides it. The theme class
+   is applied to <html> by ThemeProvider / the inline boot script in layout.tsx,
+   so these marketing & auth pages follow the same light/dark preference as the
+   dashboard. */
 :root {
+  --bg: #f6f7fb;
+  --bg-card: rgba(255, 255, 255, 0.85);
+  --bg-input: #ffffff;
+  --bg-subtle: #eef1f8;
+  --border: rgba(15, 23, 42, 0.1);
+  --text: #0f172a;
+  --muted: rgba(15, 23, 42, 0.6);
+  --link: #4f46e5;
+  --sidebar-bg: rgba(255, 255, 255, 0.7);
+  --hero-badge-text: #4338ca;
+  --info-text: #2563eb;
+  --primary: #6366f1;
+  --primary-2: #a855f7;
+  --accent: #06b6d4;
+  --success: #16a34a;
+  --error: #dc2626;
+  --radius: 14px;
+  --shadow: 0 24px 80px rgba(99, 102, 241, 0.12);
+}
+
+.dark {
   --bg: #07070f;
   --bg-card: rgba(255, 255, 255, 0.04);
+  --bg-input: rgba(255, 255, 255, 0.05);
+  --bg-subtle: rgba(255, 255, 255, 0.04);
   --border: rgba(255, 255, 255, 0.08);
   --text: #f4f4f5;
   --muted: rgba(255, 255, 255, 0.55);
-  --primary: #6366f1;
-  --primary-2: #a855f7;
+  --link: #a5b4fc;
+  --sidebar-bg: rgba(0, 0, 0, 0.35);
+  --hero-badge-text: #c7d2fe;
+  --info-text: #93c5fd;
   --accent: #22d3ee;
   --success: #4ade80;
   --error: #f87171;
-  --radius: 14px;
   --shadow: 0 24px 80px rgba(99, 102, 241, 0.15);
 }
 
@@ -43,7 +71,7 @@ body::before {
   z-index: 0;
 }
 
-a { color: #a5b4fc; text-decoration: none; }
+a { color: var(--link); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
 .container {
@@ -65,7 +93,7 @@ a:hover { text-decoration: underline; }
 .logo {
   font-size: 1.35rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #c7d2fe, #e879f9);
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   display: flex;
@@ -77,13 +105,17 @@ a:hover { text-decoration: underline; }
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.25rem;
-  color: white;
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.logo-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .nav-links {
@@ -154,7 +186,7 @@ a:hover { text-decoration: underline; }
   border: 1px solid var(--border);
   color: var(--text);
 }
-.btn-ghost:hover { border-color: rgba(255,255,255,0.2); text-decoration: none; }
+.btn-ghost:hover { border-color: rgba(99,102,241,0.4); text-decoration: none; }
 
 .hero {
   padding: 48px 0 80px;
@@ -167,7 +199,7 @@ a:hover { text-decoration: underline; }
   border-radius: 999px;
   background: rgba(99, 102, 241, 0.15);
   border: 1px solid rgba(99, 102, 241, 0.3);
-  color: #c7d2fe;
+  color: var(--hero-badge-text);
   font-size: 0.8rem;
   font-weight: 600;
   margin-bottom: 24px;
@@ -275,6 +307,8 @@ a:hover { text-decoration: underline; }
   font-size: 0.85rem;
   border-top: 1px solid var(--border);
 }
+.footer a { color: var(--muted); }
+.footer a:hover { color: var(--text); text-decoration: none; }
 
 /* AUTH */
 .auth-page {
@@ -319,7 +353,7 @@ a:hover { text-decoration: underline; }
 .form-group textarea {
   width: 100%;
   padding: 14px 16px;
-  background: rgba(255,255,255,0.05);
+  background: var(--bg-input);
   border: 1px solid var(--border);
   border-radius: 12px;
   color: var(--text);
@@ -350,6 +384,11 @@ a:hover { text-decoration: underline; }
   border: 1px solid rgba(74, 222, 128, 0.3);
   color: var(--success);
 }
+.alert-info {
+  background: rgba(96, 165, 250, 0.1);
+  border: 1px solid rgba(96, 165, 250, 0.28);
+  color: var(--info-text);
+}
 
 .auth-footer {
   text-align: center;
@@ -357,6 +396,34 @@ a:hover { text-decoration: underline; }
   color: var(--muted);
   font-size: 0.9rem;
 }
+
+/* Theme-aware auth helpers (replace previously hardcoded dark inline styles) */
+.auth-link { color: var(--link); font-weight: 600; text-decoration: none; }
+.form-hint { font-size: 0.75rem; color: var(--muted); margin-top: 6px; }
+
+.auth-divider { display: flex; align-items: center; margin: 24px 0; }
+.auth-divider::before,
+.auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.auth-divider span { padding: 0 16px; color: var(--muted); font-size: 0.875rem; }
+
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s, opacity 0.2s;
+}
+.btn-google:hover { border-color: var(--primary); }
+.btn-google:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* DASHBOARD */
 .dash-layout {
@@ -368,7 +435,7 @@ a:hover { text-decoration: underline; }
 }
 
 .sidebar {
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--sidebar-bg);
   border-right: 1px solid var(--border);
   padding: 24px 16px;
   display: flex;
@@ -453,7 +520,7 @@ a:hover { text-decoration: underline; }
 .file-list { list-style: none; }
 .file-list li {
   padding: 10px 14px;
-  background: rgba(255,255,255,0.03);
+  background: var(--bg-subtle);
   border-radius: 10px;
   margin-bottom: 8px;
   font-size: 0.9rem;
@@ -492,7 +559,7 @@ a:hover { text-decoration: underline; }
 }
 .msg-ai {
   align-self: flex-start;
-  background: rgba(255,255,255,0.06);
+  background: var(--bg-subtle);
   border: 1px solid var(--border);
 }
 

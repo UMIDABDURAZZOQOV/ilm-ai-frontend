@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { apiFetch } from "@/lib/api";
@@ -9,8 +9,16 @@ export default function GoogleCallbackPage() {
   const router = useRouter();
   const { login } = useAuth();
   const [error, setError] = useState("");
+  // Google's authorization code is single-use. React's Strict Mode (dev only)
+  // deliberately double-invokes effects, which would otherwise send the same
+  // code to the backend twice and fail the second exchange with
+  // invalid_grant. Guard so the exchange only ever runs once per mount.
+  const hasRun = useRef(false);
 
   useEffect(() => {
+    if (hasRun.current) return;
+    hasRun.current = true;
+
     const handleCallback = async () => {
       try {
         // Get the authorization code from the URL
@@ -79,9 +87,7 @@ export default function GoogleCallbackPage() {
           <>
             <div style={{ marginBottom: "16px" }}>
               <div className="logo-mark" style={{ margin: "0 auto 16px" }}>
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
+                <img src="/logo-icon.png" alt="Ilm AI" />
               </div>
             </div>
             <h2 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "8px" }}>

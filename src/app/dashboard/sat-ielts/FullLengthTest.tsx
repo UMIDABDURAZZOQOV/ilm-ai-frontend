@@ -1,18 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Lock, Loader2, ChevronRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Lock, Loader2, ChevronRight, Grid3x3, Bookmark, RotateCcw, Clock } from "lucide-react";
 import {
   startFullTest,
   completeSectionTest,
   completeFullTest,
+  completeSession,
   submitAnswer,
   ExamType,
   Question,
-  FullTestStartResponse,
+  FullTestResponse,
+  SATFullTestResponse,
+  IELTSFullTestResponse,
   FullTestCompleteResponse,
+  SessionResult,
 } from "@/lib/satIeltsApi";
+import AiAnalysisPanel from "./AiAnalysisPanel";
 
 interface User {
   id: number;
@@ -24,7 +29,7 @@ interface FullLengthTestProps {
   user: User;
   examType: ExamType;
   isPremium: boolean;
-  onComplete: (result: FullTestCompleteResponse) => void;
+  onComplete: (result: SessionResult) => void;
 }
 
 type TestPhase = "idle" | "active" | "section_done" | "done";
@@ -36,17 +41,20 @@ export default function FullLengthTest({
   onComplete,
 }: FullLengthTestProps) {
   const [phase, setPhase] = useState<TestPhase>("idle");
-  const [testData, setTestData] = useState<FullTestStartResponse | null>(null);
+  const [testData, setTestData] = useState<FullTestResponse | null>(null);
   const [currentQuestions, setCurrentQuestions] = useState<Question[]>([]);
   const [currentSectionIdx, setCurrentSectionIdx] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string>("");
   const [currentQIdx, setCurrentQIdx] = useState(0);
   const [answeredMap, setAnsweredMap] = useState<Record<number, string>>({});
+  const [flaggedMap, setFlaggedMap] = useState<Record<number, boolean>>({});
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<FullTestCompleteResponse | null>(null);
+  const [result, setResult] = useState<SessionResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
+  const [showQuestionGrid, setShowQuestionGrid] = useState(false);
 
   // ── Premium gate ───────────────────────────────────────────────────────────
   if (!isPremium) {
@@ -78,13 +86,47 @@ export default function FullLengthTest({
     try {
       const data = await startFullTest({ user_id: user.id, exam_type: examType });
       setTestData(data);
-      setCurrentQuestions(data.questions);
-      setCurrentSectionIdx(0);
-      setCurrentQIdx(0);
-      setAnsweredMap({});
-      setSelectedAnswer("");
-      setTimeLeft(data.section_duration_seconds);
-      setPhase("active");
+      
+      // Handle SAT modular format
+      if (data.test_type === "sat_modular") {
+        const satData = data as SATFullTestResponse;
+        const firstModule = satData.modules[0];
+        setCurrentSessionId(firstModule.session_id);
+        setTimeLeft(firstModule.duration_seconds);
+        setCurrentSectionIdx(0);
+        setCurrentQIdx(0);
+        setAnsweredMap({});
+        setSelectedAnswer("");
+        setPhase("active");
+        // Fetch questions for first module
+        // Note: We'll need to fetch questions from the session endpoint
+        setCurrentQuestions([]); // Will be populated by fetching
+      }
+      // Handle IELTS sectional format
+      else if (data.test_type === "ielts_sectional") {
+        const ieltsData = data as IELTSFullTestResponse;
+        const firstSection = ieltsData.sections[0];
+        setCurrentSessionId(firstSection.session_id);
+        setTimeLeft(firstSection.duration_seconds);
+        setCurrentSectionIdx(0);
+        setCurrentQIdx(0);
+        setAnsweredMap({});
+        setSelectedAnswer("");
+        setPhase("active");
+        setCurrentQuestions([]); // Will be populated by fetching
+      }
+      // Handle old format (fallback)
+      else {
+        const oldData = data as any;
+        setCurrentSessionId(oldData.test_id);
+        setCurrentQuestions(oldData.questions);
+        setCurrentSectionIdx(0);
+        setCurrentQIdx(0);
+        setAnsweredMap({});
+        setSelectedAnswer("");
+        setTimeLeft(oldData.section_duration_seconds);
+        setPhase("active");
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -93,12 +135,12 @@ export default function FullLengthTest({
   };
 
   const handleSubmitAnswer = async () => {
-    if (!testData || !selectedAnswer || submitting) return;
+    if (!currentSessionId || !selectedAnswer || submitting) return;
     const q = currentQuestions[currentQIdx];
     if (!q || answeredMap[q.id] !== undefined) return;
     setSubmitting(true);
     try {
-      await submitAnswer(testData.test_id, {
+      await submitAnswer(currentSessionId, {
         question_id: q.id,
         answer: selectedAnswer,
         elapsed_ms: 0,
@@ -114,27 +156,36 @@ export default function FullLengthTest({
   };
 
   const handleCompleteSection = async () => {
-    if (!testData) return;
+    if (!currentSessionId) return;
     setLoading(true);
     try {
-      const sections = testData.sections;
-      const currentSection = sections[currentSectionIdx];
-      const res = await completeSectionTest(testData.test_id, currentSection);
-
-      if (res.next_section && res.questions) {
-        setCurrentSectionIdx((i) => i + 1);
-        setCurrentQuestions(res.questions);
-        setCurrentQIdx(0);
-        setAnsweredMap({});
-        setSelectedAnswer("");
-        setTimeLeft(res.section_duration_seconds);
-        setPhase("active");
+      // Complete current session
+      const result = await completeSession(currentSessionId);
+      
+      // For SAT/IELTS modular/sectional tests, advance to next section
+      if (testData && (testData.test_type === "sat_modular" || testData.test_type === "ielts_sectional")) {
+        const sections = (testData as any).modules || (testData as any).sections;
+        if (currentSectionIdx < sections.length - 1) {
+          const nextSection = sections[currentSectionIdx + 1];
+          setCurrentSessionId(nextSection.session_id);
+          setTimeLeft(nextSection.duration_seconds);
+          setCurrentSectionIdx((i) => i + 1);
+          setCurrentQIdx(0);
+          setAnsweredMap({});
+          setSelectedAnswer("");
+          setCurrentQuestions([]); // Will need to fetch
+          setPhase("active");
+        } else {
+          // All sections complete
+          setResult(result);
+          setPhase("done");
+          onComplete(result);
+        }
       } else {
-        // Last section — complete the full test
-        const finalResult = await completeFullTest(testData.test_id);
-        setResult(finalResult);
+        // Old format or single session
+        setResult(result);
         setPhase("done");
-        onComplete(finalResult);
+        onComplete(result);
       }
     } catch (err: any) {
       setError(err.message);
@@ -143,11 +194,69 @@ export default function FullLengthTest({
     }
   };
 
-  const currentSection = testData?.sections[currentSectionIdx] ?? "";
-  const totalSections = testData?.sections.length ?? 0;
+  const getCurrentSectionName = () => {
+    if (!testData) return "";
+    if (testData.test_type === "sat_modular") {
+      const modules = (testData as SATFullTestResponse).modules;
+      const current = modules[currentSectionIdx];
+      return current ? `Module ${current.module} - ${current.section}` : "";
+    }
+    if (testData.test_type === "ielts_sectional") {
+      const sections = (testData as IELTSFullTestResponse).sections;
+      const current = sections[currentSectionIdx];
+      return current ? current.section : "";
+    }
+    // Old format
+    const sections = (testData as any).sections;
+    return sections ? sections[currentSectionIdx] : "";
+  };
+
+  const getTotalSections = () => {
+    if (!testData) return 0;
+    if (testData.test_type === "sat_modular") {
+      return (testData as SATFullTestResponse).modules.length;
+    }
+    if (testData.test_type === "ielts_sectional") {
+      return (testData as IELTSFullTestResponse).sections.length;
+    }
+    return (testData as any).sections?.length || 0;
+  };
+
+  const currentSection = getCurrentSectionName();
+  const totalSections = getTotalSections();
   const currentQ = currentQuestions[currentQIdx];
   const isQAnswered = currentQ ? answeredMap[currentQ.id] !== undefined : false;
   const allAnswered = currentQuestions.every((q) => answeredMap[q.id] !== undefined);
+
+  const handlePrevious = () => {
+    if (currentQIdx > 0) {
+      setCurrentQIdx((i) => i - 1);
+      setSelectedAnswer("");
+    }
+  };
+
+  const handleJumpToQuestion = (idx: number) => {
+    setCurrentQIdx(idx);
+    setSelectedAnswer("");
+    setShowQuestionGrid(false);
+  };
+
+  const toggleFlag = () => {
+    if (currentQ) {
+      setFlaggedMap((prev) => ({
+        ...prev,
+        [currentQ.id]: !prev[currentQ.id],
+      }));
+    }
+  };
+
+  const getQuestionStatus = (qId: number) => {
+    const answered = answeredMap[qId] !== undefined;
+    const flagged = flaggedMap[qId];
+    if (answered) return "answered";
+    if (flagged) return "flagged";
+    return "unanswered";
+  };
 
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -173,10 +282,10 @@ export default function FullLengthTest({
           </p>
         </div>
 
-        {result.section_scores && (
+        {(result as any).section_scores && (
           <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 space-y-3">
             <h4 className="text-sm font-bold text-slate-300">Section Breakdown</h4>
-            {Object.entries(result.section_scores).map(([section, pct]) => (
+            {Object.entries((result as any).section_scores).map(([section, pct]) => (
               <div key={section} className="flex items-center justify-between text-sm">
                 <span className="text-slate-400">{section}</span>
                 <span className="text-white font-bold">{Math.round(Number(pct))}%</span>
@@ -184,6 +293,9 @@ export default function FullLengthTest({
             ))}
           </div>
         )}
+
+        {/* AI mistake analysis */}
+        <AiAnalysisPanel sessionId={result.session_id} />
       </motion.div>
     );
   }
@@ -228,15 +340,28 @@ export default function FullLengthTest({
           Section {currentSectionIdx + 1} of {totalSections}:{" "}
           <span className="text-blue-400">{currentSection}</span>
         </span>
-        {timeLeft !== null && (
-          <span
-            className={`text-sm font-bold ${
-              timeLeft < 60 ? "text-red-400" : "text-slate-300"
+        <div className="flex items-center gap-3">
+          {timeLeft !== null && (
+            <span
+              className={`text-sm font-bold flex items-center gap-1.5 ${
+                timeLeft < 60 ? "text-red-400" : "text-slate-300"
+              }`}
+            >
+              <Clock className="h-4 w-4" />
+              {formatTime(timeLeft)}
+            </span>
+          )}
+          <button
+            onClick={() => setShowQuestionGrid(!showQuestionGrid)}
+            className={`p-2 rounded-lg transition-all ${
+              showQuestionGrid
+                ? "bg-blue-500/10 text-blue-400"
+                : "bg-slate-700 text-slate-400 hover:bg-slate-600"
             }`}
           >
-            {formatTime(timeLeft)}
-          </span>
-        )}
+            <Grid3x3 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* Question progress bar */}
@@ -315,10 +440,40 @@ export default function FullLengthTest({
             className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/50 resize-none disabled:opacity-60"
           />
         )}
+
+        {/* Flag button */}
+        <div className="flex items-center justify-between">
+          {isQAnswered && (
+            <p className="text-xs text-green-400 flex items-center gap-1">
+              ✓ Answer submitted
+            </p>
+          )}
+          <button
+            onClick={toggleFlag}
+            className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all ${
+              flaggedMap[currentQ.id]
+                ? "bg-amber-500/10 text-amber-400 border border-amber-500/30"
+                : "bg-slate-800 text-slate-400 hover:bg-slate-700"
+            }`}
+          >
+            <Bookmark className={`h-3.5 w-3.5 ${flaggedMap[currentQ.id] ? "fill-current" : ""}`} />
+            {flaggedMap[currentQ.id] ? "Flagged" : "Flag"}
+          </button>
+        </div>
       </div>
 
       {/* Buttons */}
       <div className="flex gap-3">
+        {currentQIdx > 0 && (
+          <button
+            onClick={handlePrevious}
+            className="py-3 px-4 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-xl text-sm transition-all flex items-center justify-center gap-2"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Previous
+          </button>
+        )}
+
         {!isQAnswered && (
           <button
             onClick={handleSubmitAnswer}
@@ -357,6 +512,95 @@ export default function FullLengthTest({
       </div>
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
+
+      {/* Question Grid Modal */}
+      <AnimatePresence>
+        {showQuestionGrid && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowQuestionGrid(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-white">
+                  {currentSection} - Question Navigator
+                </h3>
+                <button
+                  onClick={() => setShowQuestionGrid(false)}
+                  className="text-slate-400 hover:text-white transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Legend */}
+              <div className="flex items-center gap-4 mb-4 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-4 h-4 rounded bg-green-500" />
+                  <span className="text-slate-400">Answered</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-4 h-4 rounded bg-amber-500" />
+                  <span className="text-slate-400">Flagged</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-4 h-4 rounded bg-slate-700" />
+                  <span className="text-slate-400">Unanswered</span>
+                </div>
+              </div>
+
+              {/* Grid */}
+              <div className="grid grid-cols-5 sm:grid-cols-8 gap-2">
+                {currentQuestions.map((q, idx) => {
+                  const status = getQuestionStatus(q.id);
+                  const isCurrent = idx === currentQIdx;
+                  return (
+                    <button
+                      key={q.id}
+                      onClick={() => handleJumpToQuestion(idx)}
+                      className={`aspect-square rounded-lg text-sm font-semibold transition-all ${
+                        isCurrent
+                          ? "ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900"
+                          : "hover:scale-105"
+                      } ${
+                        status === "answered"
+                          ? "bg-green-500 text-white"
+                          : status === "flagged"
+                          ? "bg-amber-500 text-white"
+                          : "bg-slate-700 text-slate-300"
+                      }`}
+                    >
+                      {idx + 1}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Stats */}
+              <div className="mt-4 pt-4 border-t border-slate-800 flex items-center justify-between text-sm">
+                <span className="text-slate-400">
+                  {Object.keys(answeredMap).length} answered
+                </span>
+                <span className="text-slate-400">
+                  {Object.keys(flaggedMap).filter((k) => flaggedMap[parseInt(k)]).length} flagged
+                </span>
+                <span className="text-slate-400">
+                  {currentQuestions.length - Object.keys(answeredMap).length} remaining
+                </span>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

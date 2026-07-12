@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles, Target, Clock, Zap } from "lucide-react";
 
 import {
   getDashboard,
@@ -90,16 +91,32 @@ function SessionStartForm({ examType, onStart, userId }: SessionStartFormProps) 
   };
 
   return (
-    <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 space-y-4 max-w-lg">
-      <h4 className="font-bold text-white">Start Practice Session</h4>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 border border-slate-700/50 rounded-3xl p-6 space-y-5 max-w-lg shadow-2xl shadow-blue-900/10 backdrop-blur-xl"
+    >
+      <div className="flex items-center gap-3">
+        <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+          <Sparkles className="h-5 w-5 text-white" />
+        </div>
+        <div>
+          <h4 className="font-bold text-white text-lg">Start Practice Session</h4>
+          <p className="text-xs text-slate-400">Master your skills with targeted practice</p>
+        </div>
+      </div>
 
       {/* Domain */}
-      <div className="space-y-1.5">
-        <label className="text-xs text-slate-400">Domain (optional — all domains if empty)</label>
-        <select
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+          <Target className="h-4 w-4 text-blue-400" />
+          Domain <span className="text-slate-500 font-normal">(optional)</span>
+        </label>
+        <motion.select
           value={domain}
           onChange={(e) => setDomain(e.target.value)}
-          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+          whileFocus={{ scale: 1.02 }}
+          className="w-full bg-slate-800/80 border border-slate-700/50 rounded-xl px-4 py-3 text-white text-sm outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
         >
           <option value="">All domains</option>
           {domains.map((d) => (
@@ -107,34 +124,48 @@ function SessionStartForm({ examType, onStart, userId }: SessionStartFormProps) 
               {d}
             </option>
           ))}
-        </select>
+        </motion.select>
       </div>
 
       {/* Difficulty */}
-      <div className="space-y-1.5">
-        <label className="text-xs text-slate-400">Difficulty</label>
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+          <Zap className="h-4 w-4 text-yellow-400" />
+          Difficulty
+        </label>
         <div className="flex gap-2">
           {(["easy", "medium", "hard"] as Difficulty[]).map((d) => (
-            <button
+            <motion.button
               key={d}
               onClick={() => setDifficulty(d)}
-              className={`flex-1 py-2 rounded-xl text-sm font-medium capitalize transition-all ${
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className={`flex-1 py-3 rounded-xl text-sm font-medium capitalize transition-all ${
                 difficulty === d
-                  ? "bg-blue-600 text-white"
-                  : "bg-slate-800 text-slate-400 hover:bg-slate-700"
+                  ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/25"
+                  : "bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 border border-slate-700/50"
               }`}
             >
               {d}
-            </button>
+            </motion.button>
           ))}
         </div>
       </div>
 
       {/* Number of questions */}
-      <div className="space-y-1.5">
-        <div className="flex justify-between">
-          <label className="text-xs text-slate-400">Number of Questions</label>
-          <span className="text-xs font-bold text-blue-400">{numQuestions}</span>
+      <div className="space-y-2">
+        <div className="flex justify-between items-center">
+          <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+            <Clock className="h-4 w-4 text-green-400" />
+            Questions
+          </label>
+          <motion.span 
+            key={numQuestions}
+            animate={{ scale: [1, 1.2, 1] }}
+            className="text-sm font-bold text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full"
+          >
+            {numQuestions}
+          </motion.span>
         </div>
         <input
           type="range"
@@ -143,9 +174,9 @@ function SessionStartForm({ examType, onStart, userId }: SessionStartFormProps) 
           step={5}
           value={numQuestions}
           onChange={(e) => setNumQuestions(Number(e.target.value))}
-          className="w-full accent-blue-500"
+          className="w-full h-2 bg-slate-700/50 rounded-full appearance-none cursor-pointer accent-blue-500"
         />
-        <div className="flex justify-between text-[10px] text-slate-600">
+        <div className="flex justify-between text-[10px] text-slate-500 font-medium">
           {[5, 10, 15, 20, 25, 30].map((n) => (
             <span key={n}>{n}</span>
           ))}
@@ -153,50 +184,69 @@ function SessionStartForm({ examType, onStart, userId }: SessionStartFormProps) 
       </div>
 
       {/* Timed toggle */}
-      <div className="flex items-center justify-between bg-slate-800/60 rounded-xl px-4 py-3">
+      <motion.div
+        className={`flex items-center justify-between rounded-xl px-4 py-3 transition-all ${
+          timed ? "bg-blue-500/10 border border-blue-500/30" : "bg-slate-800/50 border border-slate-700/50"
+        }`}
+        whileHover={{ scale: 1.02 }}
+      >
         <div>
           <p className="text-sm text-white font-medium">Timed Mode</p>
           <p className="text-xs text-slate-500">~90 seconds per question</p>
         </div>
-        <button
+        <motion.button
           onClick={() => setTimed((t) => !t)}
-          className={`relative h-6 w-11 rounded-full transition-all duration-200 ${
+          whileTap={{ scale: 0.9 }}
+          className={`relative h-7 w-13 rounded-full transition-all duration-300 ${
             timed ? "bg-blue-600" : "bg-slate-700"
           }`}
+          style={{ width: "52px" }}
         >
-          <span
-            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all duration-200 ${
-              timed ? "left-5.5 translate-x-0.5" : "left-0.5"
+          <motion.span
+            className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-lg transition-all duration-300 ${
+              timed ? "left-7" : "left-1"
             }`}
           />
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
       {error && (
-        <p className="text-red-400 text-sm">{error}</p>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm"
+        >
+          {error}
+        </motion.div>
       )}
 
-      <button
+      <motion.button
         onClick={handleStart}
         disabled={loading}
-        className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-xl text-sm transition-all flex items-center justify-center gap-2"
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25"
       >
         {loading ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin" /> Starting…
+            <Loader2 className="h-5 w-5 animate-spin" /> Starting Session…
           </>
         ) : (
-          "Start Session"
+          <>
+            <Sparkles className="h-5 w-5" /> Start Session
+          </>
         )}
-      </button>
-    </div>
+      </motion.button>
+    </motion.div>
   );
 }
 
 // ── Main dashboard ─────────────────────────────────────────────────────────────
 
 export default function SatIeltsDashboard({ user }: SatIeltsDashboardProps) {
-  const [examType, setExamType] = useState<ExamType>("SAT");
+  // This dashboard panel is now IELTS-focused — SAT has its own dedicated
+  // platform at /sat, so we no longer expose the SAT/IELTS switcher here.
+  const [examType] = useState<ExamType>("IELTS");
   const [activeTab, setActiveTab] = useState<MainTab>("overview");
   const [dashboard, setDashboard] = useState<DashboardStats | null>(null);
   const [dashLoading, setDashLoading] = useState(true);
@@ -264,39 +314,49 @@ export default function SatIeltsDashboard({ user }: SatIeltsDashboardProps) {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
-      {/* Exam type switcher */}
-      <div className="flex items-center gap-2">
-        {(["SAT", "IELTS"] as ExamType[]).map((et) => (
-          <button
-            key={et}
-            onClick={() => setExamType(et)}
-            className={`px-5 py-2 rounded-xl font-bold text-sm transition-all ${
-              examType === et
-                ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
-                : "bg-slate-800 text-slate-400 hover:bg-slate-700"
-            }`}
-          >
-            {et}
-          </button>
-        ))}
-      </div>
+      {/* IELTS header + pointer to the dedicated SAT platform */}
+      <motion.div
+        className="flex items-center justify-between gap-3 bg-slate-900/50 border border-slate-800 rounded-2xl px-4 py-3"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <div className="flex items-center gap-2">
+          <span className="px-3 py-1.5 rounded-xl font-bold text-sm bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/25">
+            IELTS
+          </span>
+          <span className="text-sm text-slate-400 hidden sm:inline">practice &amp; mock tests</span>
+        </div>
+        <Link
+          href="/sat"
+          className="flex items-center gap-1.5 text-sm font-semibold text-slate-300 hover:text-white transition-colors"
+        >
+          Preparing for SAT? <span className="text-blue-400">Open SAT platform →</span>
+        </Link>
+      </motion.div>
 
       {/* Sub-tabs */}
-      <div className="flex items-center gap-1 bg-slate-900/50 border border-slate-800 rounded-xl p-1">
+      <motion.div 
+        className="flex items-center gap-1 bg-slate-900/50 border border-slate-800 rounded-2xl p-1.5"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
         {tabs.map((tab) => (
-          <button
+          <motion.button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${
               activeTab === tab.id
-                ? "bg-slate-700 text-white"
-                : "text-slate-500 hover:text-slate-300"
+                ? "bg-slate-700 text-white shadow-md"
+                : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/30"
             }`}
           >
             {tab.label}
-          </button>
+          </motion.button>
         ))}
-      </div>
+      </motion.div>
 
       {/* Loading state — only for overview tab */}
       {dashLoading && activeTab === "overview" && (
@@ -432,7 +492,7 @@ export default function SatIeltsDashboard({ user }: SatIeltsDashboardProps) {
 
                   {/* Per-question review */}
                   <div className="space-y-3">
-                    {sessionResult.per_question.map((pq, i) => (
+                    {sessionResult.per_question && sessionResult.per_question.map((pq, i) => (
                       <div
                         key={pq.question_id}
                         className={`rounded-xl border p-4 text-sm space-y-2 ${

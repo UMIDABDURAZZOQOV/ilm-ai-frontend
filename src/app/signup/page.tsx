@@ -5,27 +5,30 @@ export const dynamic = "force-dynamic";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/hooks/useI18n";
 import { apiFetch } from "@/lib/api";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { BookOpen } from "lucide-react";
+import { PasswordInput } from "@/components/PasswordInput";
 
 export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
   const { t } = useI18n();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+    if (password.length < 8) {
+      setError(t("err_password_len"));
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError(t("err_password_match"));
       return;
     }
     setLoading(true);
@@ -35,19 +38,8 @@ export default function SignupPage() {
         method: "POST",
         body: JSON.stringify({ name, email, password }),
       });
-      
-      login({
-        id: data.user_id || data.id,
-        name: data.name,
-        email: data.email,
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
-        profile_picture: data.profile_picture,
-        oauth_provider: data.oauth_provider,
-        oauth_provider_id: data.oauth_provider_id,
-      });
-      
-      router.push("/dashboard");
+
+      router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -55,9 +47,20 @@ export default function SignupPage() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    const redirectUri = `${window.location.origin}/auth/google-callback`;
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/auth/google-login?redirect_uri=${encodeURIComponent(redirectUri)}`;
+  const handleGoogleLogin = async () => {
+    try {
+      const redirectUri = `${window.location.origin}/auth/google-callback`;
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+      const res = await fetch(`${apiUrl}/auth/google-login?redirect_uri=${encodeURIComponent(redirectUri)}`);
+      const data = await res.json();
+      if (data.auth_url) {
+        window.location.href = data.auth_url;
+      } else {
+        setError("Google login manzilini olishda xato.");
+      }
+    } catch (err: any) {
+      setError("Google login ishlamadi: " + err.message);
+    }
   };
 
   return (
@@ -70,7 +73,7 @@ export default function SignupPage() {
         <div style={{ textAlign: "center", marginBottom: 16 }}>
           <span className="logo" style={{ textDecoration: "none", justifyContent: "center" }}>
             <div className="logo-mark">
-              <BookOpen className="h-5 w-5" />
+              <img src="/logo-icon.png" alt="Ilm AI" />
             </div>
             <span>{t("brand")}</span>
           </span>
@@ -80,6 +83,10 @@ export default function SignupPage() {
 
         <form onSubmit={handleSubmit}>
           {error && <div className="alert alert-error">{error}</div>}
+
+          <div className="alert alert-info" style={{ fontSize: "0.8125rem" }}>
+            {t("signup_verify_note")}
+          </div>
 
           <div className="form-group">
             <label>{t("name")}</label>
@@ -91,39 +98,31 @@ export default function SignupPage() {
           </div>
           <div className="form-group">
             <label>{t("password")}</label>
-            <input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
+            <PasswordInput required value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
+            <p className="form-hint">{t("password_hint")}</p>
+          </div>
+          <div className="form-group">
+            <label>{t("confirm_password")}</label>
+            <PasswordInput required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="••••••••" />
+            {confirmPassword.length > 0 && password !== confirmPassword && (
+              <p style={{ fontSize: "0.75rem", color: "#ef4444", marginTop: 6 }}>{t("err_password_match")}</p>
+            )}
+            {confirmPassword.length >= 8 && password === confirmPassword && (
+              <p style={{ fontSize: "0.75rem", color: "#22c55e", marginTop: 6 }}>{t("password_match_ok")}</p>
+            )}
           </div>
 
           <button type="submit" disabled={loading} className="btn btn-primary btn-block">
             {loading ? t("thinking") : t("signup_btn")}
           </button>
 
-          <div style={{ display: "flex", alignItems: "center", margin: "24px 0" }}>
-            <div style={{ flex: 1, height: "1px", backgroundColor: "#374151" }}></div>
-            <span style={{ padding: "0 16px", color: "#9ca3af", fontSize: "0.875rem" }}>or</span>
-            <div style={{ flex: 1, height: "1px", backgroundColor: "#374151" }}></div>
-          </div>
+          <div className="auth-divider"><span>or</span></div>
 
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="btn btn-outline btn-block"
-            style={{ 
-              display: "flex", 
-              alignItems: "center", 
-              justifyContent: "center",
-              gap: "12px",
-              padding: "12px 16px",
-              border: "1px solid #374151",
-              borderRadius: "8px",
-              background: "#1f2937",
-              color: "white",
-              fontSize: "0.875rem",
-              fontWeight: "500",
-              cursor: loading ? "not-allowed" : "pointer",
-              opacity: loading ? 0.6 : 1
-            }}
+            className="btn-google"
           >
             <svg width="20" height="20" viewBox="0 0 24 24">
               <path 
@@ -149,7 +148,7 @@ export default function SignupPage() {
 
         <p className="auth-footer">
           {t("have_account")}{" "}
-          <Link href="/login" style={{ color: "#a5b4fc", fontWeight: 600, textDecoration: "none" }}>{t("login_link")}</Link>
+          <Link href="/login" className="auth-link">{t("login_link")}</Link>
         </p>
       </div>
     </div>

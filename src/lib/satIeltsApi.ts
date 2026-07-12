@@ -5,7 +5,7 @@ import { apiFetch } from "./api";
 export type ExamType = "SAT" | "IELTS";
 export type Difficulty = "easy" | "medium" | "hard";
 export type QuestionType = "mcq" | "short_answer" | "essay";
-export type SessionType = "practice" | "full_test";
+export type SessionType = "practice" | "full_test" | "diagnostic";
 export type AnalysisStatus = "pending" | "complete" | "failed";
 
 // ─── Question interfaces ──────────────────────────────────────────────────────
@@ -14,11 +14,14 @@ export interface Question {
   id: number;
   exam_type: ExamType;
   domain: string;
+  skill?: string | null;
   difficulty: Difficulty;
   question_type: QuestionType;
   question_text: string;
+  passage?: string | null;       // optional reading passage / context
   options: string[] | null;      // exactly 4 for MCQ
   correct_answer: string | null;
+  explanation?: string | null;   // answer explanation, when available
   rubric: string | null;
   source_filename: string | null;
   tags: string[];
@@ -53,10 +56,40 @@ export interface SessionStartParams {
   user_id: number;
   exam_type: ExamType;
   domain?: string | null;
+  section?: string | null;
+  skill?: string | null;
   difficulty?: Difficulty;
   num_questions?: number;
   timed?: boolean;
   duration_seconds?: number | null;
+  session_type?: string | null;
+}
+
+// ─── Skill tree (Question Bank taxonomy + progress) ────────────────────────────
+
+export interface SkillProgress {
+  skill: string;
+  question_count: number;
+  attempted: number;
+  correct: number;
+}
+
+export interface DomainProgress {
+  domain: string;
+  question_count: number;
+  attempted: number;
+  correct: number;
+  skills: SkillProgress[];
+}
+
+export interface SkillTreeSection {
+  section: string;
+  domains: DomainProgress[];
+}
+
+export interface SkillTreeResponse {
+  exam_type: ExamType;
+  sections: SkillTreeSection[];
 }
 
 export interface SessionStartResponse {
@@ -82,11 +115,30 @@ export interface PerQuestionResult {
   question_id: number;
   question_text: string;
   question_type: QuestionType;
+  domain: string | null;
   options: string[] | null;
   user_answer: string | null;
   correct_answer: string | null;
   is_correct: boolean;
   explanation: string | null;
+}
+
+// ─── AI mistake analysis ───────────────────────────────────────────────────────
+
+export interface MistakeAnalysisItem {
+  question: string;
+  your_answer: string;
+  correct_answer: string | null;
+  why_wrong: string;
+}
+
+export interface SessionAnalysisResult {
+  summary: string;
+  weak_areas: string[];
+  mistake_analysis: MistakeAnalysisItem[];
+  recommended_topics: string[];
+  study_tips: string[];
+  domain_feedback: Record<string, string>;
 }
 
 export interface SessionResult {
@@ -97,6 +149,7 @@ export interface SessionResult {
   questions_correct: number;
   questions_total: number;
   per_question: PerQuestionResult[];
+  section_scores?: Record<string, number>;
   analysis_status: AnalysisStatus;
   completed_at: string;
 }
@@ -125,6 +178,7 @@ export interface FullTestStartParams {
 }
 
 export interface FullTestStartResponse {
+  test_type?: "legacy";
   test_id: number;
   exam_type: ExamType;
   sections: string[];
@@ -144,6 +198,57 @@ export interface SectionCompleteResponse {
 export interface FullTestCompleteResponse extends SessionResult {
   section_scores: Record<string, number>;
 }
+
+// ─── SAT Modular Test interfaces ───────────────────────────────────────────────
+
+export interface SATModule {
+  module: 1 | 2;
+  section: "RW" | "Math";
+  session_id: number;
+  duration_seconds: number;
+  question_count: number;
+}
+
+export interface SATFullTestResponse {
+  test_type: "sat_modular";
+  sessions: {
+    module1_rw: number;
+    module1_math: number;
+    module2_rw: number;
+    module2_math: number;
+  };
+  modules: SATModule[];
+  total_questions: number;
+  total_duration_seconds: number;
+  started_at: string;
+}
+
+// ─── IELTS Sectional Test interfaces ───────────────────────────────────────────
+
+export interface IELTSSection {
+  section: "Listening" | "Reading" | "Writing" | "Speaking";
+  session_id: number;
+  duration_seconds: number;
+  question_count: number;
+}
+
+export interface IELTSFullTestResponse {
+  test_type: "ielts_sectional";
+  sessions: {
+    listening: number;
+    reading: number;
+    writing: number;
+    speaking: number;
+  };
+  sections: IELTSSection[];
+  total_questions: number;
+  total_duration_seconds: number;
+  started_at: string;
+}
+
+// ─── Unified Full Test Response ────────────────────────────────────────────────
+
+export type FullTestResponse = SATFullTestResponse | IELTSFullTestResponse | FullTestStartResponse;
 
 // ─── Score prediction interfaces ──────────────────────────────────────────────
 
@@ -183,6 +288,8 @@ export interface DashboardStats {
   target_score: number | null;
   target_gap: number | null;
   sessions_completed: number;
+  questions_attempted?: number;
+  overall_accuracy?: number;
   empty_state: boolean;
   is_premium: boolean;
 }
@@ -254,6 +361,30 @@ export async function completeSession(
 }
 
 /**
+ * On-demand AI analysis of a completed session — explains the student's
+ * actual mistakes and gives concrete strategy tips.
+ * POST /sat-ielts/sessions/{sessionId}/analyze
+ */
+export async function analyzeSession(
+  sessionId: number
+): Promise<SessionAnalysisResult> {
+  return apiFetch(`/sat-ielts/sessions/${sessionId}/analyze`, {
+    method: "POST",
+  });
+}
+
+/**
+ * Domain/skill taxonomy with question counts and the user's progress.
+ * GET /sat-ielts/skills/{userId}?exam_type=SAT
+ */
+export async function getSkillTree(
+  userId: number,
+  examType: ExamType = "SAT"
+): Promise<SkillTreeResponse> {
+  return apiFetch(`/sat-ielts/skills/${userId}?exam_type=${examType}`);
+}
+
+/**
  * List all sessions for a user, optionally filtered by exam type.
  * GET /sat-ielts/sessions/{userId}?exam_type=SAT
  */
@@ -271,7 +402,7 @@ export async function getUserSessions(
  */
 export async function startFullTest(
   params: FullTestStartParams
-): Promise<FullTestStartResponse> {
+): Promise<FullTestResponse> {
   return apiFetch("/sat-ielts/full-tests/start", {
     method: "POST",
     body: JSON.stringify(params),

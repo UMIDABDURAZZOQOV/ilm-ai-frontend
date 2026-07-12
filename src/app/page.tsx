@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useI18n } from "@/hooks/useI18n";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
-import { BookOpen, Brain, MessageSquare, GraduationCap, Calendar, Zap, Shield, Globe, Users, Menu, X } from "lucide-react";
+import { Brain, MessageSquare, GraduationCap, Calendar, Zap, Globe, Building2, Menu, X } from "lucide-react";
 
 export default function LandingPage() {
   const { t } = useI18n();
@@ -17,12 +17,12 @@ export default function LandingPage() {
         <nav className="nav">
           <Link href="/" className="logo">
             <div className="logo-mark">
-              <BookOpen className="h-5 w-5" />
+              <img src="/logo-icon.png" alt="Ilm AI" />
             </div>
             <span>{t("brand")}</span>
           </Link>
           <div className={`nav-links ${mobileMenuOpen ? "mobile-open" : ""}`}>
-            <a href="#about" onClick={() => setMobileMenuOpen(false)}>About</a>
+            <a href="#about" onClick={() => setMobileMenuOpen(false)}>{t("nav_about")}</a>
             <a href="#features" onClick={() => setMobileMenuOpen(false)}>{t("nav_features")}</a>
             <a href="#how" onClick={() => setMobileMenuOpen(false)}>{t("nav_how")}</a>
             <LanguageSwitcher />
@@ -51,20 +51,11 @@ export default function LandingPage() {
         <section className="section" id="about">
           <div className="grid sm:grid-cols-2 gap-12 items-center">
             <div className="text-left">
-              <h2 className="text-3xl font-black mb-6 tracking-tight">What is Ilm AI?</h2>
+              <h2 className="text-3xl font-black mb-6 tracking-tight">{t("about_title")}</h2>
               <div className="space-y-4 text-slate-400 leading-relaxed">
-                <p>
-                  Learning never stops. Whether you are a 16-year-old preparing for university entrance exams, 
-                  a 30-year-old engineer switching careers, or a doctor reading new research, Ilm AI is built for you.
-                </p>
-                <p>
-                  Most learning tools are built around content — they give you videos and articles. 
-                  Ilm AI is built around <strong>you</strong> — your materials, your pace, and your knowledge gaps.
-                </p>
-                <p>
-                  Simply upload your textbooks, notes, or research papers, and Ilm AI becomes your personal tutor: 
-                  quizzing you, explaining mistakes, and generating a personalized learning plan that fits your life.
-                </p>
+                <p>{t("about_p1")}</p>
+                <p>{t("about_p2")}</p>
+                <p>{t("about_p3")}</p>
               </div>
             </div>
             <div className="relative">
@@ -77,8 +68,8 @@ export default function LandingPage() {
                     <Zap className="h-5 w-5" />
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-bold">Personalized</p>
-                    <p className="text-xs text-slate-500">Tailored to your pace</p>
+                    <p className="text-sm font-bold">{t("about_badge_title")}</p>
+                    <p className="text-xs text-slate-500">{t("about_badge_sub")}</p>
                   </div>
                 </div>
               </div>
@@ -87,51 +78,58 @@ export default function LandingPage() {
         </section>
 
         <section className="section" id="features">
-          <h2 className="section-title">Our Services</h2>
-          <p className="section-sub">Comprehensive tools designed to accelerate your learning journey</p>
+          <h2 className="section-title">{t("services_title")}</h2>
+          <p className="section-sub">{t("services_sub")}</p>
           <div className="grid-3">
             <article className="card">
               <div className="h-12 w-12 bg-blue-500/10 rounded-xl flex items-center justify-center mb-6">
                 <MessageSquare className="h-6 w-6 text-blue-500" />
               </div>
-              <h3>AI Learning Companion</h3>
-              <p>Chat with your materials. Get instant answers grounded strictly in your uploaded content with citations.</p>
+              <h3>{t("svc_chat_title")}</h3>
+              <p>{t("svc_chat_desc")}</p>
             </article>
             <article className="card">
               <div className="h-12 w-12 bg-green-500/10 rounded-xl flex items-center justify-center mb-6">
                 <GraduationCap className="h-6 w-6 text-green-500" />
               </div>
-              <h3>Smart Quiz Mode</h3>
-              <p>Test your knowledge with AI-generated questions at multiple difficulty levels. Get detailed explanations for every answer.</p>
+              <h3>{t("svc_quiz_title")}</h3>
+              <p>{t("svc_quiz_desc")}</p>
             </article>
             <article className="card">
               <div className="h-12 w-12 bg-purple-500/10 rounded-xl flex items-center justify-center mb-6">
                 <Calendar className="h-6 w-6 text-purple-500" />
               </div>
-              <h3>Study Plan Generator</h3>
-              <p>Input your goal and target date. Our AI agent creates a realistic day-by-day plan based on your materials and gaps.</p>
+              <h3>{t("svc_plan_title")}</h3>
+              <p>{t("svc_plan_desc")}</p>
             </article>
             <article className="card">
               <div className="h-12 w-12 bg-pink-500/10 rounded-xl flex items-center justify-center mb-6">
                 <Brain className="h-6 w-6 text-pink-500" />
               </div>
-              <h3>Knowledge Gap Detection</h3>
-              <p>The system identifies concepts you struggle with across sessions and generates a report of what to revisit.</p>
+              <h3>{t("svc_gaps_title")}</h3>
+              <p>{t("svc_gaps_desc")}</p>
             </article>
             <article className="card">
               <div className="h-12 w-12 bg-yellow-500/10 rounded-xl flex items-center justify-center mb-6">
                 <Globe className="h-6 w-6 text-yellow-500" />
               </div>
-              <h3>Multilingual Support</h3>
-              <p>Full support for Uzbek, Russian, and English. Learn in the language you are most comfortable with.</p>
+              <h3>{t("svc_lang_title")}</h3>
+              <p>{t("svc_lang_desc")}</p>
             </article>
-            <article className="card">
-              <div className="h-12 w-12 bg-cyan-500/10 rounded-xl flex items-center justify-center mb-6">
-                <Users className="h-6 w-6 text-cyan-500" />
+            <Link href="/sat" className="card" style={{ textDecoration: "none" }}>
+              <div className="h-12 w-12 bg-indigo-500/10 rounded-xl flex items-center justify-center mb-6">
+                <GraduationCap className="h-6 w-6 text-indigo-500" />
               </div>
-              <h3>Global Accessibility</h3>
-              <p>Built for learners worldwide, optimized for Uzbekistan and Central Asia. Accessible on any device, anywhere.</p>
-            </article>
+              <h3>{t("svc_sat_title")}</h3>
+              <p>{t("svc_sat_desc")}</p>
+            </Link>
+            <Link href="/sat/college" className="card" style={{ textDecoration: "none" }}>
+              <div className="h-12 w-12 bg-teal-500/10 rounded-xl flex items-center justify-center mb-6">
+                <Building2 className="h-6 w-6 text-teal-500" />
+              </div>
+              <h3>{t("svc_college_title")}</h3>
+              <p>{t("svc_college_desc")}</p>
+            </Link>
           </div>
         </section>
 
@@ -154,13 +152,13 @@ export default function LandingPage() {
         </section>
 
         <footer className="footer">
-          <div className="mb-6 flex justify-center gap-8">
-            <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-white transition-colors">Contact Us</a>
+          <div className="mb-6 flex justify-center gap-8 flex-wrap">
+            <a href="#about" className="transition-colors">{t("nav_about")}</a>
+            <a href="#features" className="transition-colors">{t("nav_features")}</a>
+            <a href="mailto:yaktusecho9@gmail.com" className="transition-colors">{t("footer_contact")}</a>
           </div>
-          <p className="mb-2">© 2026 Ilm AI. All Rights Reserved.</p>
-          <p className="text-slate-500 text-xs">Supported and accessible globally. Empowering learners everywhere.</p>
+          <p className="mb-2">{t("footer_copyright")}</p>
+          <p className="text-slate-500 text-xs">{t("footer_note")}</p>
         </footer>
       </div>
     </div>

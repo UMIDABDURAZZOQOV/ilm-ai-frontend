@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/hooks/useI18n";
 import {
@@ -25,12 +26,14 @@ import {
   MessageCircle,
   CreditCard,
   ChevronRight,
+  ChevronDown,
+  BookText,
+  Building2,
   Star,
   Copy,
   Volume2,
   Mic,
   Camera,
-  BookOpen,
   Zap,
   Shield,
   RotateCcw,
@@ -38,18 +41,68 @@ import {
   Target,
   TrendingUp,
   Award,
+  Sparkles,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
+import { useTheme, type ThemeMode } from "@/hooks/useTheme";
 import { apiFetch } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import SatIeltsDashboard from "./sat-ielts/SatIeltsDashboard";
+import AssistantDashboard from "./assistant/AssistantDashboard";
+import ReviewDashboard from "./review/ReviewDashboard";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
+const PRESET_AVATARS = [
+  "/avatars/avatar-1.svg",
+  "/avatars/avatar-2.svg",
+  "/avatars/avatar-3.svg",
+  "/avatars/avatar-4.svg",
+  "/avatars/avatar-5.svg",
+  "/avatars/avatar-6.svg",
+  "/avatars/avatar-7.svg",
+  "/avatars/avatar-8.svg",
+];
+
+// Downscale any picked image to a small square JPEG data URI so it fits in the
+// user's profile record and stays light to ship on every auth response.
+function fileToAvatarDataUri(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("read failed"));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("decode failed"));
+      img.onload = () => {
+        const size = 128;
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject(new Error("no canvas"));
+        // Cover-crop to a centered square.
+        const min = Math.min(img.width, img.height);
+        const sx = (img.width - min) / 2;
+        const sy = (img.height - min) / 2;
+        ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+        resolve(canvas.toDataURL("image/jpeg", 0.8));
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 function DashboardContent() {
-  const { user, logout, isLoading: authLoading } = useAuth();
+  const { user, login, logout, isLoading: authLoading } = useAuth();
   const { t, lang } = useI18n();
+  const { themeMode, setThemeMode } = useTheme();
   const router = useRouter();
   const [activePanel, setActivePanel] = useState("overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [platformMenuOpen, setPlatformMenuOpen] = useState(false);
 
   // Stats & Data
   const [files, setFiles] = useState<any[]>([]);
@@ -63,7 +116,7 @@ function DashboardContent() {
 
   const startListening = () => {
     if (!("webkitSpeechRecognition" in window) && !("speechRecognition" in window)) {
-      alert("Speech recognition not supported in this browser.");
+      alert(t("assistant_speech_unsupported"));
       return;
     }
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).speechRecognition;
@@ -123,7 +176,7 @@ function DashboardContent() {
   // Subscription State
   const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"payme" | "click" | "stripe" | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"payme" | "click" | null>(null);
   const [showPaymentSelection, setShowPaymentSelection] = useState(false);
 
   // Flashcards State
@@ -134,10 +187,20 @@ function DashboardContent() {
   // Quiz Stats State
   const [quizStats, setQuizStats] = useState<any>(null);
 
+  // Today's Plan State
+  const [todayPlan, setTodayPlan] = useState<any>(null);
+
   // Settings State
   const [settingsGoal, setSettingsGoal] = useState("");
   const [settingsTargetDate, setSettingsTargetDate] = useState("");
   const [settingsStatus, setSettingsStatus] = useState<{ msg: string; type: "success" | "error" | null }>({ msg: "", type: null });
+
+  // Profile (name + avatar) editing
+  const [settingsFirstName, setSettingsFirstName] = useState("");
+  const [settingsLastName, setSettingsLastName] = useState("");
+  const [avatar, setAvatar] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileStatus, setProfileStatus] = useState<{ msg: string; type: "success" | "error" | null }>({ msg: "", type: null });
 
   // Telegram reminder
   const [reminderTime, setReminderTime] = useState("09:00");
@@ -186,9 +249,23 @@ function DashboardContent() {
       }
 
       try {
+        const planData = await apiFetch(`/plan/${user?.id}/today`);
+        setTodayPlan(planData);
+      } catch {
+        setTodayPlan(null);
+      }
+
+      try {
         const profile = await apiFetch(`/auth/profile/${user?.id}`);
         setSettingsGoal(profile.learning_goal || "");
         setSettingsTargetDate(profile.target_date || "");
+        {
+          const full = (profile.name || user?.name || "").trim();
+          const parts = full.split(/\s+/);
+          setSettingsFirstName(parts[0] || "");
+          setSettingsLastName(parts.slice(1).join(" "));
+        }
+        setAvatar(profile.profile_picture || "");
       } catch {
         // Profile fields remain empty until saved
       }
@@ -215,7 +292,7 @@ function DashboardContent() {
     
     // Check free tier limits
     if (!subscriptionStatus?.is_premium && files.length >= 5) {
-      alert("Free tier is limited to 5 files. Please upgrade for unlimited uploads.");
+      alert(t("free_tier_file_limit"));
       setActivePanel("subscription");
       return;
     }
@@ -251,7 +328,7 @@ function DashboardContent() {
     if (!user || !pasteContent.trim()) return;
 
     if (!subscriptionStatus?.is_premium && files.length >= 5) {
-      alert("Free tier is limited to 5 files. Please upgrade for unlimited uploads.");
+      alert(t("free_tier_file_limit"));
       setActivePanel("subscription");
       return;
     }
@@ -293,9 +370,9 @@ function DashboardContent() {
         method: "POST",
         body: JSON.stringify({ user_id: user.id, reminder_time: reminderTime }),
       });
-      setReminderStatus({ msg: "Reminder time saved!", type: "success" });
+      setReminderStatus({ msg: t("reminder_save_success"), type: "success" });
     } catch {
-      setReminderStatus({ msg: "Failed to save reminder time", type: "error" });
+      setReminderStatus({ msg: t("reminder_save_error"), type: "error" });
     } finally {
       setLoading(false);
     }
@@ -313,7 +390,7 @@ function DashboardContent() {
       await apiFetch(`/files/delete?user_id=${user.id}&filename=${encodeURIComponent(filename)}`, { method: "DELETE" });
       fetchInitialData();
     } catch (err: any) {
-      alert("Failed to delete file: " + err.message);
+      alert(t("file_delete_error_prefix") + " " + err.message);
     }
   };
 
@@ -329,11 +406,52 @@ function DashboardContent() {
           target_date: settingsTargetDate,
         }),
       });
-      setSettingsStatus({ msg: "Settings saved!", type: "success" });
+      setSettingsStatus({ msg: t("settings_save_success"), type: "success" });
     } catch (err: any) {
-      setSettingsStatus({ msg: "Failed to save settings", type: "error" });
+      setSettingsStatus({ msg: t("settings_save_error"), type: "error" });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setProfileStatus({ msg: t("avatar_invalid"), type: "error" });
+      return;
+    }
+    try {
+      const dataUri = await fileToAvatarDataUri(file);
+      setAvatar(dataUri);
+      setProfileStatus({ msg: "", type: null });
+    } catch {
+      setProfileStatus({ msg: t("avatar_invalid"), type: "error" });
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    const name = `${settingsFirstName.trim()} ${settingsLastName.trim()}`.trim();
+    if (!name) {
+      setProfileStatus({ msg: t("profile_name_required"), type: "error" });
+      return;
+    }
+    setSavingProfile(true);
+    setProfileStatus({ msg: "", type: null });
+    try {
+      await apiFetch("/auth/update-profile", {
+        method: "POST",
+        body: JSON.stringify({ user_id: user.id, name, avatar }),
+      });
+      // Refresh the local session so the sidebar/header update immediately.
+      login({ ...user, name, profile_picture: avatar || undefined });
+      setProfileStatus({ msg: t("settings_save_success"), type: "success" });
+    } catch {
+      setProfileStatus({ msg: t("settings_save_error"), type: "error" });
+    } finally {
+      setSavingProfile(false);
     }
   };
 
@@ -375,7 +493,7 @@ function DashboardContent() {
       !subscriptionStatus?.is_premium &&
       subscriptionStatus?.quiz_today >= subscriptionStatus?.quiz_limit
     ) {
-      alert(`Daily quiz limit reached (${subscriptionStatus?.quiz_limit}). Upgrade to Premium for unlimited quizzes.`);
+      alert(t("quiz_limit_reached").replace("{limit}", String(subscriptionStatus?.quiz_limit)));
       setActivePanel("subscription");
       return;
     }
@@ -397,11 +515,11 @@ function DashboardContent() {
         }),
       });
       if (!data.questions || data.questions.length === 0) {
-        alert("No questions were generated. Make sure you have uploaded materials first.");
+        alert(t("quiz_no_questions"));
       }
       setQuizResult(data.questions || []);
     } catch (err: any) {
-      alert(`Quiz error: ${err.message}`);
+      alert(`${t("quiz_error_prefix")} ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -419,7 +537,7 @@ function DashboardContent() {
       setCurrentCardIndex(0);
       setIsCardFlipped(false);
     } catch (err: any) {
-      alert("Failed to generate flashcards.");
+      alert(t("flashcards_gen_error"));
     } finally {
       setLoading(false);
     }
@@ -488,7 +606,7 @@ function DashboardContent() {
       });
       setPlanResult(data);
     } catch (err: any) {
-      alert(`Plan error: ${err.message}`);
+      alert(`${t("plan_error_prefix")} ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -530,7 +648,7 @@ function DashboardContent() {
     }
   };
 
-  const handleUpgradeSubscription = async (method: "payme" | "click" | "stripe") => {
+  const handleUpgradeSubscription = async (method: "payme" | "click") => {
     if (!user) return;
     setPaymentMethod(method);
     setShowPaymentSelection(false);
@@ -571,7 +689,7 @@ function DashboardContent() {
       setShowPaymentModal(false);
       fetchInitialData();
     } catch {
-      alert("Payment confirmation failed. Please try again.");
+      alert(t("payment_confirm_error"));
     } finally {
       setLoading(false);
     }
@@ -604,12 +722,14 @@ function DashboardContent() {
     { id: "overview", label: t("overview"), icon: LayoutDashboard },
     { id: "files", label: t("dash_files"), icon: FileText },
     { id: "chat", label: t("dash_chat"), icon: MessageSquare },
+    { id: "assistant", label: t("dash_assistant") || "AI Yordamchi", icon: Sparkles },
     { id: "quiz", label: t("dash_quiz"), icon: GraduationCap },
-    { id: "sat-ielts", label: "SAT / IELTS", icon: GraduationCap },
+    { id: "sat-ielts", label: "IELTS", icon: GraduationCap },
     { id: "plans", label: t("dash_plan"), icon: Calendar },
     { id: "flashcards", label: t("dash_flashcards"), icon: Zap },
     { id: "gaps", label: t("dash_gaps"), icon: Brain },
-    { id: "subscription", label: t("dash_subscription"), icon: CreditCard },
+    { id: "review", label: t("dash_review") || "Takrorlash", icon: RotateCcw },
+    // Subscription hidden during beta — everything is free for now.
     { id: "feedback", label: t("dash_feedback"), icon: MessageCircle },
     { id: "telegram", label: t("dash_telegram"), icon: Send },
     { id: "settings", label: t("settings") || "Settings", icon: Settings },
@@ -617,15 +737,23 @@ function DashboardContent() {
 
   return (
     <div className="flex h-screen bg-transparent overflow-hidden text-slate-900 dark:text-slate-100 relative z-10">
-      {/* Sidebar */}
-      <motion.aside
-        initial={false}
-        animate={{ width: isSidebarOpen ? 280 : 80 }}
-        className="relative bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-800/50 flex flex-col transition-all duration-300 z-30"
+      {/* Mobile backdrop — tap to close the drawer */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar — off-canvas drawer on mobile, in-flow collapsible rail on desktop */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-[280px] transform transition-transform duration-300 md:relative md:translate-x-0 md:transition-[width] ${
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        } ${isSidebarOpen ? "md:w-[280px]" : "md:w-20"} bg-white/95 md:bg-white/70 dark:bg-slate-900/95 md:dark:bg-slate-900/70 backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-800/50 flex flex-col`}
       >
         <div className="p-6 flex items-center gap-3 overflow-hidden">
-          <div className="h-10 w-10 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
-            <BookOpen className="text-white h-5 w-5" />
+          <div className="h-10 w-10 rounded-xl overflow-hidden flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
+            <img src="/logo-icon.png" alt="Ilm AI" className="h-full w-full object-cover" />
           </div>
           {isSidebarOpen && (
             <span className="font-bold text-xl whitespace-nowrap bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{t("brand")}</span>
@@ -636,7 +764,7 @@ function DashboardContent() {
           {menuItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActivePanel(item.id)}
+              onClick={() => { setActivePanel(item.id); setIsMobileMenuOpen(false); }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all group ${
                 activePanel === item.id
                   ? "bg-blue-50 dark:bg-blue-900/30 text-primary"
@@ -675,25 +803,79 @@ function DashboardContent() {
 
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="absolute -right-3 top-20 h-6 w-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full flex items-center justify-center shadow-sm z-50 hover:bg-slate-50"
+          className="absolute -right-3 top-20 h-6 w-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full items-center justify-center shadow-sm z-50 hover:bg-slate-50 hidden md:flex"
         >
           {isSidebarOpen ? <X className="h-3 w-3" /> : <Menu className="h-3 w-3" />}
         </button>
-      </motion.aside>
+      </aside>
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto relative">
-        <header className="sticky top-0 z-20 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 p-6 flex justify-between items-center">
-          <h2 className="text-xl font-bold capitalize tracking-tight">
-            {menuItems.find((i) => i.id === activePanel)?.label}
-          </h2>
-          <div className="flex items-center gap-4">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-semibold">{user?.name || "User"}</p>
-              <p className="text-xs text-slate-500">{user?.email}</p>
+        <header className="bg-gradient-to-r from-blue-600 to-primary dark:from-blue-900 dark:to-blue-800 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 pt-8 pb-6 px-6 flex justify-between items-center shadow-lg">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              onClick={() => { setIsMobileMenuOpen(true); setIsSidebarOpen(true); }}
+              className="md:hidden shrink-0 h-10 w-10 flex items-center justify-center rounded-xl bg-white/15 text-white hover:bg-white/25 transition-colors"
+              aria-label="Menu"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <div className="min-w-0">
+              <p className="text-sm text-blue-100 font-medium">{lang === "uz" ? "Xush kelibsiz" : lang === "ru" ? "Добро пожаловать" : "Welcome back"}</p>
+              <h2 className="text-2xl font-bold text-white capitalize tracking-tight truncate">
+                {menuItems.find((i) => i.id === activePanel)?.label}
+              </h2>
             </div>
-            <div className="h-10 w-10 bg-gradient-to-br from-primary/20 to-secondary/20 border border-primary/20 rounded-full flex items-center justify-center font-bold text-primary">
-              {user?.name?.charAt(0) || "U"}
+          </div>
+          <div className="flex items-center gap-4">
+            {/* Platform switcher — pick SAT / IELTS / College App directly */}
+            <div className="relative">
+              <button
+                onClick={() => setPlatformMenuOpen((o) => !o)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white text-blue-700 rounded-xl text-sm font-black shadow-lg hover:scale-105 transition-transform"
+              >
+                <GraduationCap className="h-4 w-4" />
+                <span className="hidden xs:inline">Platforms</span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${platformMenuOpen ? "rotate-180" : ""}`} />
+              </button>
+              {platformMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setPlatformMenuOpen(false)} />
+                  <div className="absolute right-0 mt-2 w-56 z-50 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
+                    {[
+                      { href: "/sat", label: "SAT", sub: "Digital SAT prep", icon: GraduationCap, color: "text-blue-600" },
+                      { href: "/sat/ielts", label: "IELTS", sub: "All four skills", icon: BookText, color: "text-violet-600" },
+                      { href: "/sat/college", label: "College App", sub: "6,000+ universities", icon: Building2, color: "text-teal-600" },
+                    ].map((p) => (
+                      <Link
+                        key={p.href}
+                        href={p.href}
+                        onClick={() => setPlatformMenuOpen(false)}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        <p.icon className={`h-5 w-5 shrink-0 ${p.color}`} />
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-slate-900 dark:text-white leading-tight">{p.label}</p>
+                          <p className="text-xs text-slate-400">{p.sub}</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 ml-auto text-slate-300" />
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="text-right hidden sm:block">
+              <p className="text-sm font-semibold text-white">{user?.name || "User"}</p>
+              <p className="text-xs text-blue-200">{user?.email}</p>
+            </div>
+            <div className="h-12 w-12 bg-white/20 backdrop-blur-sm border-2 border-white/30 rounded-full flex items-center justify-center font-bold text-white text-lg shadow-lg overflow-hidden">
+              {user?.profile_picture ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={user.profile_picture} alt="avatar" className="h-full w-full object-cover" />
+              ) : (
+                user?.name?.charAt(0) || "U"
+              )}
             </div>
           </div>
         </header>
@@ -706,16 +888,16 @@ function DashboardContent() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="space-y-6"
+                className="space-y-6 mt-4"
               >
                 {/* Top Stats Grid */}
                 <div className="grid sm:grid-cols-3 lg:grid-cols-6 gap-4">
                   {[
                     { label: t("dash_files"), value: stats.files, icon: FileText, color: "bg-blue-500/10 text-blue-500" },
-                    { label: t("streak_label"), value: `${stats.streak} Days`, icon: CheckCircle2, color: "bg-green-500/10 text-green-500" },
-                    { label: "Sessions", value: quizStats?.sessions_completed || 0, icon: GraduationCap, color: "bg-orange-500/10 text-orange-500" },
-                    { label: "Avg Score", value: `${quizStats?.average_score || 0}%`, icon: TrendingUp, color: "bg-emerald-500/10 text-emerald-500" },
-                    { label: "Questions", value: quizStats?.total_questions || 0, icon: Award, color: "bg-pink-500/10 text-pink-500" },
+                    { label: t("streak_label"), value: `${stats.streak} ${t("days_suffix")}`, icon: CheckCircle2, color: "bg-green-500/10 text-green-500" },
+                    { label: t("stat_sessions"), value: quizStats?.sessions_completed || 0, icon: GraduationCap, color: "bg-orange-500/10 text-orange-500" },
+                    { label: t("stat_avg_score"), value: `${quizStats?.average_score || 0}%`, icon: TrendingUp, color: "bg-emerald-500/10 text-emerald-500" },
+                    { label: t("stat_questions"), value: quizStats?.total_questions || 0, icon: Award, color: "bg-pink-500/10 text-pink-500" },
                     { label: t("dash_telegram"), value: stats.tgLinked ? t("tg_linked") : t("tg_not_linked"), icon: Send, color: "bg-purple-500/10 text-purple-500" },
                   ].map((stat, i) => (
                     <div
@@ -731,10 +913,50 @@ function DashboardContent() {
                   ))}
                 </div>
 
+                {/* Today's Plan */}
+                {todayPlan && todayPlan.status === "today" && todayPlan.day && (
+                  <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-6 rounded-2xl border-2 border-primary/20 dark:border-primary/30">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-bold text-sm text-primary">{t("plan_today_title")}</h3>
+                      <span className="text-[11px] font-bold text-primary bg-primary/10 rounded-full px-2.5 py-0.5">
+                        {t("day_label")} {todayPlan.days_elapsed + 1}
+                      </span>
+                    </div>
+                    <p className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2">{todayPlan.day.topic}</p>
+                    {Array.isArray(todayPlan.day.tasks) &&
+                      todayPlan.day.tasks.slice(0, 3).map((task: string, i: number) => (
+                        <p key={i} className="text-sm text-slate-500 mb-1">
+                          • {task}
+                        </p>
+                      ))}
+                    <p className="text-xs text-slate-400 mt-3 font-semibold">
+                      ⏱ {todayPlan.day.duration_minutes} {t("plan_today_minutes")}
+                    </p>
+                  </div>
+                )}
+                {todayPlan && todayPlan.status === "no_plan" && (
+                  <button
+                    onClick={() => setActivePanel("plans")}
+                    className="w-full text-left bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-6 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-primary transition-all"
+                  >
+                    <p className="font-bold text-sm text-slate-700 dark:text-slate-200">
+                      {t("plan_no_plan_title")}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">{t("plan_no_plan_cta")}</p>
+                  </button>
+                )}
+                {todayPlan && todayPlan.status === "finished" && (
+                  <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-6 rounded-2xl border border-green-500/30 text-center">
+                    <p className="font-bold text-sm text-green-600 dark:text-green-400">
+                      {t("plan_finished")}
+                    </p>
+                  </div>
+                )}
+
                 {/* Score Trend Chart */}
-                {quizStats?.score_trend?.length > 0 && (
-                  <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-6 rounded-2xl border border-slate-200/50 dark:border-slate-800/50">
-                    <h3 className="font-bold text-sm mb-4">Knowledge Score Trend</h3>
+                <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-6 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 min-h-[200px]">
+                  <h3 className="font-bold text-sm mb-4">{t("chart_title")}</h3>
+                  {quizStats?.score_trend && quizStats.score_trend.length > 0 ? (
                     <div className="flex items-end gap-2 h-32">
                       {quizStats.score_trend.map((s: any, i: number) => (
                         <div key={i} className="flex-1 flex flex-col items-center gap-1">
@@ -746,13 +968,17 @@ function DashboardContent() {
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div className="flex items-center justify-center h-32 text-slate-500 text-sm border-2 border-dashed border-slate-300 rounded-lg">
+                      {t("chart_empty")}
+                    </div>
+                  )}
+                </div>
 
                 {/* Topics Covered */}
-                {quizStats?.topics_covered?.length > 0 && (
-                  <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-6 rounded-2xl border border-slate-200/50 dark:border-slate-800/50">
-                    <h3 className="font-bold text-sm mb-3">Topics Covered</h3>
+                <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-6 rounded-2xl border border-slate-200/50 dark:border-slate-800/50">
+                  <h3 className="font-bold text-sm mb-3">{t("topics_covered_title")}</h3>
+                  {quizStats?.topics_covered && quizStats.topics_covered.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {quizStats.topics_covered.map((topic: string, i: number) => (
                         <span key={i} className="px-3 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full capitalize">
@@ -760,8 +986,12 @@ function DashboardContent() {
                         </span>
                       ))}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div className="text-slate-500 text-sm">
+                      {t("topics_covered_empty")}
+                    </div>
+                  )}
+                </div>
               </motion.div>
             )}
 
@@ -770,7 +1000,7 @@ function DashboardContent() {
                 key="files"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="space-y-6"
+                className="space-y-6 mt-4"
               >
                 <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 text-center">
                   <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
@@ -799,7 +1029,7 @@ function DashboardContent() {
                       htmlFor="file-upload"
                       className="cursor-pointer px-6 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-semibold hover:bg-slate-200 transition-all inline-block"
                     >
-                      {selectedFile ? selectedFile.name : "Select File"}
+                      {selectedFile ? selectedFile.name : t("select_file")}
                     </label>
 
                     <input
@@ -815,7 +1045,7 @@ function DashboardContent() {
                       className="cursor-pointer px-6 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-semibold hover:bg-slate-200 transition-all inline-block flex items-center gap-2"
                     >
                       <Camera className="h-4 w-4" />
-                      Take Photo
+                      {t("take_photo")}
                     </label>
                   </div>
 
@@ -851,21 +1081,21 @@ function DashboardContent() {
                 </div>
 
                 <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800">
-                  <h3 className="text-lg font-bold mb-2">Paste Content</h3>
-                  <p className="text-slate-500 mb-4 text-sm">Add notes or text directly without uploading a file.</p>
+                  <h3 className="text-lg font-bold mb-2">{t("paste_content_title")}</h3>
+                  <p className="text-slate-500 mb-4 text-sm">{t("paste_content_desc")}</p>
                   <div className="space-y-4 max-w-2xl">
                     <input
                       type="text"
                       value={pasteTitle}
                       onChange={(e) => setPasteTitle(e.target.value)}
-                      placeholder="Title (e.g. Chapter 3 Notes)"
+                      placeholder={t("paste_title_placeholder")}
                       className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-primary"
                     />
                     <textarea
                       value={pasteContent}
                       onChange={(e) => setPasteContent(e.target.value)}
                       rows={6}
-                      placeholder="Paste your study material here..."
+                      placeholder={t("paste_content_placeholder")}
                       className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-primary resize-none"
                     />
                     <button
@@ -873,7 +1103,7 @@ function DashboardContent() {
                       disabled={loading || !pasteContent.trim()}
                       className="px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-blue-600 disabled:opacity-50 transition-all"
                     >
-                      {loading ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : "Save Pasted Content"}
+                      {loading ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : t("save_pasted_content")}
                     </button>
                   </div>
                 </div>
@@ -882,11 +1112,11 @@ function DashboardContent() {
                   <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
                     <h3 className="font-bold">{t("dash_files")}</h3>
                     <span className="text-sm text-slate-500">
-                      {files.length} {t("dash_files")}
+                      {files.length} {t("files_count_label")}
                     </span>
                   </div>
                   <div className="divide-y divide-slate-200 dark:divide-slate-800">
-                    {files.length > 0 ? (
+                    {files && files.length > 0 ? (
                       files.map((file, i) => (
                         <div
                           key={i}
@@ -904,13 +1134,13 @@ function DashboardContent() {
                           <div className="flex items-center gap-2">
                             {file.chunks && (
                               <span className="text-[10px] font-medium bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md text-slate-500">
-                                {file.chunks} chunks
+                                {file.chunks} {t("chunks_label")}
                               </span>
                             )}
                             <button
                               onClick={() => handleDeleteFile(typeof file === 'string' ? file : file.filename)}
                               className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
-                              title="Delete file"
+                              title={t("delete_file_title")}
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -932,7 +1162,7 @@ function DashboardContent() {
                 key="chat"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="h-[calc(100vh-200px)] flex flex-col bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-200/50 dark:border-slate-800/50 overflow-hidden"
+                className="mt-4 h-[calc(100vh-200px)] flex flex-col bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-200/50 dark:border-slate-800/50 overflow-hidden"
               >
                 <div className="flex-1 overflow-y-auto p-6 space-y-4">
                   {messages.length === 0 && (
@@ -941,7 +1171,7 @@ function DashboardContent() {
                         <MessageSquare className="h-10 w-10 text-primary" />
                       </div>
                       <p className="font-medium text-lg">{t("ask_placeholder")}</p>
-                      <p className="text-sm text-slate-500 max-w-xs mt-2">Chat with your materials using our advanced AI companion.</p>
+                      <p className="text-sm text-slate-500 max-w-xs mt-2">{t("chat_empty_desc")}</p>
                     </div>
                   )}
                   {messages.map((msg, i) => (
@@ -976,10 +1206,10 @@ function DashboardContent() {
                             <button
                               onClick={() => {
                                 navigator.clipboard.writeText(msg.content);
-                                alert("Copied!");
+                                alert(t("copied_msg"));
                               }}
                               className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                              title="Copy to clipboard"
+                              title={t("copy_clipboard_title")}
                             >
                               <Copy className="h-4 w-4" />
                             </button>
@@ -1002,7 +1232,7 @@ function DashboardContent() {
                                 window.speechSynthesis.speak(utterance);
                               }}
                               className="p-2 text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
-                              title="Listen"
+                              title={t("listen_title")}
                             >
                               <Volume2 className="h-4 w-4" />
                             </button>
@@ -1037,7 +1267,7 @@ function DashboardContent() {
                             ? "bg-red-500 text-white animate-pulse"
                             : "bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200"
                         }`}
-                        title="Voice Input"
+                        title={t("voice_input_title")}
                       >
                         <Mic className="h-5 w-5" />
                       </button>
@@ -1058,66 +1288,63 @@ function DashboardContent() {
                 key="quiz"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="space-y-6"
+                className="space-y-6 mt-4"
               >
-                {quizResult.length === 0 || answeredQuestions.length === quizResult.length ? (
-                  <>
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 grid sm:grid-cols-3 gap-4 items-end">
-                      <div>
-                        <label className="block text-sm font-medium mb-2">
-                          {t("difficulty")}
-                        </label>
-                        <select
-                          value={quizDifficulty}
-                          onChange={(e) => setQuizDifficulty(e.target.value)}
-                          className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none"
-                        >
-                          <option value="easy">{t("easy")}</option>
-                          <option value="medium">{t("medium")}</option>
-                          <option value="hard">{t("hard")}</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">
-                          {t("num_questions")}
-                        </label>
-                        <input
-                          type="number"
-                          value={quizCount}
-                          onChange={(e) => setQuizCount(parseInt(e.target.value))}
-                          className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none"
-                        />
-                      </div>
-                      <button
-                        onClick={handleGenerateQuiz}
-                        disabled={loading}
-                        className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-blue-600 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                {!quizResult || quizResult.length === 0 ? (
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 grid sm:grid-cols-3 gap-4 items-end">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        {t("difficulty")}
+                      </label>
+                      <select
+                        value={quizDifficulty}
+                        onChange={(e) => setQuizDifficulty(e.target.value)}
+                        className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none"
                       >
-                        {loading ? (
-                          <Loader2 className="h-5 w-5 animate-spin" />
-                        ) : (
-                          t("generate_quiz")
-                        )}
-                      </button>
+                        <option value="easy">{t("easy")}</option>
+                        <option value="medium">{t("medium")}</option>
+                        <option value="hard">{t("hard")}</option>
+                      </select>
                     </div>
-                    {answeredQuestions.length === quizResult.length && (
-                      <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
-                        <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                        <h3 className="text-2xl font-bold mb-2">
-                          {t("your_score")}: {score}/{quizResult.length}
-                        </h3>
-                        <p className="text-slate-500 mb-6">
-                          {Math.round((score / quizResult.length) * 100)}%
-                        </p>
-                        <button
-                          onClick={handleGenerateQuiz}
-                          className="px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-blue-600 transition-all"
-                        >
-                          {t("restart_quiz")}
-                        </button>
-                      </div>
-                    )}
-                  </>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        {t("num_questions")}
+                      </label>
+                      <input
+                        type="number"
+                        value={quizCount}
+                        onChange={(e) => setQuizCount(parseInt(e.target.value))}
+                        className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none"
+                      />
+                    </div>
+                    <button
+                      onClick={handleGenerateQuiz}
+                      disabled={loading}
+                      className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-blue-600 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                    >
+                      {loading ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        t("generate_quiz")
+                      )}
+                    </button>
+                  </div>
+                ) : answeredQuestions.length === quizResult.length ? (
+                  <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
+                    <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                    <h3 className="text-2xl font-bold mb-2">
+                      {t("your_score")}: {score}/{quizResult.length}
+                    </h3>
+                    <p className="text-slate-500 mb-6">
+                      {Math.round((score / quizResult.length) * 100)}%
+                    </p>
+                    <button
+                      onClick={handleGenerateQuiz}
+                      className="px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-blue-600 transition-all"
+                    >
+                      {t("restart_quiz")}
+                    </button>
+                  </div>
                 ) : (
                   <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800">
                     {/* Progress Bar */}
@@ -1177,7 +1404,7 @@ function DashboardContent() {
                           value={selectedAnswer || ""}
                           onChange={(e) => setSelectedAnswer(e.target.value)}
                           disabled={answeredQuestions.includes(currentQuestionIndex)}
-                          placeholder="Type your answer..."
+                          placeholder={t("type_answer_placeholder")}
                           className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-primary disabled:opacity-60"
                         />
                       </div>
@@ -1190,7 +1417,7 @@ function DashboardContent() {
                           value={selectedAnswer || ""}
                           onChange={(e) => setSelectedAnswer(e.target.value)}
                           disabled={answeredQuestions.includes(currentQuestionIndex)}
-                          placeholder="Explain your answer..."
+                          placeholder={t("explain_answer_placeholder")}
                           rows={4}
                           className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-primary resize-none disabled:opacity-60"
                         />
@@ -1223,11 +1450,11 @@ function DashboardContent() {
                               : t("incorrect")}
                           </p>
                           <p className="text-sm text-slate-600 dark:text-slate-400">
-                            <span className="font-medium">Your answer:</span> {selectedAnswer || "—"}
+                            <span className="font-medium">{t("your_answer_label")}</span> {selectedAnswer || "—"}
                           </p>
                           {selectedAnswer !== quizResult[currentQuestionIndex].correct_answer && (
                             <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                              <span className="font-medium">Correct answer:</span> {quizResult[currentQuestionIndex].correct_answer}
+                              <span className="font-medium">{t("correct_answer_label")}</span> {quizResult[currentQuestionIndex].correct_answer}
                             </p>
                           )}
                           {quizResult[currentQuestionIndex].explanation && (
@@ -1281,7 +1508,7 @@ function DashboardContent() {
                         type="text"
                         value={planGoal}
                         onChange={(e) => setPlanGoal(e.target.value)}
-                        placeholder="e.g. Master Python Decorators"
+                        placeholder={t("goal_input_placeholder")}
                         className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none"
                       />
                     </div>
@@ -1472,19 +1699,19 @@ function DashboardContent() {
                       <div className="text-center py-4">
                         <AlertCircle className="h-10 w-10 text-amber-500 mx-auto mb-3" />
                         <p className="font-semibold text-amber-600 dark:text-amber-400 mb-1">
-                          Not enough data yet
+                          {t("gaps_not_ready_title")}
                         </p>
                         <p className="text-sm text-slate-500">
-                          {gapsResult.message || "Complete at least 2 quiz sessions to generate a Gaps Report."}
+                          {gapsResult.message || t("gaps_not_ready_default")}
                         </p>
                         <p className="text-xs text-slate-400 mt-2">
-                          Sessions completed: {gapsResult.sessions_completed ?? 0} / 2 required
+                          {t("gaps_sessions_completed")}: {gapsResult.sessions_completed ?? 0} {t("gaps_of_required")}
                         </p>
                         <button
                           onClick={() => setActivePanel("quiz")}
                           className="mt-4 px-5 py-2 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-blue-600 transition-all"
                         >
-                          Go to Quiz →
+                          {t("gaps_go_to_quiz")}
                         </button>
                       </div>
                     ) : typeof gapsResult === "string" ? (
@@ -1589,15 +1816,15 @@ function DashboardContent() {
                     {subscriptionStatus && (
                       <div className="grid sm:grid-cols-3 gap-4 mb-8">
                         <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                          <p className="text-xs text-slate-500">Quizzes today</p>
+                          <p className="text-xs text-slate-500">{t("quizzes_today")}</p>
                           <p className="font-bold">{subscriptionStatus.quiz_today} / {subscriptionStatus.quiz_limit}</p>
                         </div>
                         <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                          <p className="text-xs text-slate-500">Uploads</p>
+                          <p className="text-xs text-slate-500">{t("uploads_label")}</p>
                           <p className="font-bold">{subscriptionStatus.uploads_count} / {subscriptionStatus.uploads_limit}</p>
                         </div>
                         <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                          <p className="text-xs text-slate-500">Chats today</p>
+                          <p className="text-xs text-slate-500">{t("chats_today")}</p>
                           <p className="font-bold">{subscriptionStatus.chat_today} / {subscriptionStatus.chat_limit}</p>
                         </div>
                       </div>
@@ -1615,7 +1842,7 @@ function DashboardContent() {
                           </button>
 
                           <div className="space-y-4">
-                            <p className="text-[10px] uppercase tracking-[0.2em] font-black text-slate-400">Supported payment methods</p>
+                            <p className="text-[10px] uppercase tracking-[0.2em] font-black text-slate-400">{t("supported_payment_methods")}</p>
                             <div className="flex flex-wrap gap-6 items-center">
                               {/* Payme */}
                               <div className="flex items-center gap-2 group cursor-default">
@@ -1630,13 +1857,6 @@ function DashboardContent() {
                                   CLICK
                                 </div>
                                 <span className="text-sm font-black tracking-tighter text-slate-400 group-hover:text-[#00a6ff] transition-colors">Click</span>
-                              </div>
-                              {/* Stripe */}
-                              <div className="flex items-center gap-2 group cursor-default">
-                                <div className="h-8 w-8 bg-[#635bff] rounded-lg flex items-center justify-center shadow-md shadow-[#635bff]/20 group-hover:scale-110 transition-transform text-white font-bold text-[10px]">
-                                  S
-                                </div>
-                                <span className="text-sm font-black tracking-tighter text-slate-400 group-hover:text-[#635bff] transition-colors">Stripe</span>
                               </div>
                             </div>
                           </div>
@@ -1749,6 +1969,18 @@ function DashboardContent() {
               </motion.div>
             )}
 
+            {activePanel === "assistant" && (
+              <motion.div key="assistant" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                <AssistantDashboard user={user} onNavigate={setActivePanel} />
+              </motion.div>
+            )}
+
+            {activePanel === "review" && (
+              <motion.div key="review" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                <ReviewDashboard user={user} onNavigate={setActivePanel} />
+              </motion.div>
+            )}
+
             {activePanel === "telegram" && (
               <motion.div
                 key="telegram"
@@ -1780,10 +2012,10 @@ function DashboardContent() {
                       </p>
                       {!stats.tgLinked && (
                         <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-xs text-blue-700 dark:text-blue-300 space-y-1">
-                          <p className="font-semibold">How to link:</p>
-                          <p>1. Open the bot: <strong>@ILM_AI_HELPER_bot</strong></p>
-                          <p>2. Send <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">/link</code></p>
-                          <p>3. Enter your email and password</p>
+                          <p className="font-semibold">{t("tg_how_to_link")}</p>
+                          <p>{t("tg_step_open_bot").replace("{bot}", "")}<strong>@ILM_AI_HELPER_bot</strong></p>
+                          <p>{t("tg_step_send")} <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">/link</code></p>
+                          <p>{t("tg_step_credentials")}</p>
                         </div>
                       )}
                     </div>
@@ -1800,17 +2032,17 @@ function DashboardContent() {
                           {t("streak_label")}
                         </span>
                         <span className="font-bold text-green-500">
-                          {stats.streak} Days
+                          {stats.streak} {t("days_suffix")}
                         </span>
                       </div>
                       <div className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
                         <label className="block text-sm font-medium text-slate-500 mb-1">
-                          Daily Reminder Time
+                          {t("tg_reminder_time")}
                         </label>
-                        <p className="text-xs text-slate-400 mb-2">⏰ Tashkent time (UTC+5)</p>
+                        <p className="text-xs text-slate-400 mb-2">{t("tg_reminder_tz")}</p>
                         {!stats.tgLinked && (
                           <p className="text-xs text-amber-500 mb-2">
-                            ⚠️ Link your Telegram account first to receive reminders
+                            {t("tg_reminder_link_first")}
                           </p>
                         )}
                         <div className="flex gap-3">
@@ -1825,7 +2057,7 @@ function DashboardContent() {
                             disabled={loading}
                             className="px-4 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-blue-600 disabled:opacity-50"
                           >
-                            Save
+                            {t("tg_save")}
                           </button>
                         </div>
                         {reminderStatus.msg && (
@@ -1838,13 +2070,13 @@ function DashboardContent() {
 
                     {!stats.tgLinked && (
                       <a
-                        href="https://web.telegram.org/a/#8931717698"
+                        href="https://t.me/ILM_AI_HELPER_bot"
                         target="_blank"
                         rel="noreferrer"
                         className="w-full py-4 bg-[#0088cc] text-white rounded-xl font-bold hover:bg-[#0077b5] transition-all flex items-center justify-center gap-2"
                       >
                         <Send className="h-5 w-5" />
-                        Open Telegram Bot (@ILM_AI_HELPER_bot)
+                        {t("tg_open_bot_button")}
                       </a>
                     )}
                   </div>
@@ -1858,31 +2090,127 @@ function DashboardContent() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="max-w-2xl space-y-6"
+                className="max-w-2xl space-y-6 mt-4"
               >
+                {/* Profile: name + avatar */}
+                <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="h-12 w-12 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center">
+                      <Camera className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">{t("profile_title")}</h3>
+                      <p className="text-sm text-slate-500">{t("profile_subtitle")}</p>
+                    </div>
+                  </div>
+
+                  {/* Current avatar + upload/remove */}
+                  <div className="flex items-center gap-5 mb-6">
+                    <div className="h-20 w-20 rounded-full overflow-hidden shrink-0 bg-gradient-to-br from-blue-500 to-primary flex items-center justify-center text-white text-2xl font-black ring-2 ring-slate-200 dark:ring-slate-700">
+                      {avatar ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={avatar} alt="avatar" className="h-full w-full object-cover" />
+                      ) : (
+                        (settingsFirstName || user?.name || "U").charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                        <Upload className="h-4 w-4" />
+                        {t("avatar_upload")}
+                        <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+                      </label>
+                      {avatar && (
+                        <button
+                          onClick={() => setAvatar("")}
+                          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          {t("avatar_remove")}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Preset avatars */}
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">{t("avatar_presets")}</p>
+                  <div className="flex flex-wrap gap-3 mb-6">
+                    {PRESET_AVATARS.map((src) => (
+                      <button
+                        key={src}
+                        onClick={() => setAvatar(src)}
+                        className={`h-12 w-12 rounded-xl overflow-hidden transition-all ${
+                          avatar === src ? "ring-2 ring-primary ring-offset-2 ring-offset-white dark:ring-offset-slate-900 scale-105" : "hover:scale-105 opacity-90 hover:opacity-100"
+                        }`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt="preset avatar" className="h-full w-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Name — separate first and last name */}
+                  <div className="grid sm:grid-cols-2 gap-3 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">{t("profile_first_name")}</label>
+                      <input
+                        type="text"
+                        value={settingsFirstName}
+                        onChange={(e) => setSettingsFirstName(e.target.value)}
+                        placeholder={t("profile_first_name")}
+                        className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">{t("profile_last_name")}</label>
+                      <input
+                        type="text"
+                        value={settingsLastName}
+                        onChange={(e) => setSettingsLastName(e.target.value)}
+                        placeholder={t("profile_last_name")}
+                        className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleSaveProfile}
+                    disabled={savingProfile}
+                    className="w-full py-4 bg-primary text-white rounded-xl font-bold hover:bg-blue-600 disabled:opacity-50 transition-all"
+                  >
+                    {savingProfile ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : t("profile_save")}
+                  </button>
+                  {profileStatus.msg && (
+                    <div className={`flex items-center gap-2 text-sm font-medium mt-3 ${profileStatus.type === "success" ? "text-green-500" : "text-red-500"}`}>
+                      {profileStatus.type === "success" ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                      {profileStatus.msg}
+                    </div>
+                  )}
+                </div>
+
                 <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                   <div className="flex items-center gap-4 mb-6">
                     <div className="h-12 w-12 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center">
                       <Target className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold">Learning Settings</h3>
-                      <p className="text-sm text-slate-500">Set your learning goal and target date</p>
+                      <h3 className="text-xl font-bold">{t("settings_learning_title")}</h3>
+                      <p className="text-sm text-slate-500">{t("settings_learning_subtitle")}</p>
                     </div>
                   </div>
 
                   <div className="space-y-5">
                     <div>
-                      <label className="block text-sm font-medium mb-2">Learning Goal</label>
+                      <label className="block text-sm font-medium mb-2">{t("goal")}</label>
                       <textarea
                         value={settingsGoal}
                         onChange={(e) => setSettingsGoal(e.target.value)}
-                        placeholder="e.g. Master Python for data science, learn conversational English..."
+                        placeholder={t("goal_placeholder")}
                         className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-primary resize-none h-28"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">Target Date</label>
+                      <label className="block text-sm font-medium mb-2">{t("target_date")}</label>
                       <input
                         type="date"
                         value={settingsTargetDate}
@@ -1895,7 +2223,7 @@ function DashboardContent() {
                       disabled={loading}
                       className="w-full py-4 bg-primary text-white rounded-xl font-bold hover:bg-blue-600 disabled:opacity-50 transition-all"
                     >
-                      {loading ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : "Save Settings"}
+                      {loading ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : t("save_settings")}
                     </button>
                     {settingsStatus.msg && (
                       <div className={`flex items-center gap-2 text-sm font-medium ${settingsStatus.type === "success" ? "text-green-500" : "text-red-500"}`}>
@@ -1906,22 +2234,57 @@ function DashboardContent() {
                   </div>
                 </div>
 
+                {/* Appearance */}
+                <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="h-12 w-12 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center">
+                      <Sun className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">{t("appearance_title")}</h3>
+                      <p className="text-sm text-slate-500">{t("appearance_subtitle")}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    {(
+                      [
+                        { mode: "light" as ThemeMode, label: t("theme_light"), icon: Sun },
+                        { mode: "dark" as ThemeMode, label: t("theme_dark"), icon: Moon },
+                        { mode: "system" as ThemeMode, label: t("theme_system"), icon: Monitor },
+                      ]
+                    ).map((opt) => (
+                      <button
+                        key={opt.mode}
+                        onClick={() => setThemeMode(opt.mode)}
+                        className={`flex flex-col items-center gap-2 py-4 rounded-xl border-2 transition-all ${
+                          themeMode === opt.mode
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-slate-200 dark:border-slate-700 text-slate-500 hover:border-primary/50"
+                        }`}
+                      >
+                        <opt.icon className="h-5 w-5" />
+                        <span className="text-xs font-semibold">{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Account Info */}
                 <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <h3 className="font-bold mb-4">Account Info</h3>
+                  <h3 className="font-bold mb-4">{t("account_info_title")}</h3>
                   <div className="space-y-3">
                     <div className="flex justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                      <span className="text-sm text-slate-500">Name</span>
+                      <span className="text-sm text-slate-500">{t("account_name")}</span>
                       <span className="text-sm font-bold">{user?.name}</span>
                     </div>
                     <div className="flex justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                      <span className="text-sm text-slate-500">Email</span>
+                      <span className="text-sm text-slate-500">{t("account_email")}</span>
                       <span className="text-sm font-bold">{user?.email}</span>
                     </div>
                     <div className="flex justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                      <span className="text-sm text-slate-500">Plan</span>
+                      <span className="text-sm text-slate-500">{t("account_plan")}</span>
                       <span className={`text-sm font-bold ${subscriptionStatus?.is_premium ? "text-primary" : "text-slate-500"}`}>
-                        {subscriptionStatus?.is_premium ? "Premium" : "Free"}
+                        {subscriptionStatus?.is_premium ? t("subscription_premium") : t("subscription_free")}
                       </span>
                     </div>
                   </div>
@@ -1949,14 +2312,13 @@ function DashboardContent() {
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 p-8"
             >
-              <h3 className="text-2xl font-black mb-2 tracking-tight">Select Payment</h3>
-              <p className="text-slate-500 text-sm mb-8">Choose your preferred payment method</p>
-              
+              <h3 className="text-2xl font-black mb-2 tracking-tight">{t("select_payment_title")}</h3>
+              <p className="text-slate-500 text-sm mb-8">{t("select_payment_subtitle")}</p>
+
               <div className="grid gap-3">
                 {[
-                  { id: "payme", label: "Payme", color: "bg-[#00c2ed]", text: "P", desc: "Local payment (UZS)" },
-                  { id: "click", label: "Click", color: "bg-[#00a6ff]", text: "C", desc: "Local payment (UZS)" },
-                  { id: "stripe", label: "Stripe", color: "bg-[#635bff]", text: "S", desc: "International (USD)" },
+                  { id: "payme", label: "Payme", color: "bg-[#00c2ed]", text: "P", desc: t("payment_local_desc") },
+                  { id: "click", label: "Click", color: "bg-[#00a6ff]", text: "C", desc: t("payment_local_desc") },
                 ].map((m) => (
                   <button
                     key={m.id}
@@ -2004,13 +2366,11 @@ function DashboardContent() {
               className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800"
             >
               <div className={`${
-                paymentMethod === 'payme' ? "bg-[#00c2ed]" : 
-                paymentMethod === 'click' ? "bg-[#00a6ff]" : "bg-[#635bff]"
+                paymentMethod === 'payme' ? "bg-[#00c2ed]" : "bg-[#00a6ff]"
               } p-10 flex flex-col items-center justify-center text-white relative`}>
                 <div className="bg-white p-5 rounded-3xl mb-4 shadow-xl">
                   <div className={`${
-                    paymentMethod === 'payme' ? "text-[#00c2ed]" : 
-                    paymentMethod === 'click' ? "text-[#00a6ff]" : "text-[#635bff]"
+                    paymentMethod === 'payme' ? "text-[#00c2ed]" : "text-[#00a6ff]"
                   } font-black text-4xl tracking-tighter uppercase`}>
                     {paymentMethod}
                   </div>
@@ -2022,20 +2382,19 @@ function DashboardContent() {
               <div className="p-10 space-y-8">
                 <div className="space-y-4 bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-100 dark:border-slate-800">
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-500 font-medium">Service</span>
+                    <span className="text-slate-500 font-medium">{t("payment_service")}</span>
                     <span className="font-bold text-slate-900 dark:text-white">Ilm AI Premium</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-500 font-medium">Frequency</span>
-                    <span className="font-bold text-slate-900 dark:text-white">Monthly</span>
+                    <span className="text-slate-500 font-medium">{t("payment_frequency")}</span>
+                    <span className="font-bold text-slate-900 dark:text-white">{t("payment_monthly")}</span>
                   </div>
                   <div className="pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                    <span className="font-black text-lg">Total</span>
+                    <span className="font-black text-lg">{t("payment_total")}</span>
                     <span className={`text-3xl font-black ${
-                      paymentMethod === 'payme' ? "text-[#00c2ed]" : 
-                      paymentMethod === 'click' ? "text-[#00a6ff]" : "text-[#635bff]"
+                      paymentMethod === 'payme' ? "text-[#00c2ed]" : "text-[#00a6ff]"
                     }`}>
-                      {paymentMethod === 'stripe' ? "$2.99" : "29,000 UZS"}
+                      {"25,000 UZS"}
                     </span>
                   </div>
                 </div>
@@ -2045,11 +2404,10 @@ function DashboardContent() {
                     onClick={confirmTestPayment}
                     disabled={loading}
                     className={`w-full py-5 ${
-                      paymentMethod === 'payme' ? "bg-[#00c2ed] shadow-[#00c2ed]/20" : 
-                      paymentMethod === 'click' ? "bg-[#00a6ff] shadow-[#00a6ff]/20" : "bg-[#635bff] shadow-[#635bff]/20"
+                      paymentMethod === 'payme' ? "bg-[#00c2ed] shadow-[#00c2ed]/20" : "bg-[#00a6ff] shadow-[#00a6ff]/20"
                     } text-white rounded-[1.25rem] font-black text-lg hover:scale-[1.02] active:scale-[0.98] transition-all shadow-2xl flex items-center justify-center gap-3`}
                   >
-                    {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : "Complete Transaction"}
+                    {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : t("payment_complete_btn")}
                   </button>
                   <button
                     onClick={() => setShowPaymentModal(false)}

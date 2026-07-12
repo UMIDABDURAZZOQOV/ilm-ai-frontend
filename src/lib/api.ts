@@ -50,6 +50,22 @@ async function refreshAccessToken(session: SessionData): Promise<SessionData | n
   return updated;
 }
 
+/**
+ * Login fails with a structured 403 { code: "email_not_verified", email }
+ * when an email/password account hasn't confirmed its verification code
+ * yet. Returns the email to redirect to the verify page with, or null for
+ * any other kind of error.
+ */
+export function getUnverifiedEmail(err: unknown): string | null {
+  if (err instanceof Error) {
+    const e = err as Error & { status?: number; detail?: unknown };
+    if (e.status === 403 && typeof e.detail === "object" && e.detail !== null && (e.detail as any).code === "email_not_verified") {
+      return (e.detail as any).email ?? null;
+    }
+  }
+  return null;
+}
+
 export async function apiFetch(path: string, options: RequestInit = {}) {
   const session = getSession();
   const headers: Record<string, string> = {
@@ -88,13 +104,22 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
 
   if (!res.ok) {
     const errorMsg = data.detail || data.error || `Request failed (${res.status})`;
-    trackError(new Error(typeof errorMsg === "string" ? errorMsg : JSON.stringify(errorMsg)), {
+    const readableMsg =
+      typeof errorMsg === "string"
+        ? errorMsg
+        : typeof errorMsg === "object" && errorMsg !== null && "message" in errorMsg
+        ? String((errorMsg as { message: unknown }).message)
+        : JSON.stringify(errorMsg);
+    trackError(new Error(readableMsg), {
       endpoint: path,
       method,
       status: res.status,
       duration_ms: duration,
     });
-    throw new Error(typeof errorMsg === "string" ? errorMsg : JSON.stringify(errorMsg));
+    const error = new Error(readableMsg) as Error & { status?: number; detail?: unknown };
+    error.status = res.status;
+    error.detail = data.detail;
+    throw error;
   }
 
   return data;

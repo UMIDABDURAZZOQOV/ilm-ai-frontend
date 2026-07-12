@@ -7,9 +7,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/hooks/useI18n";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, getUnverifiedEmail } from "@/lib/api";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { BookOpen } from "lucide-react";
+import { PasswordInput } from "@/components/PasswordInput";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -44,6 +44,11 @@ export default function LoginPage() {
       
       router.push("/dashboard");
     } catch (err: any) {
+      const unverifiedEmail = getUnverifiedEmail(err);
+      if (unverifiedEmail) {
+        router.push(`/verify-email?email=${encodeURIComponent(unverifiedEmail)}`);
+        return;
+      }
       setError(err.message === "Request failed (401)" ? t("err_fill") : err.message);
     } finally {
       setLoading(false);
@@ -80,7 +85,7 @@ export default function LoginPage() {
         <div style={{ textAlign: "center", marginBottom: 16 }}>
           <span className="logo" style={{ textDecoration: "none", justifyContent: "center" }}>
             <div className="logo-mark">
-              <BookOpen className="h-5 w-5" />
+              <img src="/logo-icon.png" alt="Ilm AI" />
             </div>
             <span>{t("brand")}</span>
           </span>
@@ -97,39 +102,26 @@ export default function LoginPage() {
           </div>
           <div className="form-group">
             <label>{t("password")}</label>
-            <input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
+            <PasswordInput required value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
+          </div>
+
+          <div style={{ textAlign: "right", marginBottom: 16 }}>
+            <Link href="/forgot-password" className="auth-link" style={{ fontSize: "0.8125rem" }}>
+              {t("forgot_password")}
+            </Link>
           </div>
 
           <button type="submit" disabled={loading} className="btn btn-primary btn-block">
             {loading ? t("thinking") : t("login_btn")}
           </button>
 
-          <div style={{ display: "flex", alignItems: "center", margin: "24px 0" }}>
-            <div style={{ flex: 1, height: "1px", backgroundColor: "#374151" }}></div>
-            <span style={{ padding: "0 16px", color: "#9ca3af", fontSize: "0.875rem" }}>or</span>
-            <div style={{ flex: 1, height: "1px", backgroundColor: "#374151" }}></div>
-          </div>
+          <div className="auth-divider"><span>or</span></div>
 
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="btn btn-outline btn-block"
-            style={{ 
-              display: "flex", 
-              alignItems: "center", 
-              justifyContent: "center",
-              gap: "12px",
-              padding: "12px 16px",
-              border: "1px solid #374151",
-              borderRadius: "8px",
-              background: "#1f2937",
-              color: "white",
-              fontSize: "0.875rem",
-              fontWeight: "500",
-              cursor: loading ? "not-allowed" : "pointer",
-              opacity: loading ? 0.6 : 1
-            }}
+            className="btn-google"
           >
             <svg width="20" height="20" viewBox="0 0 24 24">
               <path 
@@ -155,7 +147,7 @@ export default function LoginPage() {
 
         <p className="auth-footer">
           {t("no_account")}{" "}
-          <Link href="/signup" style={{ color: "#a5b4fc", fontWeight: 600, textDecoration: "none" }}>{t("signup_link")}</Link>
+          <Link href="/signup" className="auth-link">{t("signup_link")}</Link>
         </p>
       </div>
     </div>
