@@ -49,6 +49,11 @@ export default function CollegeBrowsePage() {
   const [country, setCountry] = useState<string>("All");
   const [colleges, setColleges] = useState<College[]>([]);
   const [loading, setLoading] = useState(true);
+  // Render in pages — the full directory is ~6000 entries, so rendering all at
+  // once (each an animated card) froze the page for minutes. Show a chunk and
+  // let the user load more.
+  const PAGE = 48;
+  const [visible, setVisible] = useState(PAGE);
 
   const countries = useMemo(() => {
     const set = new Set(
@@ -61,6 +66,8 @@ export default function CollegeBrowsePage() {
   useEffect(() => {
     loadColleges().then(setColleges).finally(() => setLoading(false));
   }, []);
+  // Any filter/search change starts the list back at the first page.
+  useEffect(() => { setVisible(PAGE); }, [query, region, country, schoolType, accBand, sort, tab]);
 
   function toggleSave(id: string) {
     setSaved((prev) => {
@@ -109,7 +116,7 @@ export default function CollegeBrowsePage() {
           <button
             key={r.id}
             onClick={() => { setRegion(r.id); setCountry("All"); }}
-            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
+            className={`flex-1 sm:flex-none min-w-0 flex items-center justify-center gap-1.5 px-2 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all ${
               region === r.id ? "bg-white dark:bg-slate-800 shadow text-slate-900 dark:text-white" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
             }`}
           >
@@ -177,16 +184,28 @@ export default function CollegeBrowsePage() {
       ) : filtered.length === 0 ? (
         <p className="text-center text-slate-500 py-12">{tab === "saved" ? "You haven't saved any colleges yet." : "No colleges match your search."}</p>
       ) : (
-        <div className="grid md:grid-cols-2 gap-4">
-          {filtered.map((c, i) => (
-            <CollegeCard key={c.id} college={c} saved={saved.includes(c.id)} onToggle={() => toggleSave(c.id)} delay={i * 0.02} />
-          ))}
-        </div>
+        <>
+          <div className="grid md:grid-cols-2 gap-4">
+            {filtered.slice(0, visible).map((c, i) => (
+              <CollegeCard key={c.id} college={c} saved={saved.includes(c.id)} onToggle={() => toggleSave(c.id)} delay={Math.min(i, 11) * 0.03} />
+            ))}
+          </div>
+          {filtered.length > visible && (
+            <div className="flex justify-center pt-2">
+              <button
+                onClick={() => setVisible((v) => v + PAGE)}
+                className="px-6 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-600 dark:text-slate-300 hover:border-[#0d3b4f] dark:hover:border-amber-400 hover:text-[#0d3b4f] dark:hover:text-amber-400 transition-all"
+              >
+                Load more ({filtered.length - visible} left)
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {!loading && (
         <p className="text-xs text-slate-400">
-          Showing {filtered.length} of {colleges.length} universities — US data from public College Scorecard,
+          Showing {Math.min(visible, filtered.length)} of {filtered.length} matching universities — US data from public College Scorecard,
           European universities from the open Hipolabs dataset.
         </p>
       )}
@@ -200,15 +219,19 @@ function CollegeCard({ college: c, saved, onToggle, delay }: { college: College;
       <Link href={`/sat/college/${c.id}`} className="group block rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-900/5">
         <div className="flex items-start gap-4">
           <CollegeLogo college={c} className="h-12 w-12 shrink-0 rounded-xl" />
-          <div className="flex-1 min-w-0 pr-8">
-            <h3 className="font-bold text-lg leading-tight">{c.name}</h3>
-            <p className="text-sm text-slate-400 flex items-center gap-1 mt-0.5"><MapPin className="h-3.5 w-3.5" /> {c.city}, {c.state}</p>
+          <div className="flex-1 min-w-0 pr-10">
+            <h3 className="font-bold text-lg leading-tight break-words">{c.name}</h3>
+            <p className="text-sm text-slate-400 flex items-center gap-1 mt-0.5"><MapPin className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{c.city}, {c.state}</span></p>
             <p className="text-xs text-slate-400 mt-0.5">{c.type}</p>
           </div>
-          <div className="text-right shrink-0">
+        </div>
+        <div className="flex gap-8 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+          <div>
             <p className="text-[11px] text-slate-400">Acceptance</p>
             <p className="font-black">{c.acceptanceRate != null ? `${c.acceptanceRate}%` : "—"}</p>
-            <p className="text-[11px] text-slate-400 mt-2">Median SAT</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-slate-400">Median SAT</p>
             <p className="font-black">{c.medianSAT ?? "—"}</p>
           </div>
         </div>

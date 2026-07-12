@@ -125,21 +125,23 @@ export default function QuestionBankPage() {
         </>
       ) : viewMode === "skills" && activeSection ? (
         <>
-          <div className="flex items-center gap-4">
+          <div className="space-y-3">
             <button
               onClick={() => setActiveSection(null)}
               className="text-sm font-bold text-slate-500 hover:text-slate-700"
             >
               ‹ Back to Question Bank
             </button>
-            <h1 className="text-3xl font-bold flex-1">{activeSection}</h1>
-            <button
-              onClick={() => setViewMode(viewMode === "skills" ? "questions" : viewMode === "questions" ? "diagnostic" : "skills")}
-              className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-sm font-bold transition-all"
-            >
-              <Filter className="h-4 w-4" />
-              {viewMode === "skills" ? "Browse Questions" : viewMode === "questions" ? "Diagnostic Test" : "Skill Tree"}
-            </button>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <h1 className="text-2xl sm:text-3xl font-bold">{activeSection}</h1>
+              <button
+                onClick={() => setViewMode(viewMode === "skills" ? "questions" : viewMode === "questions" ? "diagnostic" : "skills")}
+                className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-sm font-bold transition-all shrink-0"
+              >
+                <Filter className="h-4 w-4" />
+                {viewMode === "skills" ? "Browse Questions" : viewMode === "questions" ? "Diagnostic Test" : "Skill Tree"}
+              </button>
+            </div>
           </div>
 
           {error && (

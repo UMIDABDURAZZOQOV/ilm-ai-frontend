@@ -810,7 +810,7 @@ function DashboardContent() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto relative">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden relative min-w-0">
         <header className="bg-gradient-to-r from-blue-600 to-primary dark:from-blue-900 dark:to-blue-800 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 pt-8 pb-6 px-6 flex justify-between items-center shadow-lg">
           <div className="flex items-center gap-3 min-w-0">
             <button
@@ -2021,11 +2021,11 @@ function DashboardContent() {
                     </div>
 
                     <div className="grid gap-4">
-                      <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                        <span className="text-sm font-medium text-slate-500">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-3 p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+                        <span className="text-sm font-medium text-slate-500 shrink-0">
                           {t("email")}
                         </span>
-                        <span className="font-mono text-sm">{user.email}</span>
+                        <span className="font-mono text-sm break-all sm:text-right">{user.email}</span>
                       </div>
                       <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
                         <span className="text-sm font-medium text-slate-500">
@@ -2277,9 +2277,9 @@ function DashboardContent() {
                       <span className="text-sm text-slate-500">{t("account_name")}</span>
                       <span className="text-sm font-bold">{user?.name}</span>
                     </div>
-                    <div className="flex justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                      <span className="text-sm text-slate-500">{t("account_email")}</span>
-                      <span className="text-sm font-bold">{user?.email}</span>
+                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
+                      <span className="text-sm text-slate-500 shrink-0">{t("account_email")}</span>
+                      <span className="text-sm font-bold break-all sm:text-right">{user?.email}</span>
                     </div>
                     <div className="flex justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
                       <span className="text-sm text-slate-500">{t("account_plan")}</span>
