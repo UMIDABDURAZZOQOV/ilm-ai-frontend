@@ -79,104 +79,105 @@ export default function QuestionBankPage() {
     <div className="space-y-6">
       {viewMode === "skills" && !activeSection ? (
         <>
-          <div>
-            <h1 className="text-3xl font-bold">🗃 Question Bank</h1>
-            <p className="text-slate-500 mt-1">Practice by domain and skill, tracked per topic.</p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
-            {/* Reading & Writing Card */}
+          <h1 className="text-[30px] font-extrabold tracking-tight">🗃 Question Bank</h1>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-[900px]">
+            {/* Reading & Writing */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-br from-pink-500 to-purple-600 rounded-2xl p-6 text-white flex flex-col gap-2 min-h-[170px]"
+              className="rounded-[18px] p-6 text-white flex flex-col gap-1.5 min-h-[170px]"
+              style={{ background: "linear-gradient(120deg,#F06ECF,#C455E8)" }}
             >
-              <div className="text-xl font-bold">Reading & Writing</div>
-              <div className="text-sm opacity-90">{rwTotal} questions</div>
-              <button 
+              <div className="text-[20px] font-extrabold">Reading &amp; Writing</div>
+              <div className="text-[14.5px] opacity-90">{rwTotal} questions</div>
+              <button
                 onClick={() => setActiveSection("Reading & Writing")}
-                className="mt-auto self-start bg-white text-slate-900 text-sm font-bold px-5 py-2.5 rounded-full"
+                className="mt-auto self-start bg-white text-op-ink text-[14px] font-extrabold px-5 py-2.5 rounded-full hover:bg-white/90 transition-colors"
               >
-                Open <ArrowRight className="h-4 w-4 inline ml-1" />
+                Open ›
               </button>
             </motion.div>
 
-            {/* Math Card */}
+            {/* Math */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl p-6 text-white flex flex-col gap-2 min-h-[170px]"
+              transition={{ delay: 0.08 }}
+              className="rounded-[18px] p-6 text-white flex flex-col gap-1.5 min-h-[170px]"
+              style={{ background: "linear-gradient(120deg,#3EC1F5,#2E7BE0)" }}
             >
-              <div className="text-xl font-bold">Math</div>
-              <div className="text-sm opacity-90">{mathTotal} questions</div>
-              <button 
+              <div className="text-[20px] font-extrabold">Math</div>
+              <div className="text-[14.5px] opacity-90">{mathTotal} questions</div>
+              <button
                 onClick={() => setActiveSection("Math")}
-                className="mt-auto self-start bg-white text-slate-900 text-sm font-bold px-5 py-2.5 rounded-full"
+                className="mt-auto self-start bg-white text-op-ink text-[14px] font-extrabold px-5 py-2.5 rounded-full hover:bg-white/90 transition-colors"
               >
-                Open <ArrowRight className="h-4 w-4 inline ml-1" />
+                Open ›
               </button>
             </motion.div>
           </div>
 
-          <div className="text-xs text-slate-400 max-w-2xl text-center mt-8 leading-relaxed">
+          <div className="text-[12px] text-op-faint max-w-[760px] text-center mx-auto mt-6 leading-relaxed">
             SAT® is a trademark of the College Board, used for identification purposes only. This platform is not affiliated with or endorsed by the College Board.
           </div>
         </>
       ) : viewMode === "skills" && activeSection ? (
         <>
-          <div className="space-y-3">
+          <button
+            onClick={() => setActiveSection(null)}
+            className="text-[14.5px] font-bold text-op-slate hover:text-op-ink"
+          >
+            ‹ Back to Question Bank
+          </button>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h1 className="text-[30px] sm:text-[34px] font-extrabold tracking-tight">{activeSection}</h1>
             <button
-              onClick={() => setActiveSection(null)}
-              className="text-sm font-bold text-slate-500 hover:text-slate-700"
+              onClick={() => setViewMode(viewMode === "skills" ? "questions" : viewMode === "questions" ? "diagnostic" : "skills")}
+              className="flex items-center gap-2 px-4 py-2.5 border border-op-line rounded-[10px] text-[13.5px] font-bold text-op-slate hover:bg-op-panel transition-colors shrink-0"
             >
-              ‹ Back to Question Bank
+              <Filter className="h-4 w-4" />
+              {viewMode === "skills" ? "Browse Questions" : viewMode === "questions" ? "Diagnostic Test" : "Skill Tree"}
             </button>
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <h1 className="text-2xl sm:text-3xl font-bold">{activeSection}</h1>
-              <button
-                onClick={() => setViewMode(viewMode === "skills" ? "questions" : viewMode === "questions" ? "diagnostic" : "skills")}
-                className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-sm font-bold transition-all shrink-0"
-              >
-                <Filter className="h-4 w-4" />
-                {viewMode === "skills" ? "Browse Questions" : viewMode === "questions" ? "Diagnostic Test" : "Skill Tree"}
-              </button>
-            </div>
           </div>
 
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 text-red-600 dark:text-red-400 text-sm rounded-xl px-4 py-3">
+            <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3">
               {error}
             </div>
           )}
 
-          {/* Practice all button */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex items-center gap-4">
-            <div className="flex-1">
-              <div className="text-lg font-bold">Practice all topics</div>
-              <div className="text-sm text-slate-500">{activeSection} · {section?.domains.reduce((sum, d) => sum + d.question_count, 0) ?? 0} questions</div>
+          {/* Practice all topics */}
+          <div className="border border-op-line rounded-[16px] p-5 sm:p-6 flex items-center gap-4">
+            <div className="flex-1 min-w-0">
+              <div className="text-[17px] font-extrabold">Practice all topics</div>
+              <div className="text-[14px] text-op-slate">{activeSection} · {section?.domains.reduce((sum, d) => sum + d.question_count, 0) ?? 0} questions</div>
             </div>
             <button
               onClick={() => handleStart(activeSection, null, activeSection)}
               disabled={starting !== null}
-              className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-bold px-6 py-3 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 transition-all"
+              className="bg-op-panel text-op-ink text-[14px] font-extrabold px-6 py-3 rounded-[12px] hover:bg-[#E2E8EB] disabled:opacity-40 transition-colors shrink-0"
             >
               {starting === activeSection ? <Loader2 className="h-4 w-4 animate-spin" /> : "Start practice"}
             </button>
           </div>
 
+          <div className="flex justify-between text-[13.5px] font-bold text-op-muted border-b border-op-line pb-2">
+            <span>Topic</span><span>Progress</span>
+          </div>
+
           {/* Domain list */}
-          <div className="space-y-6">
+          <div className="space-y-5">
             {section?.domains.map((domain, di) => (
               <motion.div
                 key={domain.domain}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: di * 0.05 }}
-                className="pb-6 border-b border-slate-200 dark:border-slate-800 last:border-0"
+                className="pb-5 border-b border-op-line last:border-0 space-y-3"
               >
-                <div className="text-2xl font-bold mb-4">{domain.domain}</div>
-                <div className="space-y-3">
+                <div className="text-[21px] font-extrabold">{domain.domain}</div>
+                <div className="space-y-1">
                   {domain.skills.map((skill: SkillProgress) => {
                     const pct =
                       skill.question_count > 0 ? Math.min(100, (skill.attempted / skill.question_count) * 100) : 0;
@@ -186,12 +187,14 @@ export default function QuestionBankPage() {
                         key={skill.skill}
                         onClick={() => handleStart(domain.domain, skill.skill, key)}
                         disabled={starting !== null || skill.question_count === 0}
-                        className="flex items-center gap-4 w-full bg-transparent hover:opacity-75 disabled:opacity-40 transition-all text-left p-2"
+                        className="flex items-center gap-3.5 w-full bg-transparent hover:bg-op-panel rounded-lg disabled:opacity-40 transition-colors text-left p-2"
                       >
-                        <span className="w-6 h-6 rounded-full border-2 border-slate-300 dark:border-slate-600 flex-shrink-0" />
-                        <span className="text-base font-semibold flex-1 text-slate-900 dark:text-white">{skill.skill}</span>
-                        <div className="w-36 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full" />
-                        <span className="text-sm font-bold text-slate-500 w-16 text-right">{skill.attempted}/{skill.question_count}</span>
+                        <span className={`w-[22px] h-[22px] rounded-full border-[1.5px] flex-shrink-0 ${pct >= 100 ? "bg-op-blue border-op-blue" : "border-[#D5DCE0]"}`} />
+                        <span className="text-[15.5px] font-semibold flex-1 min-w-0 truncate">{skill.skill}</span>
+                        <span className="hidden sm:block w-[140px] h-[6px] bg-op-line rounded-full overflow-hidden shrink-0">
+                          <span className="block h-full bg-op-blue rounded-full" style={{ width: `${pct}%` }} />
+                        </span>
+                        <span className="text-[14px] font-bold text-op-slate w-14 text-right shrink-0">{skill.attempted}/{skill.question_count}</span>
                       </button>
                     );
                   })}
@@ -203,26 +206,20 @@ export default function QuestionBankPage() {
       ) : viewMode === "questions" ? (
         <>
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setViewMode("skills")}
-              className="text-sm font-bold text-slate-500 hover:text-slate-700"
-            >
+            <button onClick={() => setViewMode("skills")} className="text-[14.5px] font-bold text-op-slate hover:text-op-ink">
               ‹ Back to Question Bank
             </button>
-            <h1 className="text-3xl font-bold flex-1">Browse Questions</h1>
+            <h1 className="text-[30px] font-extrabold tracking-tight flex-1">Browse Questions</h1>
           </div>
           <QuestionBank userId={user!.id} examType="SAT" />
         </>
       ) : (
         <>
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setViewMode("skills")}
-              className="text-sm font-bold text-slate-500 hover:text-slate-700"
-            >
+            <button onClick={() => setViewMode("skills")} className="text-[14.5px] font-bold text-op-slate hover:text-op-ink">
               ‹ Back to Question Bank
             </button>
-            <h1 className="text-3xl font-bold flex-1">Diagnostic Test</h1>
+            <h1 className="text-[30px] font-extrabold tracking-tight flex-1">Diagnostic Test</h1>
           </div>
           <DiagnosticTest userId={user!.id} examType="SAT" onComplete={() => {}} />
         </>

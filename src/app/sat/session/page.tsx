@@ -27,6 +27,7 @@ import {
   type Question,
 } from "@/lib/satIeltsApi";
 import AiAnalysisPanel from "@/app/dashboard/sat-ielts/AiAnalysisPanel";
+import { MathText } from "@/components/MathText";
 
 interface PlanStep {
   section: string;
@@ -459,7 +460,7 @@ export default function SatSessionPage() {
                       <p className="text-xs font-bold text-slate-400">
                         Question {i + 1}{pq.domain ? ` · ${pq.domain}` : ""}
                       </p>
-                      <p className="text-sm whitespace-pre-wrap">{pq.question_text}</p>
+                      <MathText className="text-sm whitespace-pre-wrap font-serif-sat">{pq.question_text}</MathText>
                       <div className="text-sm space-y-1">
                         <p>
                           <span className="text-slate-400">Your answer: </span>
@@ -477,7 +478,7 @@ export default function SatSessionPage() {
                       {pq.explanation && (
                         <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3 text-sm text-slate-600 dark:text-slate-300">
                           <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Explanation</p>
-                          <p className="whitespace-pre-wrap">{pq.explanation}</p>
+                          <MathText className="whitespace-pre-wrap">{pq.explanation}</MathText>
                         </div>
                       )}
                     </div>
@@ -545,7 +546,7 @@ export default function SatSessionPage() {
       <main className="flex-1 overflow-y-auto">
         <div className={`mx-auto p-4 sm:p-8 ${isLong ? "max-w-6xl lg:grid lg:grid-cols-2 lg:gap-10" : "max-w-3xl"}`}>
           <div className={isLong ? "lg:border-r lg:border-slate-200 lg:dark:border-slate-800 lg:pr-10 mb-6 lg:mb-0" : "mb-6"}>
-            <p className="whitespace-pre-wrap leading-relaxed text-[15px]">{question.question_text}</p>
+            <MathText className="whitespace-pre-wrap font-serif-sat leading-[1.75] text-[16.5px]">{question.question_text}</MathText>
           </div>
 
           <div>
@@ -599,7 +600,7 @@ export default function SatSessionPage() {
                         }`}>
                           {optionLetter(opt, oi)}
                         </span>
-                        <span className={`text-sm ${crossed ? "line-through" : ""}`}>{optionBody(opt)}</span>
+                        <MathText className={`text-[15px] font-serif-sat ${crossed ? "line-through" : ""}`}>{optionBody(opt)}</MathText>
                       </button>
                       {crossOutMode && (
                         <button

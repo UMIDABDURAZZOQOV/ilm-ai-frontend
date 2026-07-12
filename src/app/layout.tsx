@@ -1,13 +1,18 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Plus_Jakarta_Sans, Manrope, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import "@/sentry.client.config";
 
-const jakarta = Plus_Jakarta_Sans({ 
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-jakarta",
 });
+
+// OnePrep-style typography used across the SAT platform: Manrope for UI,
+// Source Serif for passages and question stems (Bluebook look).
+const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
+const sourceSerif = Source_Serif_4({ subsets: ["latin"], variable: "--font-serif-sat" });
 
 export const metadata: Metadata = {
   title: "Ilm AI — Personal AI Learning Companion",
@@ -41,7 +46,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
-      <body className={`${jakarta.variable} font-sans antialiased`}>
+      <body className={`${jakarta.variable} ${manrope.variable} ${sourceSerif.variable} font-sans antialiased`}>
         <Providers>{children}</Providers>
       </body>
     </html>
