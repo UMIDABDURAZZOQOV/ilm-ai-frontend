@@ -23,6 +23,7 @@ export interface Question {
   correct_answer: string | null;
   explanation?: string | null;   // answer explanation, when available
   rubric: string | null;
+  image_url?: string | null;     // URL or base64 data URI for question images (graphs, triangles, etc.)
   source_filename: string | null;
   tags: string[];
   created_at: string;

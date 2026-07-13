@@ -283,6 +283,17 @@ export default function PracticeSession({
             </button>
           </div>
 
+          {/* Question image */}
+          {currentQuestion.image_url && (
+            <div className="rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
+              <img
+                src={currentQuestion.image_url}
+                alt="Question illustration"
+                className="w-full max-h-64 object-contain bg-white dark:bg-slate-800"
+              />
+            </div>
+          )}
+
           {/* Question text */}
           <p className="text-base font-semibold leading-relaxed text-slate-900 dark:text-white">
             {currentQuestion.question_text}
