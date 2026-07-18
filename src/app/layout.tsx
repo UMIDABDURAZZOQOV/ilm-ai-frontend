@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Manrope, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
+import TestModeBanner from "@/components/TestModeBanner";
 import "@/sentry.client.config";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -47,7 +48,10 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className={`${jakarta.variable} ${manrope.variable} ${sourceSerif.variable} font-sans antialiased`}>
-        <Providers>{children}</Providers>
+        <Providers>
+          <TestModeBanner />
+          {children}
+        </Providers>
       </body>
     </html>
   );
