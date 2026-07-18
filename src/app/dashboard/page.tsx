@@ -53,6 +53,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import AssistantDashboard from "./assistant/AssistantDashboard";
 import ReviewDashboard from "./review/ReviewDashboard";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const PRESET_AVATARS = [
   "/avatars/avatar-1.svg",
@@ -915,6 +916,7 @@ function DashboardContent() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             {/* Platform switcher — pick SAT / IELTS / College App directly */}
             <div className="relative">
               <button

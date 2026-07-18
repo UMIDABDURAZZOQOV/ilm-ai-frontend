@@ -14,6 +14,7 @@ import {
 import { useI18n } from "@/hooks/useI18n";
 import type { TranslationKey } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import ThemeToggle from "@/components/ThemeToggle";
 import {
   Brain,
   MessageSquare,
@@ -191,13 +192,16 @@ export default function LandingPage() {
               <Link href="/login" onClick={() => setMobileMenuOpen(false)}>{t("nav_login")}</Link>
               <Link href="/signup" className="btn btn-primary" onClick={() => setMobileMenuOpen(false)}>{t("nav_signup")}</Link>
             </div>
-            <button
-              className="mobile-menu-btn"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <ThemeToggle />
+              <button
+                className="mobile-menu-btn"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label="Toggle menu"
+              >
+                {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </button>
+            </div>
           </nav>
         </div>
       </div>

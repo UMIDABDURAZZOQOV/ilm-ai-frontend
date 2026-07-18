@@ -24,6 +24,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import ThemeToggle from "@/components/ThemeToggle";
 
 type NavItem = { href: string; label: string; icon: typeof Home; exact: boolean; group?: string };
 
@@ -219,6 +220,7 @@ export default function SatLayout({ children }: { children: React.ReactNode }) {
           <GraduationCap className="h-5 w-5 text-white" />
           <span className="font-extrabold">Ilm AI <span className="text-op-tealMuted font-bold text-xs uppercase tracking-widest">{platform.label}</span></span>
         </div>
+        <ThemeToggle className="ml-auto" />
       </div>
 
       {/* Mobile backdrop */}

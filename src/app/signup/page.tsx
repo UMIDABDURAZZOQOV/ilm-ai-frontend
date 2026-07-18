@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "@/hooks/useI18n";
 import { apiFetch } from "@/lib/api";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import ThemeToggle from "@/components/ThemeToggle";
 import { PasswordInput } from "@/components/PasswordInput";
 
 export default function SignupPage() {
@@ -65,7 +66,8 @@ export default function SignupPage() {
 
   return (
     <div className="auth-page">
-      <div style={{ position: "fixed", top: 24, right: 24 }}>
+      <div style={{ position: "fixed", top: 24, right: 24 }} className="flex items-center gap-2 z-50">
+        <ThemeToggle />
         <LanguageSwitcher />
       </div>
 
