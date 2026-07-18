@@ -6,8 +6,11 @@ import { Clock, CheckCircle, ArrowLeft, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { getReading, getReadingQuestions } from "@/lib/ieltsApi";
 import type { IeltsReading, IeltsQuestion } from "@/lib/ieltsApi";
+import { useI18n } from "@/hooks/useI18n";
+import AiTutor from "@/components/skills/AiTutor";
 
 export default function IeltsReadingPage() {
+  const { lang } = useI18n();
   const [readings, setReadings] = useState<IeltsReading[]>([]);
   const [currentPassage, setCurrentPassage] = useState<IeltsReading | null>(null);
   const [questions, setQuestions] = useState<IeltsQuestion[]>([]);
@@ -211,8 +214,17 @@ export default function IeltsReadingPage() {
                     </div>
                   ) : (
                     <div className="text-sm">
-                      <span className="text-red-600 dark:text-red-400">Incorrect. </span>
-                      <span className="text-slate-500">Correct answer: {question.correct_answer}</span>
+                      <div>
+                        <span className="text-red-600 dark:text-red-400">Incorrect. </span>
+                        <span className="text-slate-500">Correct answer: {question.correct_answer}</span>
+                      </div>
+                      <AiTutor
+                        lang={lang}
+                        questionText={question.question_text}
+                        options={question.options}
+                        correctAnswer={question.correct_answer}
+                        userAnswer={answers[question.id]}
+                      />
                     </div>
                   )}
                 </div>

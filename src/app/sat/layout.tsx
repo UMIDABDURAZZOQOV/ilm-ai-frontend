@@ -21,6 +21,7 @@ import {
   Check,
   Menu,
   X,
+  Trophy,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -54,6 +55,7 @@ const PLATFORMS = [
   { id: "sat", label: "SAT", sub: "Digital SAT prep", href: "/sat", icon: GraduationCap, nav: SAT_NAV },
   { id: "ielts", label: "IELTS", sub: "All four skills", href: "/sat/ielts", icon: BookText, nav: IELTS_NAV },
   { id: "college", label: "College App", sub: "US universities", href: "/sat/college", icon: Building2, nav: COLLEGE_NAV },
+  { id: "skills", label: "Milliy Sertifikat", sub: "Ona tili & Tarix darslari", href: "/skills", icon: Trophy, nav: [] },
 ] as const;
 
 export default function SatLayout({ children }: { children: React.ReactNode }) {

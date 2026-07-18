@@ -45,11 +45,11 @@ import {
   Sun,
   Moon,
   Monitor,
+  Trophy,
 } from "lucide-react";
 import { useTheme, type ThemeMode } from "@/hooks/useTheme";
 import { apiFetch } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
-import SatIeltsDashboard from "./sat-ielts/SatIeltsDashboard";
 import AssistantDashboard from "./assistant/AssistantDashboard";
 import ReviewDashboard from "./review/ReviewDashboard";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -92,6 +92,61 @@ function fileToAvatarDataUri(file: File): Promise<string> {
     };
     reader.readAsDataURL(file);
   });
+}
+
+// Smooth SVG area/line chart for the score-trend series — replaces the old
+// bar-height hack with something that reads like a real analytics chart.
+function ScoreTrendChart({ points }: { points: { score_pct: number }[] }) {
+  const width = 600;
+  const height = 140;
+  const padY = 16;
+  const n = points.length;
+  const stepX = n > 1 ? width / (n - 1) : width;
+  const coords = points.map((p, i) => {
+    const x = n > 1 ? i * stepX : width / 2;
+    const y = padY + (1 - Math.max(0, Math.min(100, p.score_pct)) / 100) * (height - padY * 2);
+    return [x, y] as const;
+  });
+  const linePath = coords.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x},${y}`).join(" ");
+  const areaPath = `${linePath} L${coords[coords.length - 1][0]},${height} L${coords[0][0]},${height} Z`;
+
+  return (
+    <div className="relative">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-32" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="scoreTrendFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#6366f1" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {[0, 0.5, 1].map((f) => (
+          <line
+            key={f}
+            x1={0}
+            x2={width}
+            y1={padY + f * (height - padY * 2)}
+            y2={padY + f * (height - padY * 2)}
+            stroke="currentColor"
+            strokeDasharray="4 5"
+            className="text-slate-200 dark:text-slate-800"
+            strokeWidth={1}
+          />
+        ))}
+        <path d={areaPath} fill="url(#scoreTrendFill)" />
+        <path d={linePath} fill="none" stroke="#6366f1" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+        {coords.map(([x, y], i) => (
+          <circle key={i} cx={x} cy={y} r={4} className="fill-white dark:fill-slate-900" stroke="#6366f1" strokeWidth={2.5} />
+        ))}
+      </svg>
+      <div className="flex justify-between mt-1">
+        {points.map((p, i) => (
+          <span key={i} className="text-[10px] font-bold text-slate-400 flex-1 text-center first:text-left last:text-right">
+            {p.score_pct}%
+          </span>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function DashboardContent() {
@@ -719,21 +774,25 @@ function DashboardContent() {
   }
 
   const menuItems = [
-    { id: "overview", label: t("overview"), icon: LayoutDashboard },
-    { id: "files", label: t("dash_files"), icon: FileText },
-    { id: "chat", label: t("dash_chat"), icon: MessageSquare },
-    { id: "assistant", label: t("dash_assistant") || "AI Yordamchi", icon: Sparkles },
-    { id: "quiz", label: t("dash_quiz"), icon: GraduationCap },
-    { id: "sat-ielts", label: "IELTS", icon: GraduationCap },
-    { id: "plans", label: t("dash_plan"), icon: Calendar },
-    { id: "flashcards", label: t("dash_flashcards"), icon: Zap },
-    { id: "gaps", label: t("dash_gaps"), icon: Brain },
-    { id: "review", label: t("dash_review") || "Takrorlash", icon: RotateCcw },
+    { id: "overview", label: t("overview"), icon: LayoutDashboard, section: "main" },
+    { id: "files", label: t("dash_files"), icon: FileText, section: "learn" },
+    { id: "chat", label: t("dash_chat"), icon: MessageSquare, section: "learn" },
+    { id: "assistant", label: t("dash_assistant") || "AI Yordamchi", icon: Sparkles, section: "learn" },
+    { id: "quiz", label: t("dash_quiz"), icon: GraduationCap, section: "learn" },
+    { id: "plans", label: t("dash_plan"), icon: Calendar, section: "learn" },
+    { id: "flashcards", label: t("dash_flashcards"), icon: Zap, section: "learn" },
+    { id: "gaps", label: t("dash_gaps"), icon: Brain, section: "learn" },
+    { id: "review", label: t("dash_review") || "Takrorlash", icon: RotateCcw, section: "learn" },
     // Subscription hidden during beta — everything is free for now.
-    { id: "feedback", label: t("dash_feedback"), icon: MessageCircle },
-    { id: "telegram", label: t("dash_telegram"), icon: Send },
-    { id: "settings", label: t("settings") || "Settings", icon: Settings },
+    { id: "feedback", label: t("dash_feedback"), icon: MessageCircle, section: "account" },
+    { id: "telegram", label: t("dash_telegram"), icon: Send, section: "account" },
+    { id: "settings", label: t("settings") || "Settings", icon: Settings, section: "account" },
   ];
+  const sectionLabels: Record<string, string> = {
+    main: lang === "uz" ? "Asosiy" : lang === "ru" ? "Главное" : "Main",
+    learn: lang === "uz" ? "O'quv vositalari" : lang === "ru" ? "Обучение" : "Learning",
+    account: lang === "uz" ? "Hisob" : lang === "ru" ? "Аккаунт" : "Account",
+  };
 
   return (
     <div className="flex h-screen bg-transparent overflow-hidden text-slate-900 dark:text-slate-100 relative z-10">
@@ -745,59 +804,87 @@ function DashboardContent() {
         />
       )}
 
-      {/* Sidebar — off-canvas drawer on mobile, in-flow collapsible rail on desktop */}
+      {/* Sidebar — off-canvas drawer on mobile, in-flow collapsible rail on desktop.
+          Always-dark surface (independent of the light/dark toggle) for a premium,
+          consistent "app shell" feel — matches the SAT/IELTS platform's dark accents. */}
       <aside
         className={`fixed inset-y-0 left-0 z-40 w-[280px] transform transition-transform duration-300 md:relative md:translate-x-0 md:transition-[width] ${
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-        } ${isSidebarOpen ? "md:w-[280px]" : "md:w-20"} bg-white/95 md:bg-white/70 dark:bg-slate-900/95 md:dark:bg-slate-900/70 backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-800/50 flex flex-col`}
+        } ${isSidebarOpen ? "md:w-[280px]" : "md:w-20"} bg-gradient-to-b from-slate-900 to-slate-950 text-slate-300 flex flex-col shadow-2xl shadow-black/20`}
       >
         <div className="p-6 flex items-center gap-3 overflow-hidden">
-          <div className="h-10 w-10 rounded-xl overflow-hidden flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
+          <div className="h-10 w-10 rounded-xl overflow-hidden flex items-center justify-center shrink-0 shadow-lg shadow-primary/30 ring-1 ring-white/10">
             <img src="/logo-icon.png" alt="Ilm AI" className="h-full w-full object-cover" />
           </div>
           {isSidebarOpen && (
-            <span className="font-bold text-xl whitespace-nowrap bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">{t("brand")}</span>
+            <span className="font-bold text-xl whitespace-nowrap bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">{t("brand")}</span>
           )}
         </div>
 
-        <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => { setActivePanel(item.id); setIsMobileMenuOpen(false); }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all group ${
-                activePanel === item.id
-                  ? "bg-blue-50 dark:bg-blue-900/30 text-primary"
-                  : "hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500"
-              }`}
-            >
-              <item.icon
-                className={`h-5 w-5 shrink-0 ${
-                  activePanel === item.id ? "text-primary" : "group-hover:text-slate-700 dark:hover:text-slate-300"
-                }`}
-              />
-              {isSidebarOpen && <span className="font-medium whitespace-nowrap">{item.label}</span>}
-              {activePanel === item.id && isSidebarOpen && (
-                <motion.div
-                  layoutId="active"
-                  className="ml-auto w-1.5 h-1.5 rounded-full bg-primary"
-                />
+        <nav className="flex-1 px-3 space-y-1 overflow-y-auto overflow-x-hidden no-scrollbar">
+          {menuItems.map((item, i) => (
+            <div key={item.id}>
+              {isSidebarOpen && (i === 0 || item.section !== menuItems[i - 1].section) && (
+                <p className="px-4 pt-4 pb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 whitespace-nowrap">
+                  {sectionLabels[item.section]}
+                </p>
               )}
-            </button>
+              <button
+                onClick={() => { setActivePanel(item.id); setIsMobileMenuOpen(false); }}
+                className={`relative w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all group ${
+                  activePanel === item.id
+                    ? "text-white"
+                    : "hover:bg-white/5 text-slate-400 hover:text-slate-100"
+                }`}
+              >
+                {activePanel === item.id && (
+                  <motion.div
+                    layoutId="active-nav-pill"
+                    transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                    className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary to-secondary shadow-lg shadow-primary/30"
+                  />
+                )}
+                <item.icon className="h-[18px] w-[18px] shrink-0 relative z-10" />
+                {isSidebarOpen && <span className="font-medium text-[13.5px] whitespace-nowrap relative z-10">{item.label}</span>}
+              </button>
+            </div>
           ))}
         </nav>
 
-        <div className="px-6 py-4">
-          <LanguageSwitcher />
-        </div>
+        {isSidebarOpen && (
+          <button
+            onClick={() => setActivePanel("subscription")}
+            className="mx-4 mb-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-primary/40 hover:bg-white/[0.07] transition-all text-left group"
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="h-4 w-4 text-accent" />
+              <span className="text-xs font-bold text-white">
+                {subscriptionStatus?.is_premium
+                  ? t("subscription_premium")
+                  : lang === "uz" ? "Premium'ga o'ting" : lang === "ru" ? "Перейти на Premium" : "Go Premium"}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-snug">
+              {subscriptionStatus?.is_premium
+                ? t("subscription_hint")
+                : lang === "uz" ? "Cheklovsiz kvizlar, yuklamalar va tahlillar" : lang === "ru" ? "Безлимитные тесты, файлы и аналитика" : "Unlimited quizzes, uploads & analytics"}
+            </p>
+          </button>
+        )}
 
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800">
+        {isSidebarOpen && (
+          <div className="px-4 pb-3 dark">
+            <LanguageSwitcher />
+          </div>
+        )}
+
+        <div className="p-3 border-t border-white/10">
           <button
             onClick={logout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all"
           >
-            <LogOut className="h-5 w-5 shrink-0" />
-            {isSidebarOpen && <span className="font-medium">{t("dash_logout")}</span>}
+            <LogOut className="h-[18px] w-[18px] shrink-0" />
+            {isSidebarOpen && <span className="font-medium text-[13.5px]">{t("dash_logout")}</span>}
           </button>
         </div>
 
@@ -811,31 +898,31 @@ function DashboardContent() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto overflow-x-hidden relative min-w-0">
-        <header className="bg-gradient-to-r from-blue-600 to-primary dark:from-blue-900 dark:to-blue-800 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 pt-8 pb-6 px-6 flex justify-between items-center shadow-lg">
+        <header className="sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/70 dark:border-slate-800/70 pt-6 pb-5 px-6 flex justify-between items-center">
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => { setIsMobileMenuOpen(true); setIsSidebarOpen(true); }}
-              className="md:hidden shrink-0 h-10 w-10 flex items-center justify-center rounded-xl bg-white/15 text-white hover:bg-white/25 transition-colors"
+              className="md:hidden shrink-0 h-10 w-10 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors"
               aria-label="Menu"
             >
               <Menu className="h-5 w-5" />
             </button>
             <div className="min-w-0">
-              <p className="text-sm text-blue-100 font-medium">{lang === "uz" ? "Xush kelibsiz" : lang === "ru" ? "Добро пожаловать" : "Welcome back"}</p>
-              <h2 className="text-2xl font-bold text-white capitalize tracking-tight truncate">
+              <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">{lang === "uz" ? "Xush kelibsiz" : lang === "ru" ? "Добро пожаловать" : "Welcome back"}</p>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight truncate">
                 {menuItems.find((i) => i.id === activePanel)?.label}
               </h2>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {/* Platform switcher — pick SAT / IELTS / College App directly */}
             <div className="relative">
               <button
                 onClick={() => setPlatformMenuOpen((o) => !o)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white text-blue-700 rounded-xl text-sm font-black shadow-lg hover:scale-105 transition-transform"
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary to-secondary text-white rounded-xl text-sm font-bold shadow-md shadow-primary/25 hover:shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5 transition-all"
               >
-                <GraduationCap className="h-4 w-4" />
-                <span className="hidden xs:inline">Platforms</span>
+                <Trophy className="h-4 w-4" />
+                <span className="hidden xs:inline">{t("dash_courses") || "Kurslar"}</span>
                 <ChevronDown className={`h-4 w-4 transition-transform ${platformMenuOpen ? "rotate-180" : ""}`} />
               </button>
               {platformMenuOpen && (
@@ -846,6 +933,7 @@ function DashboardContent() {
                       { href: "/sat", label: "SAT", sub: "Digital SAT prep", icon: GraduationCap, color: "text-blue-600" },
                       { href: "/sat/ielts", label: "IELTS", sub: "All four skills", icon: BookText, color: "text-violet-600" },
                       { href: "/sat/college", label: "College App", sub: "6,000+ universities", icon: Building2, color: "text-teal-600" },
+                      { href: "/skills", label: "Milliy Sertifikat", sub: "Ona tili & Tarix", icon: Trophy, color: "text-emerald-600" },
                     ].map((p) => (
                       <Link
                         key={p.href}
@@ -865,18 +953,23 @@ function DashboardContent() {
                 </>
               )}
             </div>
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-semibold text-white">{user?.name || "User"}</p>
-              <p className="text-xs text-blue-200">{user?.email}</p>
-            </div>
-            <div className="h-12 w-12 bg-white/20 backdrop-blur-sm border-2 border-white/30 rounded-full flex items-center justify-center font-bold text-white text-lg shadow-lg overflow-hidden">
-              {user?.profile_picture ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={user.profile_picture} alt="avatar" className="h-full w-full object-cover" />
-              ) : (
-                user?.name?.charAt(0) || "U"
-              )}
-            </div>
+            <button
+              onClick={() => setActivePanel("settings")}
+              className="flex items-center gap-3 pl-1 pr-3 py-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <div className="h-9 w-9 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center font-bold text-white text-sm shadow-md overflow-hidden ring-2 ring-white dark:ring-slate-900">
+                {user?.profile_picture ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={user.profile_picture} alt="avatar" className="h-full w-full object-cover" />
+                ) : (
+                  user?.name?.charAt(0) || "U"
+                )}
+              </div>
+              <div className="text-left hidden sm:block">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white leading-tight">{user?.name || "User"}</p>
+                <p className="text-xs text-slate-400 leading-tight">{user?.email}</p>
+              </div>
+            </button>
           </div>
         </header>
 
@@ -890,34 +983,64 @@ function DashboardContent() {
                 exit={{ opacity: 0, y: -10 }}
                 className="space-y-6 mt-4"
               >
+                {/* Hero greeting strip */}
+                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 p-6 sm:p-7 text-white shadow-xl shadow-slate-900/10">
+                  <div className="absolute -right-10 -top-10 h-44 w-44 rounded-full bg-primary/30 blur-3xl" />
+                  <div className="absolute -bottom-16 left-1/3 h-40 w-40 rounded-full bg-secondary/20 blur-3xl" />
+                  <div className="relative flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm text-slate-400 font-medium">
+                        {lang === "uz" ? "Xush kelibsiz" : lang === "ru" ? "Добро пожаловать" : "Welcome back"}
+                      </p>
+                      <h3 className="text-2xl font-bold mt-0.5">{user?.name?.split(" ")[0] || t("brand")} 👋</h3>
+                    </div>
+                    {stats.streak > 0 && (
+                      <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-2xl px-4 py-2.5 border border-white/10">
+                        <span className="text-xl">🔥</span>
+                        <div>
+                          <p className="text-lg font-bold leading-none">{stats.streak} {t("days_suffix")}</p>
+                          <p className="text-[11px] text-slate-400 leading-none mt-1">{t("streak_label")}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {/* Top Stats Grid */}
                 <div className="grid sm:grid-cols-3 lg:grid-cols-6 gap-4">
                   {[
-                    { label: t("dash_files"), value: stats.files, icon: FileText, color: "bg-blue-500/10 text-blue-500" },
-                    { label: t("streak_label"), value: `${stats.streak} ${t("days_suffix")}`, icon: CheckCircle2, color: "bg-green-500/10 text-green-500" },
-                    { label: t("stat_sessions"), value: quizStats?.sessions_completed || 0, icon: GraduationCap, color: "bg-orange-500/10 text-orange-500" },
-                    { label: t("stat_avg_score"), value: `${quizStats?.average_score || 0}%`, icon: TrendingUp, color: "bg-emerald-500/10 text-emerald-500" },
-                    { label: t("stat_questions"), value: quizStats?.total_questions || 0, icon: Award, color: "bg-pink-500/10 text-pink-500" },
-                    { label: t("dash_telegram"), value: stats.tgLinked ? t("tg_linked") : t("tg_not_linked"), icon: Send, color: "bg-purple-500/10 text-purple-500" },
+                    { label: t("dash_files"), value: stats.files, icon: FileText, color: "from-blue-500 to-blue-400", tint: "bg-blue-500/10 text-blue-500" },
+                    { label: t("streak_label"), value: `${stats.streak} ${t("days_suffix")}`, icon: CheckCircle2, color: "from-green-500 to-emerald-400", tint: "bg-green-500/10 text-green-500" },
+                    { label: t("stat_sessions"), value: quizStats?.sessions_completed || 0, icon: GraduationCap, color: "from-orange-500 to-amber-400", tint: "bg-orange-500/10 text-orange-500" },
+                    { label: t("stat_avg_score"), value: `${quizStats?.average_score || 0}%`, icon: TrendingUp, color: "from-emerald-500 to-teal-400", tint: "bg-emerald-500/10 text-emerald-500" },
+                    { label: t("stat_questions"), value: quizStats?.total_questions || 0, icon: Award, color: "from-pink-500 to-rose-400", tint: "bg-pink-500/10 text-pink-500" },
+                    { label: t("dash_telegram"), value: stats.tgLinked ? t("tg_linked") : t("tg_not_linked"), icon: Send, color: "from-purple-500 to-violet-400", tint: "bg-purple-500/10 text-purple-500" },
                   ].map((stat, i) => (
-                    <div
+                    <motion.div
                       key={i}
-                      className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-5 rounded-2xl shadow-sm border border-slate-200/50 dark:border-slate-800/50 group hover:border-primary/50 transition-all duration-300"
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.45, delay: i * 0.05, ease: [0.16, 1, 0.3, 1] }}
+                      className="relative overflow-hidden bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-200/70 dark:border-slate-800 group hover:-translate-y-1 hover:shadow-lg hover:shadow-slate-900/5 transition-all duration-300"
                     >
-                      <div className={`h-10 w-10 ${stat.color} rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
+                      <div className={`absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r ${stat.color} opacity-0 group-hover:opacity-100 transition-opacity`} />
+                      <div className={`h-10 w-10 ${stat.tint} rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
                         <stat.icon className="h-5 w-5" />
                       </div>
                       <p className="text-slate-500 text-xs font-medium">{stat.label}</p>
-                      <p className="text-xl font-bold mt-1">{stat.value}</p>
-                    </div>
+                      <p className="text-xl font-bold mt-1 tracking-tight">{stat.value}</p>
+                    </motion.div>
                   ))}
                 </div>
 
                 {/* Today's Plan */}
                 {todayPlan && todayPlan.status === "today" && todayPlan.day && (
-                  <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-6 rounded-2xl border-2 border-primary/20 dark:border-primary/30">
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-primary/20 dark:border-primary/30 shadow-sm">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-bold text-sm text-primary">{t("plan_today_title")}</h3>
+                      <h3 className="font-bold text-sm text-primary flex items-center gap-2">
+                        <span className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center"><Calendar className="h-3.5 w-3.5" /></span>
+                        {t("plan_today_title")}
+                      </h3>
                       <span className="text-[11px] font-bold text-primary bg-primary/10 rounded-full px-2.5 py-0.5">
                         {t("day_label")} {todayPlan.days_elapsed + 1}
                       </span>
@@ -937,7 +1060,7 @@ function DashboardContent() {
                 {todayPlan && todayPlan.status === "no_plan" && (
                   <button
                     onClick={() => setActivePanel("plans")}
-                    className="w-full text-left bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-6 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-primary transition-all"
+                    className="w-full text-left bg-white dark:bg-slate-900 p-6 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-primary hover:bg-primary/[0.02] transition-all"
                   >
                     <p className="font-bold text-sm text-slate-700 dark:text-slate-200">
                       {t("plan_no_plan_title")}
@@ -946,51 +1069,59 @@ function DashboardContent() {
                   </button>
                 )}
                 {todayPlan && todayPlan.status === "finished" && (
-                  <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-6 rounded-2xl border border-green-500/30 text-center">
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-green-500/30 text-center shadow-sm">
                     <p className="font-bold text-sm text-green-600 dark:text-green-400">
                       {t("plan_finished")}
                     </p>
                   </div>
                 )}
 
-                {/* Score Trend Chart */}
-                <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-6 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 min-h-[200px]">
-                  <h3 className="font-bold text-sm mb-4">{t("chart_title")}</h3>
-                  {quizStats?.score_trend && quizStats.score_trend.length > 0 ? (
-                    <div className="flex items-end gap-2 h-32">
-                      {quizStats.score_trend.map((s: any, i: number) => (
-                        <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                          <span className="text-[10px] font-bold text-slate-500">{s.score_pct}%</span>
-                          <div
-                            className="w-full bg-gradient-to-t from-primary to-blue-400 rounded-t-md transition-all"
-                            style={{ height: `${Math.max(s.score_pct, 8)}%` }}
-                          />
-                        </div>
-                      ))}
+                <div className="grid lg:grid-cols-3 gap-6">
+                  {/* Score Trend Chart */}
+                  <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/70 dark:border-slate-800 min-h-[200px] shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-bold text-sm flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-primary" /> {t("chart_title")}
+                      </h3>
+                      {quizStats?.score_trend && quizStats.score_trend.length > 1 && (() => {
+                        const trend = quizStats.score_trend;
+                        const delta = trend[trend.length - 1].score_pct - trend[0].score_pct;
+                        const up = delta >= 0;
+                        return (
+                          <span className={`text-xs font-bold px-2 py-1 rounded-full ${up ? "text-emerald-600 bg-emerald-500/10" : "text-red-500 bg-red-500/10"}`}>
+                            {up ? "▲" : "▼"} {Math.abs(Math.round(delta))}%
+                          </span>
+                        );
+                      })()}
                     </div>
-                  ) : (
-                    <div className="flex items-center justify-center h-32 text-slate-500 text-sm border-2 border-dashed border-slate-300 rounded-lg">
-                      {t("chart_empty")}
-                    </div>
-                  )}
-                </div>
+                    {quizStats?.score_trend && quizStats.score_trend.length > 0 ? (
+                      <ScoreTrendChart points={quizStats.score_trend} />
+                    ) : (
+                      <div className="flex items-center justify-center h-32 text-slate-500 text-sm border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                        {t("chart_empty")}
+                      </div>
+                    )}
+                  </div>
 
-                {/* Topics Covered */}
-                <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-6 rounded-2xl border border-slate-200/50 dark:border-slate-800/50">
-                  <h3 className="font-bold text-sm mb-3">{t("topics_covered_title")}</h3>
-                  {quizStats?.topics_covered && quizStats.topics_covered.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {quizStats.topics_covered.map((topic: string, i: number) => (
-                        <span key={i} className="px-3 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full capitalize">
-                          {topic}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-slate-500 text-sm">
-                      {t("topics_covered_empty")}
-                    </div>
-                  )}
+                  {/* Topics Covered */}
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/70 dark:border-slate-800 shadow-sm">
+                    <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
+                      <Brain className="h-4 w-4 text-purple-500" /> {t("topics_covered_title")}
+                    </h3>
+                    {quizStats?.topics_covered && quizStats.topics_covered.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {quizStats.topics_covered.map((topic: string, i: number) => (
+                          <span key={i} className="px-3 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full capitalize">
+                            {topic}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-slate-500 text-sm">
+                        {t("topics_covered_empty")}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -1002,116 +1133,130 @@ function DashboardContent() {
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-6 mt-4"
               >
-                <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 text-center">
-                  <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-bold mb-2">{t("dash_upload")}</h3>
-                  <p className="text-slate-500 mb-6">{t("upload_hint")}</p>
-                  
-                  <div className="max-w-md mx-auto mb-6">
-                    <label className="block text-left text-sm font-medium mb-1">{t("topic_label")}</label>
-                    <input 
-                      type="text" 
-                      value={uploadTopic}
-                      onChange={(e) => setUploadTopic(e.target.value)}
-                      placeholder={t("topic_placeholder")}
-                      className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-primary mb-4"
-                    />
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-center gap-4 mb-6">
-                    <input
-                      type="file"
-                      id="file-upload"
-                      className="hidden"
-                      onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                    />
-                    <label
-                      htmlFor="file-upload"
-                      className="cursor-pointer px-6 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-semibold hover:bg-slate-200 transition-all inline-block"
-                    >
-                      {selectedFile ? selectedFile.name : t("select_file")}
-                    </label>
-
-                    <input
-                      type="file"
-                      id="camera-upload"
-                      accept="image/*"
-                      capture="environment"
-                      className="hidden"
-                      onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                    />
-                    <label
-                      htmlFor="camera-upload"
-                      className="cursor-pointer px-6 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-semibold hover:bg-slate-200 transition-all inline-block flex items-center gap-2"
-                    >
-                      <Camera className="h-4 w-4" />
-                      {t("take_photo")}
-                    </label>
-                  </div>
-
-                  {selectedFile && (
-                    <button
-                      onClick={handleFileUpload}
-                      disabled={loading}
-                      className="px-10 py-3 bg-primary text-white rounded-xl font-bold hover:bg-blue-600 disabled:opacity-50 transition-all"
-                    >
-                      {loading ? (
-                        <Loader2 className="h-5 w-5 animate-spin mx-auto" />
-                      ) : (
-                        t("upload_btn")
-                      )}
-                    </button>
-                  )}
-                  {uploadStatus.msg && (
-                    <div
-                      className={`mt-4 flex items-center justify-center gap-2 text-sm font-medium ${
-                        uploadStatus.type === "success"
-                          ? "text-green-500"
-                          : "text-red-500"
-                      }`}
-                    >
-                      {uploadStatus.type === "success" ? (
-                        <CheckCircle2 className="h-4 w-4" />
-                      ) : (
-                        <AlertCircle className="h-4 w-4" />
-                      )}
-                      {uploadStatus.msg}
+                <div className="grid lg:grid-cols-2 gap-6 items-start">
+                  <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-primary/40 transition-colors text-center">
+                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/15 to-secondary/15 flex items-center justify-center mx-auto mb-4">
+                      <Upload className="h-6 w-6 text-primary" />
                     </div>
-                  )}
-                </div>
+                    <h3 className="text-lg font-bold mb-1.5">{t("dash_upload")}</h3>
+                    <p className="text-slate-500 text-sm mb-6">{t("upload_hint")}</p>
 
-                <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800">
-                  <h3 className="text-lg font-bold mb-2">{t("paste_content_title")}</h3>
-                  <p className="text-slate-500 mb-4 text-sm">{t("paste_content_desc")}</p>
-                  <div className="space-y-4 max-w-2xl">
-                    <input
-                      type="text"
-                      value={pasteTitle}
-                      onChange={(e) => setPasteTitle(e.target.value)}
-                      placeholder={t("paste_title_placeholder")}
-                      className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-primary"
-                    />
-                    <textarea
-                      value={pasteContent}
-                      onChange={(e) => setPasteContent(e.target.value)}
-                      rows={6}
-                      placeholder={t("paste_content_placeholder")}
-                      className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-primary resize-none"
-                    />
-                    <button
-                      onClick={handleTextUpload}
-                      disabled={loading || !pasteContent.trim()}
-                      className="px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-blue-600 disabled:opacity-50 transition-all"
-                    >
-                      {loading ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : t("save_pasted_content")}
-                    </button>
+                    <div className="max-w-md mx-auto mb-5 text-left">
+                      <label className="block text-sm font-medium mb-1.5">{t("topic_label")}</label>
+                      <input
+                        type="text"
+                        value={uploadTopic}
+                        onChange={(e) => setUploadTopic(e.target.value)}
+                        placeholder={t("topic_placeholder")}
+                        className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+                      <input
+                        type="file"
+                        id="file-upload"
+                        className="hidden"
+                        onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                      />
+                      <label
+                        htmlFor="file-upload"
+                        className="cursor-pointer px-5 py-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all inline-flex items-center gap-2"
+                      >
+                        <FileText className="h-4 w-4 text-slate-400" />
+                        {selectedFile ? selectedFile.name : t("select_file")}
+                      </label>
+
+                      <input
+                        type="file"
+                        id="camera-upload"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                      />
+                      <label
+                        htmlFor="camera-upload"
+                        className="cursor-pointer px-5 py-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all inline-flex items-center gap-2"
+                      >
+                        <Camera className="h-4 w-4 text-slate-400" />
+                        {t("take_photo")}
+                      </label>
+                    </div>
+
+                    {selectedFile && (
+                      <button
+                        onClick={handleFileUpload}
+                        disabled={loading}
+                        className="px-10 py-3 bg-primary text-white rounded-xl font-bold hover:bg-blue-600 disabled:opacity-50 transition-all shadow-md shadow-primary/20"
+                      >
+                        {loading ? (
+                          <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                        ) : (
+                          t("upload_btn")
+                        )}
+                      </button>
+                    )}
+                    {uploadStatus.msg && (
+                      <div
+                        className={`mt-4 flex items-center justify-center gap-2 text-sm font-medium ${
+                          uploadStatus.type === "success"
+                            ? "text-green-500"
+                            : "text-red-500"
+                        }`}
+                      >
+                        {uploadStatus.type === "success" ? (
+                          <CheckCircle2 className="h-4 w-4" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4" />
+                        )}
+                        {uploadStatus.msg}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 h-full">
+                    <div className="flex items-center gap-3 mb-5">
+                      <div className="h-11 w-11 rounded-xl bg-cyan-500/10 flex items-center justify-center shrink-0">
+                        <MessageSquare className="h-5 w-5 text-cyan-500" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold leading-tight">{t("paste_content_title")}</h3>
+                        <p className="text-slate-500 text-xs">{t("paste_content_desc")}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <input
+                        type="text"
+                        value={pasteTitle}
+                        onChange={(e) => setPasteTitle(e.target.value)}
+                        placeholder={t("paste_title_placeholder")}
+                        className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-primary"
+                      />
+                      <textarea
+                        value={pasteContent}
+                        onChange={(e) => setPasteContent(e.target.value)}
+                        rows={6}
+                        placeholder={t("paste_content_placeholder")}
+                        className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-primary resize-none"
+                      />
+                      <button
+                        onClick={handleTextUpload}
+                        disabled={loading || !pasteContent.trim()}
+                        className="px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-blue-600 disabled:opacity-50 transition-all"
+                      >
+                        {loading ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : t("save_pasted_content")}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
                   <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
-                    <h3 className="font-bold">{t("dash_files")}</h3>
-                    <span className="text-sm text-slate-500">
+                    <h3 className="font-bold flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-slate-400" /> {t("dash_files")}
+                    </h3>
+                    <span className="text-xs font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">
                       {files.length} {t("files_count_label")}
                     </span>
                   </div>
@@ -1122,16 +1267,16 @@ function DashboardContent() {
                           key={i}
                           className="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-500">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="h-9 w-9 shrink-0 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-500">
                               <FileText className="h-4 w-4" />
                             </div>
-                            <div>
-                              <p className="text-sm font-bold">{typeof file === 'string' ? file : file.filename}</p>
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold truncate">{typeof file === 'string' ? file : file.filename}</p>
                               {file.topic && <p className="text-[10px] text-slate-500 uppercase tracking-wider">{file.topic}</p>}
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 shrink-0">
                             {file.chunks && (
                               <span className="text-[10px] font-medium bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md text-slate-500">
                                 {file.chunks} {t("chunks_label")}
@@ -1148,7 +1293,7 @@ function DashboardContent() {
                         </div>
                       ))
                     ) : (
-                      <div className="p-12 text-center text-slate-500">
+                      <div className="p-12 text-center text-slate-500 text-sm">
                         {t("no_files")}
                       </div>
                     )}
@@ -1162,33 +1307,38 @@ function DashboardContent() {
                 key="chat"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mt-4 h-[calc(100vh-200px)] flex flex-col bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-200/50 dark:border-slate-800/50 overflow-hidden"
+                className="mt-4 h-[calc(100vh-200px)] flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden"
               >
                 <div className="flex-1 overflow-y-auto p-6 space-y-4">
                   {messages.length === 0 && (
-                    <div className="h-full flex flex-col items-center justify-center text-center opacity-50">
-                      <div className="h-20 w-20 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                    <div className="h-full flex flex-col items-center justify-center text-center">
+                      <div className="h-20 w-20 bg-gradient-to-br from-primary/15 to-secondary/15 rounded-full flex items-center justify-center mb-4">
                         <MessageSquare className="h-10 w-10 text-primary" />
                       </div>
-                      <p className="font-medium text-lg">{t("ask_placeholder")}</p>
+                      <p className="font-bold text-lg">{t("ask_placeholder")}</p>
                       <p className="text-sm text-slate-500 max-w-xs mt-2">{t("chat_empty_desc")}</p>
                     </div>
                   )}
                   {messages.map((msg, i) => (
                     <div
                       key={i}
-                      className={`flex ${
+                      className={`flex items-end gap-2 ${
                         msg.role === "user" ? "justify-end" : "justify-start"
                       }`}
                     >
+                      {msg.role === "ai" && (
+                        <div className="h-7 w-7 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center shrink-0 shadow-sm">
+                          <Sparkles className="h-3.5 w-3.5 text-white" />
+                        </div>
+                      )}
                       <div
-                        className={`max-w-[80%] p-4 rounded-2xl relative group ${
+                        className={`max-w-[80%] p-4 rounded-2xl relative group shadow-sm ${
                           msg.role === "user"
-                            ? "bg-primary text-white rounded-tr-none"
-                            : "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-tl-none"
+                            ? "bg-gradient-to-br from-primary to-secondary text-white rounded-br-md"
+                            : "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-bl-md"
                         }`}
                       >
-                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                        <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                         {msg.citations && msg.citations.length > 0 && (
                           <div className="mt-3 pt-2 border-t border-slate-200/50 dark:border-slate-700/50">
                             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">{t("citations_label")}</p>
@@ -1249,7 +1399,7 @@ function DashboardContent() {
                     </div>
                   )}
                 </div>
-                <div className="p-4 border-t border-slate-200/50 dark:border-slate-800/50 bg-white/30 dark:bg-slate-900/30">
+                <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30">
                   <div className="relative">
                     <input
                       type="text"
@@ -1257,7 +1407,7 @@ function DashboardContent() {
                       onChange={(e) => setChatInput(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
                       placeholder={t("ask_placeholder")}
-                      className="w-full pl-6 pr-24 py-4 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-200/50 dark:border-slate-700/50 outline-none focus:ring-2 focus:ring-primary transition-all shadow-inner"
+                      className="w-full pl-6 pr-24 py-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-primary transition-all"
                     />
                     <div className="absolute right-2 top-2 flex gap-2">
                       <button
@@ -1265,7 +1415,7 @@ function DashboardContent() {
                         className={`h-10 w-10 rounded-lg flex items-center justify-center transition-colors ${
                           isListening
                             ? "bg-red-500 text-white animate-pulse"
-                            : "bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200"
+                            : "bg-slate-100 dark:bg-slate-700 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600"
                         }`}
                         title={t("voice_input_title")}
                       >
@@ -1273,7 +1423,7 @@ function DashboardContent() {
                       </button>
                       <button
                         onClick={handleSendMessage}
-                        className="h-10 w-10 bg-primary text-white rounded-lg flex items-center justify-center hover:bg-blue-600 transition-colors"
+                        className="h-10 w-10 bg-gradient-to-br from-primary to-secondary text-white rounded-lg flex items-center justify-center hover:opacity-90 transition-opacity shadow-sm"
                       >
                         <Send className="h-5 w-5" />
                       </button>
@@ -1291,82 +1441,117 @@ function DashboardContent() {
                 className="space-y-6 mt-4"
               >
                 {!quizResult || quizResult.length === 0 ? (
-                  <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 grid sm:grid-cols-3 gap-4 items-end">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        {t("difficulty")}
-                      </label>
-                      <select
-                        value={quizDifficulty}
-                        onChange={(e) => setQuizDifficulty(e.target.value)}
-                        className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none"
-                      >
-                        <option value="easy">{t("easy")}</option>
-                        <option value="medium">{t("medium")}</option>
-                        <option value="hard">{t("hard")}</option>
-                      </select>
+                  <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="h-11 w-11 rounded-xl bg-orange-500/10 flex items-center justify-center shrink-0">
+                        <GraduationCap className="h-5 w-5 text-orange-500" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-lg leading-tight">{t("dash_quiz")}</h3>
+                        <p className="text-xs text-slate-500">{t("upload_hint")}</p>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        {t("num_questions")}
-                      </label>
-                      <input
-                        type="number"
-                        value={quizCount}
-                        onChange={(e) => setQuizCount(parseInt(e.target.value))}
-                        className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none"
-                      />
+                    <div className="grid sm:grid-cols-2 gap-5 mb-6">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          {t("difficulty")}
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {(["easy", "medium", "hard"] as const).map((d) => (
+                            <button
+                              key={d}
+                              onClick={() => setQuizDifficulty(d)}
+                              className={`py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${
+                                quizDifficulty === d
+                                  ? "border-primary bg-primary/10 text-primary"
+                                  : "border-slate-200 dark:border-slate-700 text-slate-500 hover:border-primary/40"
+                              }`}
+                            >
+                              {t(d)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          {t("num_questions")}
+                        </label>
+                        <input
+                          type="number"
+                          value={quizCount}
+                          onChange={(e) => setQuizCount(parseInt(e.target.value))}
+                          className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-primary h-[42px]"
+                        />
+                      </div>
                     </div>
                     <button
                       onClick={handleGenerateQuiz}
                       disabled={loading}
-                      className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-blue-600 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                      className="w-full py-3.5 bg-gradient-to-r from-primary to-secondary text-white rounded-xl font-bold hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-md shadow-primary/20"
                     >
                       {loading ? (
                         <Loader2 className="h-5 w-5 animate-spin" />
                       ) : (
-                        t("generate_quiz")
+                        <>
+                          <Sparkles className="h-4 w-4" /> {t("generate_quiz")}
+                        </>
                       )}
                     </button>
                   </div>
                 ) : answeredQuestions.length === quizResult.length ? (
-                  <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
-                    <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                    <h3 className="text-2xl font-bold mb-2">
+                  <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm text-center">
+                    {(() => {
+                      const pct = Math.round((score / quizResult.length) * 100);
+                      const color = pct >= 80 ? "#10b981" : pct >= 50 ? "#f59e0b" : "#ef4444";
+                      const r = 54;
+                      const c = 2 * Math.PI * r;
+                      return (
+                        <svg viewBox="0 0 140 140" className="h-36 w-36 mx-auto mb-2 -rotate-90">
+                          <circle cx="70" cy="70" r={r} fill="none" stroke="currentColor" strokeWidth="10" className="text-slate-100 dark:text-slate-800" />
+                          <circle
+                            cx="70" cy="70" r={r} fill="none" stroke={color} strokeWidth="10" strokeLinecap="round"
+                            strokeDasharray={c} strokeDashoffset={c - (pct / 100) * c}
+                            style={{ transition: "stroke-dashoffset 0.8s ease" }}
+                          />
+                          <text x="70" y="76" textAnchor="middle" className="rotate-90 origin-center fill-slate-900 dark:fill-white font-black" style={{ fontSize: 28, transform: "rotate(90deg)", transformOrigin: "70px 70px" }}>
+                            {pct}%
+                          </text>
+                        </svg>
+                      );
+                    })()}
+                    <h3 className="text-2xl font-bold mb-1">
                       {t("your_score")}: {score}/{quizResult.length}
                     </h3>
-                    <p className="text-slate-500 mb-6">
-                      {Math.round((score / quizResult.length) * 100)}%
-                    </p>
+                    <p className="text-slate-500 mb-6 text-sm">{t("dash_quiz")} {t("chart_title")}</p>
                     <button
                       onClick={handleGenerateQuiz}
-                      className="px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-blue-600 transition-all"
+                      className="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-xl font-semibold hover:opacity-90 transition-all inline-flex items-center gap-2"
                     >
-                      {t("restart_quiz")}
+                      <RotateCcw className="h-4 w-4" /> {t("restart_quiz")}
                     </button>
                   </div>
                 ) : (
-                  <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800">
+                  <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                     {/* Progress Bar */}
                     <div className="mb-6">
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm text-slate-500">
-                          {t("dash_quiz")}: {currentQuestionIndex + 1}/{quizResult.length}
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                          {t("dash_quiz")} {currentQuestionIndex + 1}/{quizResult.length}
                         </span>
-                        <span className="text-sm font-bold text-primary">
+                        <span className="text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full">
                           {t("your_score")}: {score}/{answeredQuestions.length}
                         </span>
                       </div>
-                      <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
+                      <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
                         <div
-                          className="bg-primary h-2 rounded-full transition-all duration-300"
+                          className="bg-gradient-to-r from-primary to-secondary h-2 rounded-full transition-all duration-300"
                           style={{ width: `${(answeredQuestions.length / quizResult.length) * 100}%` }}
                         />
                       </div>
                     </div>
 
-                    <h3 className="text-xl font-bold mb-6">
-                      Q{currentQuestionIndex + 1}: {quizResult[currentQuestionIndex].question}
+                    <h3 className="text-xl font-bold mb-6 leading-snug">
+                      {quizResult[currentQuestionIndex].question}
                     </h3>
 
                     {/* MCQ Question - Show option buttons */}
@@ -1378,17 +1563,22 @@ function DashboardContent() {
                               key={j}
                               onClick={() => !answeredQuestions.includes(currentQuestionIndex) && setSelectedAnswer(opt)}
                               disabled={answeredQuestions.includes(currentQuestionIndex)}
-                              className={`p-4 rounded-xl border text-left transition-all ${
+                              className={`flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all ${
                                 selectedAnswer === opt
-                                  ? "border-primary bg-blue-50 dark:bg-blue-900/30"
+                                  ? "border-primary bg-primary/5 dark:bg-primary/10"
                                   : answeredQuestions.includes(currentQuestionIndex) && opt === quizResult[currentQuestionIndex].correct_answer
                                   ? "border-green-500 bg-green-50 dark:bg-green-900/30"
                                   : answeredQuestions.includes(currentQuestionIndex) && selectedAnswer === opt && opt !== quizResult[currentQuestionIndex].correct_answer
                                   ? "border-red-500 bg-red-50 dark:bg-red-900/30"
-                                  : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
+                                  : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-primary/40"
                               }`}
                             >
-                              {opt}
+                              <span className={`h-7 w-7 shrink-0 rounded-full flex items-center justify-center text-xs font-black ${
+                                selectedAnswer === opt ? "bg-primary text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-500"
+                              }`}>
+                                {String.fromCharCode(65 + j)}
+                              </span>
+                              <span className="flex-1">{opt}</span>
                             </button>
                           )
                         )}
@@ -1429,46 +1619,53 @@ function DashboardContent() {
                       <button
                         onClick={handleCheckAnswer}
                         disabled={!selectedAnswer && quizResult[currentQuestionIndex].type === "mcq"}
-                        className="px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-blue-600 disabled:opacity-50 transition-all"
+                        className="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-xl font-semibold hover:opacity-90 disabled:opacity-50 transition-all shadow-md shadow-primary/20"
                       >
                         {t("check_answer")}
                       </button>
                     ) : (
                       <div className="space-y-4">
-                        <div className={`p-4 rounded-xl ${
+                        <div className={`p-4 rounded-xl border flex gap-3 ${
                           selectedAnswer === quizResult[currentQuestionIndex].correct_answer
-                            ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
-                            : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+                            ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                            : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
                         }`}>
-                          <p className={`font-bold mb-1 ${
-                            selectedAnswer === quizResult[currentQuestionIndex].correct_answer
-                              ? "text-green-600 dark:text-green-400"
-                              : "text-red-600 dark:text-red-400"
-                          }`}>
-                            {selectedAnswer === quizResult[currentQuestionIndex].correct_answer
-                              ? t("correct")
-                              : t("incorrect")}
-                          </p>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">
-                            <span className="font-medium">{t("your_answer_label")}</span> {selectedAnswer || "—"}
-                          </p>
-                          {selectedAnswer !== quizResult[currentQuestionIndex].correct_answer && (
-                            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                              <span className="font-medium">{t("correct_answer_label")}</span> {quizResult[currentQuestionIndex].correct_answer}
-                            </p>
+                          {selectedAnswer === quizResult[currentQuestionIndex].correct_answer ? (
+                            <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
+                          ) : (
+                            <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
                           )}
-                          {quizResult[currentQuestionIndex].explanation && (
-                            <p className="text-sm text-slate-500 mt-2 italic">
-                              {quizResult[currentQuestionIndex].explanation}
+                          <div>
+                            <p className={`font-bold mb-1 ${
+                              selectedAnswer === quizResult[currentQuestionIndex].correct_answer
+                                ? "text-green-600 dark:text-green-400"
+                                : "text-red-600 dark:text-red-400"
+                            }`}>
+                              {selectedAnswer === quizResult[currentQuestionIndex].correct_answer
+                                ? t("correct")
+                                : t("incorrect")}
                             </p>
-                          )}
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                              <span className="font-medium">{t("your_answer_label")}</span> {selectedAnswer || "—"}
+                            </p>
+                            {selectedAnswer !== quizResult[currentQuestionIndex].correct_answer && (
+                              <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                                <span className="font-medium">{t("correct_answer_label")}</span> {quizResult[currentQuestionIndex].correct_answer}
+                              </p>
+                            )}
+                            {quizResult[currentQuestionIndex].explanation && (
+                              <p className="text-sm text-slate-500 mt-2 italic">
+                                {quizResult[currentQuestionIndex].explanation}
+                              </p>
+                            )}
+                          </div>
                         </div>
 
                         {/* Next question or Finish button */}
                         {currentQuestionIndex < quizResult.length - 1 ? (
                           <button
                             onClick={handleNextQuestion}
-                            className="px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-blue-600 transition-all"
+                            className="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-xl font-semibold hover:opacity-90 transition-all shadow-md shadow-primary/20"
                           >
                             {t("next_question")}
                           </button>
@@ -1480,7 +1677,7 @@ function DashboardContent() {
                             </h3>
                             <button
                               onClick={handleGenerateQuiz}
-                              className="px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-blue-600 transition-all"
+                              className="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-xl font-semibold hover:opacity-90 transition-all"
                             >
                               {t("restart_quiz")}
                             </button>
@@ -1500,7 +1697,16 @@ function DashboardContent() {
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-6"
               >
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+                <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
+                  <div className="flex items-center gap-3 mb-1">
+                    <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                      <Calendar className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg leading-tight">{t("dash_plan")}</h3>
+                      <p className="text-xs text-slate-500">{t("plan_no_plan_cta")}</p>
+                    </div>
+                  </div>
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium mb-2">{t("goal")}</label>
@@ -1509,7 +1715,7 @@ function DashboardContent() {
                         value={planGoal}
                         onChange={(e) => setPlanGoal(e.target.value)}
                         placeholder={t("goal_input_placeholder")}
-                        className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none"
+                        className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-primary"
                       />
                     </div>
                     <div>
@@ -1520,11 +1726,11 @@ function DashboardContent() {
                         type="date"
                         value={planDate}
                         onChange={(e) => setPlanDate(e.target.value)}
-                        className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none"
+                        className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-primary"
                       />
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-end gap-4">
                     <div className="flex-1">
                       <label className="block text-sm font-medium mb-2">
                         {t("daily_hours")}
@@ -1533,13 +1739,13 @@ function DashboardContent() {
                         type="number"
                         value={planHours}
                         onChange={(e) => setPlanHours(parseFloat(e.target.value))}
-                        className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none"
+                        className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-primary"
                       />
                     </div>
                     <button
                       onClick={handleGeneratePlan}
                       disabled={loading || !planGoal || !planDate}
-                      className="mt-7 px-8 py-3 bg-primary text-white rounded-xl font-bold hover:bg-blue-600 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                      className="px-8 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-xl font-bold hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-md shadow-primary/20"
                     >
                       {loading ? (
                         <Loader2 className="h-5 w-5 animate-spin" />
@@ -1551,16 +1757,18 @@ function DashboardContent() {
                 </div>
 
                 {planResult && (
-                  <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800">
-                    <h3 className="text-xl font-bold mb-2">{planResult.summary}</h3>
-                    <p className="text-sm text-slate-500 mb-8">
-                      {t("target_date")}: {planResult.target_date}
-                    </p>
+                  <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <div className="flex items-center justify-between flex-wrap gap-2 mb-8">
+                      <h3 className="text-xl font-bold">{planResult.summary}</h3>
+                      <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1.5 rounded-full">
+                        {t("target_date")}: {planResult.target_date}
+                      </span>
+                    </div>
 
                     <div className="space-y-8">
                       {planResult.weekly_breakdown?.map((week: any, i: number) => (
-                        <div key={i} className="relative pl-8 border-l-2 border-blue-500/20">
-                          <div className="absolute -left-[9px] top-0 h-4 w-4 rounded-full bg-primary" />
+                        <div key={i} className="relative pl-8 border-l-2 border-primary/20">
+                          <div className="absolute -left-[9px] top-0 h-4 w-4 rounded-full bg-gradient-to-br from-primary to-secondary ring-4 ring-white dark:ring-slate-900" />
                           <h4 className="font-bold text-lg mb-4 text-primary">
                             {t("week_label")} {week.week}: {week.focus}
                           </h4>
@@ -1568,7 +1776,7 @@ function DashboardContent() {
                             {week.days?.map((day: any, j: number) => (
                               <div
                                 key={j}
-                                className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700"
+                                className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-primary/40 transition-colors"
                               >
                                 <p className="font-bold text-sm mb-1">
                                   {t("day_label")} {day.day} — {day.topic}
@@ -1604,7 +1812,7 @@ function DashboardContent() {
                     <button
                       onClick={handleGenerateFlashcards}
                       disabled={loading}
-                      className="px-8 py-4 bg-primary text-white rounded-2xl font-bold hover:bg-blue-600 disabled:opacity-50 transition-all shadow-lg shadow-primary/20 flex items-center gap-2 mx-auto"
+                      className="px-8 py-4 bg-gradient-to-r from-primary to-secondary text-white rounded-2xl font-bold hover:opacity-90 disabled:opacity-50 transition-all shadow-lg shadow-primary/20 flex items-center gap-2 mx-auto"
                     >
                       {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : t("generate_flashcards")}
                     </button>
@@ -1624,8 +1832,8 @@ function DashboardContent() {
                           <p className="text-xl font-bold leading-tight">{flashcards[currentCardIndex].front}</p>
                         </div>
                         {/* Back */}
-                        <div 
-                          className="absolute inset-0 backface-hidden bg-primary rounded-[2.5rem] shadow-xl flex flex-col items-center justify-center p-8 text-center text-white"
+                        <div
+                          className="absolute inset-0 backface-hidden bg-gradient-to-br from-primary to-secondary rounded-[2.5rem] shadow-xl flex flex-col items-center justify-center p-8 text-center text-white"
                           style={{ transform: "rotateY(180deg)" }}
                         >
                           <span className="text-[10px] uppercase tracking-[0.2em] font-black opacity-60 mb-4">{t("flashcard_back")}</span>
@@ -1677,14 +1885,16 @@ function DashboardContent() {
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-6"
               >
-                <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
-                  <Brain className="h-12 w-12 text-purple-500 mx-auto mb-4" />
+                <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm text-center">
+                  <div className="h-16 w-16 rounded-2xl bg-purple-500/10 flex items-center justify-center mx-auto mb-4">
+                    <Brain className="h-8 w-8 text-purple-500" />
+                  </div>
                   <h3 className="text-lg font-bold mb-2">{t("gaps_title")}</h3>
-                  <p className="text-slate-500 mb-6">{t("gaps_hint")}</p>
+                  <p className="text-slate-500 mb-6 max-w-md mx-auto">{t("gaps_hint")}</p>
                   <button
                     onClick={handleGenerateGaps}
                     disabled={loading}
-                    className="px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-blue-600 disabled:opacity-50 transition-all"
+                    className="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-xl font-semibold hover:opacity-90 disabled:opacity-50 transition-all shadow-md shadow-primary/20"
                   >
                     {loading ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
@@ -1694,10 +1904,12 @@ function DashboardContent() {
                   </button>
                 </div>
                 {gapsResult && (
-                  <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800">
+                  <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                     {!gapsResult.ready ? (
                       <div className="text-center py-4">
-                        <AlertCircle className="h-10 w-10 text-amber-500 mx-auto mb-3" />
+                        <div className="h-14 w-14 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-3">
+                          <AlertCircle className="h-7 w-7 text-amber-500" />
+                        </div>
                         <p className="font-semibold text-amber-600 dark:text-amber-400 mb-1">
                           {t("gaps_not_ready_title")}
                         </p>
@@ -1709,7 +1921,7 @@ function DashboardContent() {
                         </p>
                         <button
                           onClick={() => setActivePanel("quiz")}
-                          className="mt-4 px-5 py-2 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-blue-600 transition-all"
+                          className="mt-4 px-5 py-2 bg-gradient-to-r from-primary to-secondary text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-all"
                         >
                           {t("gaps_go_to_quiz")}
                         </button>
@@ -1790,7 +2002,7 @@ function DashboardContent() {
               >
                 <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-8 rounded-3xl border border-slate-200/50 dark:border-slate-800/50 shadow-xl overflow-hidden relative">
                   <div className="absolute top-0 right-0 p-12 -mt-12 -mr-12 bg-primary/10 rounded-full blur-3xl" />
-                  
+
                   <div className="relative z-10">
                     <div className="flex items-center gap-4 mb-8">
                       <div className="h-14 w-14 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-2xl flex items-center justify-center text-purple-600 dark:text-purple-400 border border-purple-500/20">
@@ -1814,7 +2026,7 @@ function DashboardContent() {
                     </p>
 
                     {subscriptionStatus && (
-                      <div className="grid sm:grid-cols-3 gap-4 mb-8">
+                      <div className="grid sm:grid-cols-3 gap-4">
                         <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
                           <p className="text-xs text-slate-500">{t("quizzes_today")}</p>
                           <p className="font-bold">{subscriptionStatus.quiz_today} / {subscriptionStatus.quiz_limit}</p>
@@ -1829,51 +2041,77 @@ function DashboardContent() {
                         </div>
                       </div>
                     )}
+                  </div>
+                </div>
 
-                    <div className="space-y-8">
+                {/* Plan comparison */}
+                <div className="grid sm:grid-cols-2 gap-6 items-stretch">
+                  {/* Free */}
+                  <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 flex flex-col">
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">{t("subscription_free")}</p>
+                    <p className="text-4xl font-black mb-1">$0<span className="text-base font-medium text-slate-400">/mo</span></p>
+                    <p className="text-sm text-slate-500 mb-6">{t("subscription_hint")}</p>
+                    <ul className="space-y-3 mb-8 flex-1">
+                      {[t("quizzes_today"), t("uploads_label"), t("chats_today")].map((f, i) => (
+                        <li key={i} className="flex items-center gap-2.5 text-sm text-slate-600 dark:text-slate-300">
+                          <CheckCircle2 className="h-4 w-4 text-slate-400 shrink-0" /> {f}
+                        </li>
+                      ))}
+                    </ul>
+                    <button
+                      disabled
+                      className="w-full py-3 rounded-xl font-bold border-2 border-slate-200 dark:border-slate-700 text-slate-400 cursor-default"
+                    >
+                      {!subscriptionStatus?.is_premium ? t("subscription_free") + " ✓" : t("subscription_free")}
+                    </button>
+                  </div>
+
+                  {/* Premium */}
+                  <div className="relative bg-gradient-to-br from-slate-900 via-slate-900 to-purple-950 text-white rounded-3xl border border-purple-500/30 p-8 flex flex-col shadow-xl shadow-purple-500/10 overflow-hidden">
+                    <div className="absolute -top-10 -right-10 h-40 w-40 bg-purple-500/20 rounded-full blur-3xl" />
+                    <span className="absolute top-6 right-6 text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-purple-500 to-pink-500 px-2.5 py-1 rounded-full">
+                      {t("subscription_upgrade")}
+                    </span>
+                    <p className="text-xs font-black uppercase tracking-widest text-purple-300 mb-2 relative">{t("subscription_premium")}</p>
+                    <p className="text-4xl font-black mb-1 relative">25,000 <span className="text-base font-medium text-slate-400">UZS/mo</span></p>
+                    <p className="text-sm text-slate-400 mb-6 relative">{t("subscription_hint")}</p>
+                    <ul className="space-y-3 mb-8 flex-1 relative">
+                      {[t("quizzes_today"), t("uploads_label"), t("chats_today"), t("supported_payment_methods")].map((f, i) => (
+                        <li key={i} className="flex items-center gap-2.5 text-sm text-slate-200">
+                          <CheckCircle2 className="h-4 w-4 text-purple-400 shrink-0" /> {lang === "uz" ? "Cheklovsiz" : lang === "ru" ? "Безлимит" : "Unlimited"} {f}
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="relative space-y-4">
                       {!subscriptionStatus?.is_premium ? (
-                        <div className="space-y-6">
-                          <button
-                            onClick={() => setShowPaymentSelection(true)}
-                            className="group relative px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl font-bold hover:scale-105 active:scale-95 transition-all shadow-lg shadow-purple-500/25 flex items-center gap-3"
-                          >
-                            <Zap className="h-5 w-5 fill-white" />
-                            {t("subscription_upgrade")}
-                          </button>
-
-                          <div className="space-y-4">
-                            <p className="text-[10px] uppercase tracking-[0.2em] font-black text-slate-400">{t("supported_payment_methods")}</p>
-                            <div className="flex flex-wrap gap-6 items-center">
-                              {/* Payme */}
-                              <div className="flex items-center gap-2 group cursor-default">
-                                <div className="h-8 w-8 bg-[#00c2ed] rounded-lg flex items-center justify-center shadow-md shadow-[#00c2ed]/20 group-hover:scale-110 transition-transform">
-                                  <span className="text-white font-black text-xs">P</span>
-                                </div>
-                                <span className="text-sm font-black tracking-tighter text-slate-400 group-hover:text-[#00c2ed] transition-colors">Payme</span>
-                              </div>
-                              {/* Click */}
-                              <div className="flex items-center gap-2 group cursor-default">
-                                <div className="h-8 w-8 bg-[#00a6ff] rounded-lg flex items-center justify-center shadow-md shadow-[#00a6ff]/20 group-hover:scale-110 transition-transform text-white font-bold text-[10px]">
-                                  CLICK
-                                </div>
-                                <span className="text-sm font-black tracking-tighter text-slate-400 group-hover:text-[#00a6ff] transition-colors">Click</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                        <button
+                          onClick={() => setShowPaymentSelection(true)}
+                          className="w-full group relative px-8 py-3.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2"
+                        >
+                          <Zap className="h-5 w-5 fill-white" />
+                          {t("subscription_upgrade")}
+                        </button>
                       ) : (
                         <button
                           onClick={handleCancelSubscription}
                           disabled={loading}
-                          className="px-6 py-3 border-2 border-red-500/20 text-red-500 rounded-xl font-bold hover:bg-red-500/5 transition-all disabled:opacity-50"
+                          className="w-full px-6 py-3.5 border-2 border-red-400/30 text-red-300 rounded-xl font-bold hover:bg-red-500/10 transition-all disabled:opacity-50"
                         >
-                          {loading ? (
-                            <Loader2 className="h-5 w-5 animate-spin mx-auto" />
-                          ) : (
-                            t("subscription_cancel")
-                          )}
+                          {loading ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : t("subscription_cancel")}
                         </button>
                       )}
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-6 w-6 bg-[#00c2ed] rounded-md flex items-center justify-center">
+                            <span className="text-white font-black text-[9px]">P</span>
+                          </div>
+                          <span className="text-xs font-bold text-slate-400">Payme</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-6 w-6 bg-[#00a6ff] rounded-md flex items-center justify-center text-white font-bold text-[7px]">CLICK</div>
+                          <span className="text-xs font-bold text-slate-400">Click</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1887,7 +2125,7 @@ function DashboardContent() {
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-6"
               >
-                <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm max-w-2xl">
                   <div className="flex items-center gap-4 mb-6">
                     <div className="h-12 w-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center text-green-600 dark:text-green-400">
                       <MessageCircle className="h-6 w-6" />
@@ -1897,7 +2135,7 @@ function DashboardContent() {
                       <p className="text-sm text-slate-500">{t("feedback_hint")}</p>
                     </div>
                   </div>
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     <div>
                       <label className="block text-sm font-medium mb-2">
                         {t("feedback_rating")}
@@ -1907,13 +2145,13 @@ function DashboardContent() {
                           <button
                             key={star}
                             onClick={() => setFeedbackRating(star)}
-                            className="focus:outline-none"
+                            className="focus:outline-none hover:scale-110 transition-transform"
                           >
                             <Star
                               className={`h-8 w-8 transition-all ${
                                 star <= feedbackRating
                                   ? "text-yellow-400 fill-yellow-400"
-                                  : "text-slate-300"
+                                  : "text-slate-300 dark:text-slate-700"
                               }`}
                             />
                           </button>
@@ -1928,13 +2166,13 @@ function DashboardContent() {
                         value={feedbackMessage}
                         onChange={(e) => setFeedbackMessage(e.target.value)}
                         rows={6}
-                        className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none"
+                        className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-primary resize-none"
                       />
                     </div>
                     <button
                       onClick={handleSubmitFeedback}
                       disabled={loading || !feedbackMessage.trim()}
-                      className="px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-blue-600 disabled:opacity-50 transition-all"
+                      className="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-xl font-semibold hover:opacity-90 disabled:opacity-50 transition-all shadow-md shadow-primary/20"
                     >
                       {loading ? (
                         <Loader2 className="h-5 w-5 animate-spin" />
@@ -1963,12 +2201,6 @@ function DashboardContent() {
               </motion.div>
             )}
 
-            {activePanel === "sat-ielts" && (
-              <motion.div key="sat-ielts" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                <SatIeltsDashboard user={{ ...user, is_premium: subscriptionStatus?.is_premium || false }} />
-              </motion.div>
-            )}
-
             {activePanel === "assistant" && (
               <motion.div key="assistant" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                 <AssistantDashboard user={user} onNavigate={setActivePanel} />
@@ -1993,15 +2225,15 @@ function DashboardContent() {
                     <div className="h-12 w-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-primary">
                       <Send className="h-6 w-6" />
                     </div>
-                    <div>
+                    <div className="flex-1 flex items-center justify-between gap-3 flex-wrap">
                       <h3 className="text-xl font-bold">{t("dash_telegram")}</h3>
-                      <p
-                        className={`text-sm font-medium ${
-                          stats.tgLinked ? "text-green-500" : "text-slate-500"
+                      <span
+                        className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                          stats.tgLinked ? "text-green-600 bg-green-500/10" : "text-slate-500 bg-slate-100 dark:bg-slate-800"
                         }`}
                       >
                         {stats.tgLinked ? t("tg_linked") : t("tg_not_linked")}
-                      </p>
+                      </span>
                     </div>
                   </div>
 
@@ -2055,7 +2287,7 @@ function DashboardContent() {
                           <button
                             onClick={handleSaveReminder}
                             disabled={loading}
-                            className="px-4 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-blue-600 disabled:opacity-50"
+                            className="px-4 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-xl font-semibold hover:opacity-90 disabled:opacity-50 shadow-sm"
                           >
                             {t("tg_save")}
                           </button>
@@ -2073,7 +2305,7 @@ function DashboardContent() {
                         href="https://t.me/ILM_AI_HELPER_bot"
                         target="_blank"
                         rel="noreferrer"
-                        className="w-full py-4 bg-[#0088cc] text-white rounded-xl font-bold hover:bg-[#0077b5] transition-all flex items-center justify-center gap-2"
+                        className="w-full py-4 bg-[#0088cc] text-white rounded-xl font-bold hover:bg-[#0077b5] transition-all flex items-center justify-center gap-2 shadow-md shadow-[#0088cc]/20"
                       >
                         <Send className="h-5 w-5" />
                         {t("tg_open_bot_button")}
@@ -2106,7 +2338,7 @@ function DashboardContent() {
 
                   {/* Current avatar + upload/remove */}
                   <div className="flex items-center gap-5 mb-6">
-                    <div className="h-20 w-20 rounded-full overflow-hidden shrink-0 bg-gradient-to-br from-blue-500 to-primary flex items-center justify-center text-white text-2xl font-black ring-2 ring-slate-200 dark:ring-slate-700">
+                    <div className="h-20 w-20 rounded-full overflow-hidden shrink-0 bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-2xl font-black ring-2 ring-slate-200 dark:ring-slate-700">
                       {avatar ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={avatar} alt="avatar" className="h-full w-full object-cover" />
@@ -2176,7 +2408,7 @@ function DashboardContent() {
                   <button
                     onClick={handleSaveProfile}
                     disabled={savingProfile}
-                    className="w-full py-4 bg-primary text-white rounded-xl font-bold hover:bg-blue-600 disabled:opacity-50 transition-all"
+                    className="w-full py-4 bg-gradient-to-r from-primary to-secondary text-white rounded-xl font-bold hover:opacity-90 disabled:opacity-50 transition-all shadow-md shadow-primary/20"
                   >
                     {savingProfile ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : t("profile_save")}
                   </button>
@@ -2221,7 +2453,7 @@ function DashboardContent() {
                     <button
                       onClick={handleSaveSettings}
                       disabled={loading}
-                      className="w-full py-4 bg-primary text-white rounded-xl font-bold hover:bg-blue-600 disabled:opacity-50 transition-all"
+                      className="w-full py-4 bg-gradient-to-r from-primary to-secondary text-white rounded-xl font-bold hover:opacity-90 disabled:opacity-50 transition-all shadow-md shadow-primary/20"
                     >
                       {loading ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : t("save_settings")}
                     </button>
@@ -2341,7 +2573,7 @@ function DashboardContent() {
                 onClick={() => setShowPaymentSelection(false)}
                 className="w-full mt-6 py-3 text-slate-500 font-medium text-sm hover:text-slate-700 dark:hover:text-slate-300"
               >
-                Back to Dashboard
+                {lang === "uz" ? "Boshqaruv paneliga qaytish" : lang === "ru" ? "Вернуться на панель" : "Back to Dashboard"}
               </button>
             </motion.div>
           </div>
@@ -2413,13 +2645,15 @@ function DashboardContent() {
                     onClick={() => setShowPaymentModal(false)}
                     className="w-full py-2 text-slate-400 font-bold text-sm hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
                   >
-                    Cancel and return
+                    {lang === "uz" ? "Bekor qilish" : lang === "ru" ? "Отменить" : "Cancel and return"}
                   </button>
                 </div>
 
                 <div className="flex justify-center items-center gap-3 opacity-20 grayscale">
                   <Shield className="h-4 w-4" />
-                  <span className="text-[10px] uppercase tracking-widest font-black">Securely encrypted by {paymentMethod}</span>
+                  <span className="text-[10px] uppercase tracking-widest font-black">
+                    {lang === "uz" ? `${paymentMethod} orqali xavfsiz shifrlangan` : lang === "ru" ? `Безопасно зашифровано через ${paymentMethod}` : `Securely encrypted by ${paymentMethod}`}
+                  </span>
                 </div>
               </div>
             </motion.div>

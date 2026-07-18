@@ -18,6 +18,8 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useI18n } from "@/hooks/useI18n";
+import AiTutor from "@/components/skills/AiTutor";
 import {
   submitAnswer,
   completeSession,
@@ -90,6 +92,7 @@ function scoreBar(pct: number): string {
 
 export default function SatSessionPage() {
   const { user } = useAuth();
+  const { lang } = useI18n();
   const [phase, setPhase] = useState<Phase>("loading");
   const [stored, setStored] = useState<StoredSession | null>(null);
   const [current, setCurrent] = useState(0);
@@ -480,6 +483,14 @@ export default function SatSessionPage() {
                           <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Explanation</p>
                           <MathText className="whitespace-pre-wrap">{pq.explanation}</MathText>
                         </div>
+                      )}
+                      {!pq.is_correct && pq.correct_answer && (
+                        <AiTutor
+                          lang={lang}
+                          questionText={pq.question_text}
+                          correctAnswer={pq.correct_answer}
+                          userAnswer={pq.user_answer ?? undefined}
+                        />
                       )}
                     </div>
                   </div>

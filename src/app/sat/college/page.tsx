@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { GraduationCap, Search, Bookmark, SlidersHorizontal, MapPin, X, Globe2, Loader2 } from "lucide-react";
+import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { collegeCountry, collegeRegion, type College } from "@/lib/colleges";
 import { loadColleges } from "@/lib/collegesData";
 import { CollegeLogo } from "./CollegeLogo";
@@ -54,6 +55,7 @@ export default function CollegeBrowsePage() {
   // let the user load more.
   const PAGE = 48;
   const [visible, setVisible] = useState(PAGE);
+  const [gridRef] = useAutoAnimate<HTMLDivElement>();
 
   const countries = useMemo(() => {
     const set = new Set(
@@ -185,7 +187,7 @@ export default function CollegeBrowsePage() {
         <p className="text-center text-slate-500 py-12">{tab === "saved" ? "You haven't saved any colleges yet." : "No colleges match your search."}</p>
       ) : (
         <>
-          <div className="grid md:grid-cols-2 gap-4">
+          <div ref={gridRef} className="grid md:grid-cols-2 gap-4">
             {filtered.slice(0, visible).map((c, i) => (
               <CollegeCard key={c.id} college={c} saved={saved.includes(c.id)} onToggle={() => toggleSave(c.id)} delay={Math.min(i, 11) * 0.03} />
             ))}
@@ -213,10 +215,25 @@ export default function CollegeBrowsePage() {
   );
 }
 
+function accTier(rate: number | undefined): { label: string; color: string } | null {
+  if (rate == null) return null;
+  if (rate < 25) return { label: "Selective", color: "#f43f5e" };
+  if (rate <= 50) return { label: "Moderate", color: "#f59e0b" };
+  return { label: "Accessible", color: "#22c55e" };
+}
+
 function CollegeCard({ college: c, saved, onToggle, delay }: { college: College; saved: boolean; onToggle: () => void; delay: number }) {
+  const tier = accTier(c.acceptanceRate);
+  const accPct = c.acceptanceRate != null ? Math.max(4, Math.min(100, c.acceptanceRate)) : 0;
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }} className="relative">
-      <Link href={`/sat/college/${c.id}`} className="group block rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-900/5">
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -4 }}
+      transition={{ delay, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      className="relative"
+    >
+      <Link href={`/sat/college/${c.id}`} className="group block rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-white/[0.04] p-5 transition-shadow hover:shadow-[0_24px_60px_-24px_rgba(30,41,59,0.35)]">
         <div className="flex items-start gap-4">
           <CollegeLogo college={c} className="h-12 w-12 shrink-0 rounded-xl" />
           <div className="flex-1 min-w-0 pr-10">
@@ -225,18 +242,26 @@ function CollegeCard({ college: c, saved, onToggle, delay }: { college: College;
             <p className="text-xs text-slate-400 mt-0.5">{c.type}</p>
           </div>
         </div>
-        <div className="flex gap-8 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-          <div>
-            <p className="text-[11px] text-slate-400">Acceptance</p>
-            <p className="font-black">{c.acceptanceRate != null ? `${c.acceptanceRate}%` : "—"}</p>
+        <div className="flex items-end gap-8 mt-4 pt-4 border-t border-slate-100 dark:border-white/10">
+          <div className="flex-1">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-[11px] text-slate-400">Acceptance</p>
+              {tier && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ color: tier.color, backgroundColor: `${tier.color}1a` }}>{tier.label}</span>}
+            </div>
+            <p className="font-black leading-none">{c.acceptanceRate != null ? `${c.acceptanceRate}%` : "—"}</p>
+            {tier && (
+              <div className="h-1.5 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden mt-1.5">
+                <div className="h-full rounded-full transition-all" style={{ width: `${accPct}%`, backgroundColor: tier.color }} />
+              </div>
+            )}
           </div>
-          <div>
+          <div className="shrink-0">
             <p className="text-[11px] text-slate-400">Median SAT</p>
             <p className="font-black">{c.medianSAT ?? "—"}</p>
           </div>
         </div>
       </Link>
-      <button onClick={onToggle} aria-label="Save" className={`absolute top-4 right-4 h-8 w-8 rounded-lg flex items-center justify-center transition-all ${saved ? "bg-amber-400 text-[#0d3b4f]" : "bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600"}`}>
+      <button onClick={onToggle} aria-label="Save" className={`absolute top-4 right-4 h-8 w-8 rounded-lg flex items-center justify-center transition-all ${saved ? "bg-amber-400 text-[#0d3b4f]" : "bg-slate-100 dark:bg-white/10 text-slate-400 hover:text-slate-600"}`}>
         <Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />
       </button>
     </motion.div>
