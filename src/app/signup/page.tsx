@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/hooks/useI18n";
 import { apiFetch } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import ThemeToggle from "@/components/ThemeToggle";
 import { PasswordInput } from "@/components/PasswordInput";
@@ -20,6 +21,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const { t } = useI18n();
   const router = useRouter();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +42,20 @@ export default function SignupPage() {
         body: JSON.stringify({ name, email, password }),
       });
 
-      router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
+      // When email verification is disabled on the backend, signup returns
+      // tokens directly → log in and go straight to the dashboard.
+      if (data.verification_required === false && data.access_token) {
+        login({
+          id: data.user_id,
+          name: data.name,
+          email: data.email,
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+        });
+        router.push("/dashboard");
+      } else {
+        router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
