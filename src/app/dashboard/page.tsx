@@ -935,7 +935,7 @@ function DashboardContent() {
                       { href: "/sat", label: "SAT", sub: "Digital SAT prep", icon: GraduationCap, color: "text-blue-600" },
                       { href: "/sat/ielts", label: "IELTS", sub: "All four skills", icon: BookText, color: "text-violet-600" },
                       { href: "/sat/college", label: "College App", sub: "6,000+ universities", icon: Building2, color: "text-teal-600" },
-                      { href: "/skills", label: "Milliy Sertifikat", sub: "Ona tili & Tarix", icon: Trophy, color: "text-emerald-600" },
+                      { href: "/skills", label: "Fanlar", sub: "Ona tili, Tarix va boshqalar", icon: Trophy, color: "text-emerald-600" },
                     ].map((p) => (
                       <Link
                         key={p.href}

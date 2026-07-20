@@ -17,14 +17,14 @@ export default function SkillsPage() {
 
   if (isLoading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-neutral-950">
+      <div className="sat-scope min-h-screen flex items-center justify-center bg-white dark:bg-neutral-950">
         <Loader2 className="h-8 w-8 animate-spin text-neutral-400" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-950">
+    <div className="sat-scope min-h-screen bg-white dark:bg-neutral-950">
       <div className="max-w-3xl mx-auto px-4 py-6">
         <Link
           href="/dashboard"

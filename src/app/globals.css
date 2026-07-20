@@ -818,3 +818,74 @@ a:hover { text-decoration: underline; }
 .no-scrollbar::-webkit-scrollbar {
   display: none; /* Chrome/Safari/Edge */
 }
+
+/* ===================================================================
+   Dark theme for the SAT / IELTS / College section (.sat-scope)
+   -------------------------------------------------------------------
+   That section is built with hundreds of literal light-mode utilities
+   (bg-white, bg-slate-50/100, text-slate-500…900, border-slate-200, the
+   OnePrep #0d3b4f teal, and the op-* palette). Instead of editing every
+   JSX site, remap those utilities to dark values — scoped to `.sat-scope`
+   AND `.dark`, so light mode and the rest of the app are untouched. Only
+   neutral surfaces / text / borders are remapped; accent colors (blue,
+   green, red, gradients) are intentionally left alone.
+   =================================================================== */
+.dark .sat-scope { background-color: #0b1017; color: #e6edf3; }
+
+/* Surfaces */
+.dark .sat-scope .bg-white,
+.dark .sat-scope .bg-op-panel,
+.dark .sat-scope .bg-op-panel2 { background-color: #141e28 !important; }
+.dark .sat-scope .bg-slate-50 { background-color: #10171f !important; }
+.dark .sat-scope .bg-slate-100 { background-color: #1c2732 !important; }
+.dark .sat-scope .bg-op-sky { background-color: #0f2c3c !important; }
+
+/* Headings / primary text */
+.dark .sat-scope .text-op-ink,
+.dark .sat-scope .text-slate-900,
+.dark .sat-scope .text-slate-800,
+.dark .sat-scope .text-\[\#0d3b4f\] { color: #e6edf3 !important; }
+
+/* Secondary text */
+.dark .sat-scope .text-slate-700,
+.dark .sat-scope .text-slate-600 { color: #c2ccd6 !important; }
+
+/* Muted text */
+.dark .sat-scope .text-slate-500,
+.dark .sat-scope .text-op-slate,
+.dark .sat-scope .text-op-muted,
+.dark .sat-scope .text-op-faint { color: #93a3b4 !important; }
+
+/* Borders */
+.dark .sat-scope .border-slate-200,
+.dark .sat-scope .border-slate-100,
+.dark .sat-scope .border-op-line,
+.dark .sat-scope .border-\[\#0d3b4f\] { border-color: rgba(255, 255, 255, 0.10) !important; }
+
+/* Hover states that assume a light background */
+.dark .sat-scope .hover\:bg-slate-50:hover,
+.dark .sat-scope .hover\:bg-slate-100:hover,
+.dark .sat-scope .hover\:bg-op-panel:hover { background-color: #1c2732 !important; }
+
+/* Inputs */
+.dark .sat-scope input,
+.dark .sat-scope textarea,
+.dark .sat-scope select {
+  background-color: #10171f;
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #e6edf3;
+}
+.dark .sat-scope input::placeholder,
+.dark .sat-scope textarea::placeholder { color: #6b7785; }
+
+/* The Fanlar (skills) screens use the neutral-* palette instead of slate-*. */
+.dark .sat-scope .bg-neutral-100 { background-color: #1c2732 !important; }
+.dark .sat-scope .bg-neutral-50 { background-color: #10171f !important; }
+.dark .sat-scope .border-neutral-200,
+.dark .sat-scope .border-neutral-100 { border-color: rgba(255, 255, 255, 0.10) !important; }
+.dark .sat-scope .text-neutral-900,
+.dark .sat-scope .text-neutral-800 { color: #e6edf3 !important; }
+.dark .sat-scope .text-neutral-700,
+.dark .sat-scope .text-neutral-600 { color: #c2ccd6 !important; }
+.dark .sat-scope .text-neutral-500,
+.dark .sat-scope .text-neutral-400 { color: #93a3b4 !important; }

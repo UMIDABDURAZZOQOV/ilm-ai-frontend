@@ -56,7 +56,7 @@ const PLATFORMS = [
   { id: "sat", label: "SAT", sub: "Digital SAT prep", href: "/sat", icon: GraduationCap, nav: SAT_NAV },
   { id: "ielts", label: "IELTS", sub: "All four skills", href: "/sat/ielts", icon: BookText, nav: IELTS_NAV },
   { id: "college", label: "College App", sub: "US universities", href: "/sat/college", icon: Building2, nav: COLLEGE_NAV },
-  { id: "skills", label: "Milliy Sertifikat", sub: "Ona tili & Tarix darslari", href: "/skills", icon: Trophy, nav: [] },
+  { id: "skills", label: "Fanlar", sub: "Ona tili, Tarix va boshqalar", href: "/skills", icon: Trophy, nav: [] },
 ] as const;
 
 export default function SatLayout({ children }: { children: React.ReactNode }) {
@@ -70,15 +70,9 @@ export default function SatLayout({ children }: { children: React.ReactNode }) {
     if (!isLoading && !user) router.push("/login");
   }, [user, isLoading, router]);
 
-  // The SAT platform uses the OnePrep look, which is always light — force light
-  // mode for this whole section regardless of the app's global dark theme, and
-  // restore the user's choice when they navigate away.
-  useEffect(() => {
-    const root = document.documentElement;
-    const wasDark = root.classList.contains("dark");
-    root.classList.remove("dark");
-    return () => { if (wasDark) root.classList.add("dark"); };
-  }, []);
+  // The SAT section now follows the app's global light/dark theme. Its light-mode
+  // utilities (bg-white, text-slate-*, the #0d3b4f teal, op-* palette) are remapped
+  // to dark values via the `.dark .sat-scope { … }` block in globals.css.
 
   useEffect(() => {
     setMobileOpen(false);
@@ -87,7 +81,7 @@ export default function SatLayout({ children }: { children: React.ReactNode }) {
 
   if (isLoading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="sat-scope min-h-screen flex items-center justify-center bg-white">
         <Loader2 className="h-8 w-8 animate-spin text-op-blue" />
       </div>
     );
@@ -95,7 +89,7 @@ export default function SatLayout({ children }: { children: React.ReactNode }) {
 
   // The exam session runs full-screen without the sidebar chrome.
   if (pathname?.startsWith("/sat/session")) {
-    return <div className="font-manrope">{children}</div>;
+    return <div className="sat-scope font-manrope">{children}</div>;
   }
 
   const platform =
@@ -210,7 +204,7 @@ export default function SatLayout({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen flex bg-white text-op-ink font-manrope">
+    <div className="sat-scope min-h-screen flex bg-white text-op-ink font-manrope">
       {/* Mobile top bar */}
       <div className="lg:hidden fixed top-0 inset-x-0 z-30 h-14 flex items-center gap-3 px-4 bg-op-teal text-white">
         <button onClick={() => setMobileOpen(true)} className="h-9 w-9 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors" aria-label="Menu">

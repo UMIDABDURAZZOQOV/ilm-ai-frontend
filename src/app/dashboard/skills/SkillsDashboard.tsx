@@ -508,7 +508,7 @@ export default function SkillsDashboard({ user }: { user: User }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <h2 className="text-xl font-bold">{t("dash_skills") || "Milliy Sertifikat"}</h2>
+        <h2 className="text-xl font-bold">{t("dash_skills") || "Fanlar"}</h2>
         <HeartsXpHeader summary={summary} />
       </div>
 

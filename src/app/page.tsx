@@ -139,7 +139,7 @@ const COLOR_MAP: Record<string, { bg: string; text: string }> = {
   teal: { bg: "bg-teal-500/10", text: "text-teal-500" },
 };
 
-const MARQUEE_ITEMS = ["SAT", "IELTS", "TOEFL", "Milliy Sertifikat"];
+const MARQUEE_ITEMS = ["SAT", "IELTS", "TOEFL", "Fanlar"];
 
 export default function LandingPage() {
   const { t } = useI18n();
