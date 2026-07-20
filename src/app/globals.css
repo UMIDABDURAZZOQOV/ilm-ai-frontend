@@ -629,7 +629,19 @@ a:hover { text-decoration: underline; }
   color: var(--text);
   cursor: pointer;
   padding: 8px;
+  position: relative;   /* needed for z-index to apply — keeps the close (X) button
+                           tappable above the full-screen mobile menu overlay */
   z-index: 101;
+}
+
+/* Mobile menu overlay motion */
+@keyframes menuFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes menuItemUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ===== Landing page v2 — motion & effects ===== */
@@ -755,17 +767,38 @@ a:hover { text-decoration: underline; }
     top: 0;
     left: 0;
     right: 0;
-    bottom: 0;
-    background: var(--bg);
+    /* NOT bottom:0 — the sticky nav's backdrop-filter makes `position: fixed`
+       resolve against the nav bar (its containing block), so bottom:0 collapsed
+       the overlay to the ~60px bar height and the hero showed through. A viewport
+       height fills the screen regardless of the containing block. */
+    height: 100dvh;
+    /* Opaque premium backdrop: solid base (works in light AND dark) + soft brand
+       glows top and bottom, with a light blur over whatever sits behind. */
+    background:
+      radial-gradient(ellipse 110% 45% at 50% 0%, rgba(99, 102, 241, 0.22), transparent 70%),
+      radial-gradient(ellipse 95% 45% at 50% 100%, rgba(168, 85, 247, 0.16), transparent 70%),
+      var(--bg);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 24px;
-    z-index: 100;
-    padding: 24px;
+    gap: 26px;
+    z-index: 90;
+    padding: 96px 24px 48px;   /* top pad clears the logo + close (X) button */
+    animation: menuFadeIn 0.28s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .nav-links.mobile-open a {
-    font-size: 1.2rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    animation: menuItemUp 0.4s both cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .nav-links.mobile-open .lang-switch { animation: menuItemUp 0.45s both cubic-bezier(0.22, 1, 0.36, 1); }
+  .nav-links.mobile-open .btn-primary {
+    margin-top: 4px;
+    padding: 14px 34px;
+    font-size: 1.05rem;
+    animation: menuItemUp 0.5s both cubic-bezier(0.22, 1, 0.36, 1);
   }
   .hero h1 { font-size: 1.85rem; }
 }
