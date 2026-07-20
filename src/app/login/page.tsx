@@ -98,10 +98,6 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit}>
           {error && <div className="alert alert-error">{error}</div>}
 
-          <div className="alert alert-info" style={{ fontSize: "0.8125rem" }}>
-            {t("login_verify_note")}
-          </div>
-
           <div className="form-group">
             <label>{t("email")}</label>
             <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="name@example.com" />
