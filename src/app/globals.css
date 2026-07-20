@@ -89,8 +89,13 @@ a:hover { text-decoration: underline; }
 }
 
 .nav-sticky {
-  position: sticky;
+  /* fixed (not sticky): sticky was breaking because an ancestor uses
+     overflow-x:hidden, so the bar scrolled away with the page. fixed keeps it
+     pinned to the top; the page root adds matching top padding to compensate. */
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 50;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);

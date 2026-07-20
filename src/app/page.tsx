@@ -153,6 +153,17 @@ export default function LandingPage() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Lock background scroll while the mobile menu overlay is open — otherwise the
+  // page scrolls behind it and the menu appears to slide away.
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mobileMenuOpen]);
+
   const features: {
     icon: typeof MessageSquare;
     color: string;
@@ -173,8 +184,8 @@ export default function LandingPage() {
   const heroWords = t("hero_title").split(" ");
 
   return (
-    <div className="relative overflow-x-hidden">
-      {/* Sticky nav */}
+    <div className="relative overflow-x-hidden pt-[72px]">
+      {/* Fixed nav (pinned to top); pt-[72px] above offsets its height */}
       <div className={`nav-sticky ${scrolled ? "scrolled" : ""}`}>
         <div className="container">
           <nav className="nav">
