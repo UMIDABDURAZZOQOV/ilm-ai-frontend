@@ -6,6 +6,8 @@ import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import SkillsDashboard from "@/app/dashboard/skills/SkillsDashboard";
+import ThemeToggle from "@/components/ThemeToggle";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default function SkillsPage() {
   const { user, isLoading } = useAuth();
@@ -26,13 +28,19 @@ export default function SkillsPage() {
   return (
     <div className="sat-scope min-h-screen bg-white dark:bg-neutral-950">
       <div className="max-w-3xl mx-auto px-4 py-6">
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-neutral-500 hover:text-neutral-800 dark:hover:text-white mb-4"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Dashboard
-        </Link>
+        <div className="flex items-center justify-between mb-4">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-neutral-500 hover:text-neutral-800 dark:hover:text-white"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Dashboard
+          </Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <LanguageSwitcher />
+          </div>
+        </div>
         <SkillsDashboard user={user} />
       </div>
     </div>
