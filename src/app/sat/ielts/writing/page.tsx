@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Clock, Loader2, PenLine } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getWriting, submitWriting, type IeltsWriting } from "@/lib/ieltsApi";
@@ -24,10 +24,12 @@ function leadingBand(s: string | null): number | undefined {
 }
 
 export default function IeltsWritingPage() {
+  const router = useRouter();
   const { user } = useAuth();
   const [tasks, setTasks] = useState<IeltsWriting[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [open, setOpen] = useState<IeltsWriting | null>(null);
+  const [open, setOpen] = useState<IeltsWriting[] | null>(null);
+  const [activeTask, setActiveTask] = useState(0);
 
   useEffect(() => {
     getWriting()
@@ -58,9 +60,16 @@ export default function IeltsWritingPage() {
       .sort((a, b) => a.book - b.book || a.test - b.test);
   }, [tasks, testFilter]);
 
+  // Arriving from a test card means "sit this paper", so open it straight away.
+  useEffect(() => {
+    if (!testFilter || open || tests.length !== 1) return;
+    setOpen(tests[0].items);
+  }, [testFilter, open, tests]);
+
   async function grade(text: string): Promise<WritingFeedback> {
-    if (!open || !user) throw new Error("Sign in to get a band score.");
-    const res = await submitWriting({ user_id: user.id, task_id: open.id, essay_text: text });
+    const task = open?.[activeTask];
+    if (!task || !user) throw new Error("Sign in to get a band score.");
+    const res = await submitWriting({ user_id: user.id, task_id: task.id, essay_text: text });
     return {
       band: res.band_score ?? 0,
       task_achievement: leadingBand(res.task_response),
@@ -72,20 +81,43 @@ export default function IeltsWritingPage() {
   }
 
   if (open) {
+    const current = open[activeTask];
     const task: WritingTask = {
-      task: open.task_type === "Task1" ? 1 : 2,
-      prompt: open.prompt,
-      image_url: open.image_url,
-      min_words: open.min_words,
-      minutes: open.duration_minutes,
+      task: current.task_type === "Task1" ? 1 : 2,
+      prompt: current.prompt,
+      image_url: current.image_url,
+      min_words: current.min_words,
+      minutes: current.duration_minutes,
     };
     return (
       <FullScreenExam
-        title={`Writing Task ${task.task}`}
-        subtitle={open.category}
-        onExit={() => setOpen(null)}
+        title={`Writing — ${current.category}`}
+        onExit={() => (testFilter ? router.push("/sat/ielts") : setOpen(null))}
+        bottom={
+          // Both tasks are one paper; the navigator switches between them.
+          <div className="flex items-center justify-center gap-2 py-3">
+            {open.map((t, i) => (
+              <button
+                key={t.id}
+                onClick={() => setActiveTask(i)}
+                className={`w-10 py-2 rounded-lg font-bold text-sm border ${
+                  i === activeTask
+                    ? "bg-slate-900 text-white border-slate-900"
+                    : "border-slate-300 dark:border-neutral-700"
+                }`}
+              >
+                {t.task_type === "Task1" ? 1 : 2}
+              </button>
+            ))}
+          </div>
+        }
       >
-        <WritingExam task={task} storageKey={`ielts-writing-${open.id}`} onSubmit={grade} />
+        <WritingExam
+          key={current.id}
+          task={task}
+          storageKey={`ielts-writing-${current.id}`}
+          onSubmit={grade}
+        />
       </FullScreenExam>
     );
   }
@@ -134,7 +166,7 @@ export default function IeltsWritingPage() {
                   {g.items.map((t) => (
                     <button
                       key={t.id}
-                      onClick={() => setOpen(t)}
+                      onClick={() => { setOpen(g.items); setActiveTask(g.items.indexOf(t)); }}
                       className="w-full text-left rounded-lg px-2 py-2 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
                     >
                       <div className="text-sm font-semibold">

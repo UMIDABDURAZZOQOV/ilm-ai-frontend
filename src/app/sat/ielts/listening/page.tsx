@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Headphones, Loader2, Volume2 } from "lucide-react";
 import {
   getListening,
@@ -33,6 +33,7 @@ function toExamQuestions(rows: IeltsQuestion[]): ExamQuestion[] {
 }
 
 export default function IeltsListeningPage() {
+  const router = useRouter();
   const [parts, setParts] = useState<IeltsListening[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<IeltsListening[] | null>(null);
@@ -69,6 +70,13 @@ export default function IeltsListeningPage() {
     [parts, testFilter]
   );
 
+  // Arriving from a test card means "sit this paper", so open it rather than showing a
+  // list of its parts — the parts are switched from the navigator inside the exam.
+  useEffect(() => {
+    if (!testFilter || open || books.length !== 1) return;
+    setOpen(books[0].items.map((x) => x.item));
+  }, [testFilter, open, books]);
+
   if (open) {
     const ref = parseCambridgeTitle(open[0].title);
     const sections: SkillSection[] = (questions ?? []).map((qs, i) => ({
@@ -81,7 +89,7 @@ export default function IeltsListeningPage() {
       <FullScreenExam
         title={`Listening — Test ${ref?.test ?? ""}`}
         subtitle={ref ? `Cambridge ${ref.book}` : null}
-        onExit={() => setOpen(null)}
+        onExit={() => (testFilter ? router.push("/sat/ielts") : setOpen(null))}
       >
         {sections.length ? (
           <SkillExam

@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Mic } from "lucide-react";
 import { getSpeaking, type IeltsSpeaking } from "@/lib/ieltsApi";
 import { bookTitle, groupByTest, parseCambridgeTitle } from "@/lib/cambridge";
@@ -17,9 +17,11 @@ const PART_INTRO: Record<number, string> = {
 };
 
 export default function IeltsSpeakingPage() {
+  const router = useRouter();
   const [parts, setParts] = useState<IeltsSpeaking[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [open, setOpen] = useState<IeltsSpeaking | null>(null);
+  const [open, setOpen] = useState<IeltsSpeaking[] | null>(null);
+  const [activePart, setActivePart] = useState(0);
 
   useEffect(() => {
     getSpeaking()
@@ -36,27 +38,56 @@ export default function IeltsSpeakingPage() {
     [parts, testFilter]
   );
 
+  // Arriving from a test card means "sit this paper", so open it straight away.
+  useEffect(() => {
+    if (!testFilter || open || books.length !== 1) return;
+    setOpen(books[0].items.map((x) => x.item));
+  }, [testFilter, open, books]);
+
   if (open) {
-    const ref = parseCambridgeTitle(open.topic);
+    const current = open[activePart];
+    const ref = parseCambridgeTitle(current.topic);
     const part: SpeakingPart = {
-      part: (open.part as 1 | 2 | 3) ?? 1,
-      intro: PART_INTRO[open.part] ?? "",
-      topic: ref?.title ?? open.topic,
+      part: (current.part as 1 | 2 | 3) ?? 1,
+      intro: PART_INTRO[current.part] ?? "",
+      topic: ref?.title ?? current.topic,
       // Part 2 has no question list — the cue card is the prompt.
-      questions: open.questions?.length ? open.questions : open.cue_card ? [open.cue_card] : [],
-      prep_seconds: open.prep_seconds ?? undefined,
-      speak_seconds: open.speak_seconds ?? undefined,
+      questions: current.questions?.length
+        ? current.questions
+        : current.cue_card
+        ? [current.cue_card]
+        : [],
+      prep_seconds: current.prep_seconds ?? undefined,
+      speak_seconds: current.speak_seconds ?? undefined,
     };
     return (
       <FullScreenExam
-        title={`Speaking Part ${part.part}`}
-        subtitle={part.topic}
-        onExit={() => setOpen(null)}
+        title={`Speaking — Test ${ref?.test ?? ""}`}
+        subtitle={ref ? `Cambridge ${ref.book}` : null}
+        onExit={() => (testFilter ? router.push("/sat/ielts") : setOpen(null))}
+        bottom={
+          // All three parts are one interview; the navigator moves between them.
+          <div className="flex items-center justify-center gap-2 py-3">
+            {open.map((p, i) => (
+              <button
+                key={p.id}
+                onClick={() => setActivePart(i)}
+                className={`w-10 py-2 rounded-lg font-bold text-sm border ${
+                  i === activePart
+                    ? "bg-slate-900 text-white border-slate-900"
+                    : "border-slate-300 dark:border-neutral-700"
+                }`}
+              >
+                {p.part}
+              </button>
+            ))}
+          </div>
+        }
       >
         {/* No `onSubmit`: the backend cannot transcribe audio yet, so the recorder is
             for self-review rather than a band score it has no basis to give. */}
         <div className="h-full overflow-y-auto p-4">
-          <SpeakingExam part={part} />
+          <SpeakingExam key={current.id} part={part} />
         </div>
       </FullScreenExam>
     );
@@ -106,7 +137,7 @@ export default function IeltsSpeakingPage() {
                   {g.items.map(({ ref, item }) => (
                     <button
                       key={item.id}
-                      onClick={() => setOpen(item)}
+                      onClick={() => { setOpen(g.items.map((x) => x.item)); setActivePart(g.items.findIndex((x) => x.item.id === item.id)); }}
                       className="w-full text-left rounded-lg px-2 py-2 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
                     >
                       <div className="text-sm font-semibold leading-snug">
