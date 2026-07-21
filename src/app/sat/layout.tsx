@@ -39,12 +39,12 @@ const SAT_NAV: NavItem[] = [
   { href: "/sat/analytics", label: "Analytics", icon: BarChart3, exact: false, group: "PROGRESS" },
 ];
 
+// The four skills are deliberately NOT listed here. A skill only means anything
+// inside a test — you sit "Test 3 Reading", not "reading" — so they are reached from
+// the test cards on /sat/ielts, which carry ?test= through. Listing them twice let a
+// learner open a skill detached from any test.
 const IELTS_NAV: NavItem[] = [
-  { href: "/sat/ielts", label: "Overview", icon: GraduationCap, exact: true },
-  { href: "/sat/ielts/reading", label: "Reading", icon: BookText, exact: false, group: "PRACTICE" },
-  { href: "/sat/ielts/writing", label: "Writing", icon: BookText, exact: false, group: "PRACTICE" },
-  { href: "/sat/ielts/speaking", label: "Speaking", icon: BookText, exact: false, group: "PRACTICE" },
-  { href: "/sat/ielts/listening", label: "Listening", icon: BookText, exact: false, group: "PRACTICE" },
+  { href: "/sat/ielts", label: "Tests", icon: GraduationCap, exact: true },
   { href: "/sat/ielts/dictionary", label: "Dictionary", icon: BookText, exact: false, group: "PRACTICE" },
   { href: "/sat/ielts/calculator", label: "Score Calculator", icon: Calculator, exact: false, group: "PROGRESS" },
 ];
