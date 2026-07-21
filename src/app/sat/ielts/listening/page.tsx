@@ -86,6 +86,8 @@ export default function IeltsListeningPage() {
         {sections.length ? (
           <SkillExam
             skill="listening"
+            book={ref?.book}
+            test={ref?.test}
             storageKey={`ielts-listening-test-${ref?.book}-${ref?.test}`}
             sections={sections}
             render={(section, ctl) => {

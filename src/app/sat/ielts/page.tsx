@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { GraduationCap, Loader2 } from "lucide-react";
 import { getListening, getReading, getSpeaking, getWriting } from "@/lib/ieltsApi";
 import { bookTitle, parseCambridgeTitle } from "@/lib/cambridge";
+import { formatBand } from "@/lib/ieltsBand";
+import { loadSkillResult, overallFor } from "@/lib/ieltsScores";
 
 const SKILLS = ["listening", "reading", "writing", "speaking"] as const;
 type Skill = (typeof SKILLS)[number];
@@ -30,6 +32,8 @@ export default function IeltsHubPage() {
   const router = useRouter();
   const [books, setBooks] = useState<Map<number, Set<number>> | null>(null);
   const [available, setAvailable] = useState<Record<string, boolean>>({});
+  // Bands live in localStorage, so they can only be read after mount.
+  const [scores, setScores] = useState<Record<string, number>>({});
 
   useEffect(() => {
     Promise.all([getListening(), getReading(), getWriting(), getSpeaking()])
@@ -66,6 +70,22 @@ export default function IeltsHubPage() {
       })
       .catch(() => setBooks(new Map()));
   }, []);
+
+  useEffect(() => {
+    if (!books) return;
+    const next: Record<string, number> = {};
+    for (const [book, tests] of Array.from(books.entries())) {
+      for (const test of Array.from(tests)) {
+        const overall = overallFor(book, test);
+        if (overall !== null) next[`${book}/${test}`] = overall;
+        for (const skill of SKILLS) {
+          const r = loadSkillResult(book, test, skill);
+          if (r) next[`${book}/${test}/${skill}`] = r.band;
+        }
+      }
+    }
+    setScores(next);
+  }, [books]);
 
   const ordered = useMemo(
     () =>
@@ -111,8 +131,13 @@ export default function IeltsHubPage() {
                 key={test}
                 className="rounded-xl border border-slate-200 dark:border-neutral-800 overflow-hidden bg-white dark:bg-neutral-900/40"
               >
-                <div className="px-4 py-3 border-b border-slate-200 dark:border-neutral-800 font-bold">
-                  Test {test}
+                <div className="px-4 py-3 border-b border-slate-200 dark:border-neutral-800 font-bold flex items-center justify-between gap-2">
+                  <span>Test {test}</span>
+                  {scores[`${book}/${test}`] !== undefined && (
+                    <span className="text-xs font-black px-2 py-0.5 rounded bg-emerald-700 text-white">
+                      {formatBand(scores[`${book}/${test}`])}
+                    </span>
+                  )}
                 </div>
                 <div className="p-4 space-y-2.5">
                   {SKILLS.map((skill) => {
@@ -122,13 +147,18 @@ export default function IeltsHubPage() {
                         key={skill}
                         disabled={!ready}
                         onClick={() => router.push(`/sat/ielts/${skill}?test=${test}`)}
-                        className={`block w-full text-left text-sm transition-colors ${
+                        className={`flex w-full items-center justify-between gap-2 text-left text-sm transition-colors ${
                           ready
                             ? "hover:text-emerald-600 dark:hover:text-emerald-400"
                             : "text-slate-400 dark:text-neutral-600 cursor-not-allowed"
                         }`}
                       >
-                        {SKILL_LABEL[skill]}
+                        <span>{SKILL_LABEL[skill]}</span>
+                        {scores[`${book}/${test}/${skill}`] !== undefined && (
+                          <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-200 dark:bg-neutral-800 text-slate-700 dark:text-slate-200">
+                            {formatBand(scores[`${book}/${test}/${skill}`])}
+                          </span>
+                        )}
                       </button>
                     );
                   })}

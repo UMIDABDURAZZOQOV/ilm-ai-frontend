@@ -85,6 +85,8 @@ export default function IeltsReadingPage() {
         {sections.length ? (
           <SkillExam
             skill="reading"
+            book={ref?.book}
+            test={ref?.test}
             storageKey={`ielts-reading-test-${ref?.book}-${ref?.test}`}
             sections={sections}
             render={(section, ctl) => {

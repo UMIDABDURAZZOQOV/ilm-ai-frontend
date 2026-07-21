@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { bandColor, formatBand, rawToBand } from "@/lib/ieltsBand";
 import { isCorrect, type ExamQuestion } from "./ReadingExam";
+import { saveSkillResult } from "@/lib/ieltsScores";
 
 export interface SkillSection {
   /** 1-4 for Listening parts, 1-3 for Reading passages. */
@@ -25,12 +26,17 @@ export default function SkillExam({
   storageKey,
   sections,
   skill,
+  book,
+  test,
   render,
   bottomExtra,
 }: {
   storageKey: string;
   sections: SkillSection[];
   skill: "listening" | "reading";
+  /** Identifies the paper so the band can be shown on the test card afterwards. */
+  book?: number;
+  test?: number;
   /** Draws one part; the answers and scoring come back through these props. */
   render: (
     section: SkillSection,
@@ -70,6 +76,13 @@ export default function SkillExam({
   const correct = all.filter((q) => isCorrect(answers[q.number] || "", q.correct_answer)).length;
   const answered = all.filter((q) => (answers[q.number] || "").trim()).length;
   const band = rawToBand(correct, skill);
+
+  // Publish the band for the test card. Recomputing it there would mean refetching
+  // every paper just to draw the home page.
+  useEffect(() => {
+    if (!loaded.current || !book || !test) return;
+    saveSkillResult(book, test, skill, { band, correct, total: all.length, answered });
+  }, [band, correct, answered, all.length, book, test, skill]);
 
   const onAnswerChange = (n: number, v: string) => setAnswers((a) => ({ ...a, [n]: v }));
   const section = sections[active];
