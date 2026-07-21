@@ -98,8 +98,15 @@ export default function LevelTest({
       setScaleLabel(data.levels.map((l) => l.label).join("–"));
       if (data.current_level) setLevel(data.current_level);
       setPhase("testing");
-    } catch {
-      setError(t(lang, "Testni yuklab bo'lmadi.", "Не удалось загрузить тест.", "Could not load the test."));
+    } catch (err) {
+      // A subject whose calibrated bank has not been generated yet answers 404;
+      // that is "not ready", not "broken", and saying so avoids a bug report.
+      const missing = err instanceof Error && /404|not found|no placement/i.test(err.message);
+      setError(
+        missing
+          ? t(lang, "Bu fan uchun daraja testi hali tayyorlanmoqda.", "Тест по этому предмету ещё готовится.", "The placement test for this subject is still being prepared.")
+          : t(lang, "Testni yuklab bo'lmadi.", "Не удалось загрузить тест.", "Could not load the test.")
+      );
       setPhase("intro");
     }
   }
