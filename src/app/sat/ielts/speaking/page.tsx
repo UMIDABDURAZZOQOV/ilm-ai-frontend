@@ -3,10 +3,11 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Loader2, Mic } from "lucide-react";
+import { Loader2, Mic } from "lucide-react";
 import { getSpeaking, type IeltsSpeaking } from "@/lib/ieltsApi";
 import { bookTitle, groupByTest, parseCambridgeTitle } from "@/lib/cambridge";
 import SpeakingExam, { type SpeakingPart } from "@/components/ielts/SpeakingExam";
+import FullScreenExam from "@/components/ielts/FullScreenExam";
 
 const PART_INTRO: Record<number, string> = {
   1: "The examiner asks you about yourself, your home, work or studies and other familiar topics.",
@@ -39,17 +40,17 @@ export default function IeltsSpeakingPage() {
       speak_seconds: open.speak_seconds ?? undefined,
     };
     return (
-      <div className="space-y-3">
-        <button
-          onClick={() => setOpen(null)}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-white"
-        >
-          <ArrowLeft className="w-4 h-4" /> All topics
-        </button>
-        {/* No `onSubmit`: the backend cannot transcribe audio yet, so the recorder is for
-            self-review only rather than showing a band score it cannot actually judge. */}
-        <SpeakingExam part={part} />
-      </div>
+      <FullScreenExam
+        title={`Speaking Part ${part.part}`}
+        subtitle={part.topic}
+        onExit={() => setOpen(null)}
+      >
+        {/* No `onSubmit`: the backend cannot transcribe audio yet, so the recorder is
+            for self-review rather than a band score it has no basis to give. */}
+        <div className="h-full overflow-y-auto p-4">
+          <SpeakingExam part={part} />
+        </div>
+      </FullScreenExam>
     );
   }
 

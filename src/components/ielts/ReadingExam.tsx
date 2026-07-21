@@ -24,6 +24,9 @@ export interface ExamPassage {
   passage_text: string;           // paragraphs separated by blank lines; "A\n..." for lettered sections
 }
 
+/** The seeder writes gaps as a run of underscores; the input is rendered in its place. */
+const GAP_MARK = "________";
+
 const TFNG = ["TRUE", "FALSE", "NOT GIVEN"];
 const YNNG = ["YES", "NO", "NOT GIVEN"];
 
@@ -347,17 +350,31 @@ export function QuestionRow({
     );
   }
 
-  // completion (notes / summary / sentence) → a numbered text box
+  // Completion (notes / summary / sentence). The box goes exactly where the gap is
+  // printed, the way the paper reads — parking it in a right-hand column made the
+  // learner match numbers back to the sentence themselves.
+  const [before, ...rest] = q.question_text.split(GAP_MARK);
+  const after = rest.join(GAP_MARK);
+  const box = (
+    <input
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="inline-block align-baseline mx-1 w-36 border-b-2 border-slate-400 dark:border-neutral-600 focus:border-emerald-500 outline-none bg-transparent px-1 py-0.5 text-center"
+      placeholder={String(q.number)}
+      aria-label={`Question ${q.number}`}
+    />
+  );
+
   return (
-    <div className="flex items-start gap-3">
-      <span className="font-bold">{q.number}</span>
-      <span className="flex-1">{q.question_text}</span>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-40 border border-slate-300 dark:border-neutral-700 rounded-lg px-2 py-1 bg-transparent"
-        placeholder={String(q.number)}
-      />
+    <div className="flex items-start gap-2 leading-8">
+      <span className="font-bold shrink-0 pt-0.5">{q.number}</span>
+      <span className="flex-1">
+        {before}
+        {rest.length ? box : null}
+        {after}
+        {/* A gap that the parser could not place inline still needs a box. */}
+        {rest.length === 0 && box}
+      </span>
     </div>
   );
 }

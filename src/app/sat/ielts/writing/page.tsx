@@ -3,11 +3,12 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Clock, Loader2, PenLine } from "lucide-react";
+import { Clock, Loader2, PenLine } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getWriting, submitWriting, type IeltsWriting } from "@/lib/ieltsApi";
 import { bookTitle } from "@/lib/cambridge";
 import WritingExam, { type WritingFeedback, type WritingTask } from "@/components/ielts/WritingExam";
+import FullScreenExam from "@/components/ielts/FullScreenExam";
 
 /** "Cambridge 21 Test 3" → { book: 21, test: 3 } */
 function parseCategory(category: string) {
@@ -73,15 +74,13 @@ export default function IeltsWritingPage() {
       minutes: open.duration_minutes,
     };
     return (
-      <div className="h-[calc(100vh-8rem)] flex flex-col">
-        <button
-          onClick={() => setOpen(null)}
-          className="self-start inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-white mb-1"
-        >
-          <ArrowLeft className="w-4 h-4" /> All tasks
-        </button>
+      <FullScreenExam
+        title={`Writing Task ${task.task}`}
+        subtitle={open.category}
+        onExit={() => setOpen(null)}
+      >
         <WritingExam task={task} storageKey={`ielts-writing-${open.id}`} onSubmit={grade} />
-      </div>
+      </FullScreenExam>
     );
   }
 

@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Headphones, Loader2, Volume2 } from "lucide-react";
+import { Headphones, Loader2, Volume2 } from "lucide-react";
 import {
   getListening,
   getListeningQuestions,
@@ -13,6 +13,7 @@ import {
 import { bookTitle, groupByTest, parseCambridgeTitle } from "@/lib/cambridge";
 import ListeningExam, { type ListeningSection } from "@/components/ielts/ListeningExam";
 import type { ExamQuestion } from "@/components/ielts/ReadingExam";
+import FullScreenExam from "@/components/ielts/FullScreenExam";
 
 function toExamQuestions(rows: IeltsQuestion[]): ExamQuestion[] {
   return rows
@@ -68,13 +69,11 @@ export default function IeltsListeningPage() {
     };
 
     return (
-      <div className="h-[calc(100vh-8rem)] flex flex-col">
-        <button
-          onClick={() => setOpen(null)}
-          className="self-start inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-white mb-1"
-        >
-          <ArrowLeft className="w-4 h-4" /> All parts
-        </button>
+      <FullScreenExam
+        title={section.title}
+        subtitle={ref ? `Cambridge ${ref.book} · Test ${ref.test} · Part ${ref.index}` : null}
+        onExit={() => setOpen(null)}
+      >
         {questions ? (
           <ListeningExam
             section={section}
@@ -82,11 +81,11 @@ export default function IeltsListeningPage() {
             storageKey={`ielts-listening-${open.id}`}
           />
         ) : (
-          <div className="flex-1 grid place-items-center text-slate-500">
+          <div className="h-full grid place-items-center text-slate-500">
             <Loader2 className="w-6 h-6 animate-spin" />
           </div>
         )}
-      </div>
+      </FullScreenExam>
     );
   }
 
