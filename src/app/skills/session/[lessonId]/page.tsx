@@ -182,11 +182,29 @@ export default function LessonSessionPage() {
   }
 
   if (phase === "finished" && completion) {
+    // `passed === false` means the score was under the threshold: the lesson is
+    // NOT completed and the next node stays locked, so celebrate nothing and ask
+    // them to study it again. (`!== false` keeps older payloads working.)
+    const passed = completion.passed !== false;
+    const threshold = Math.round(completion.pass_threshold_pct ?? 80);
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-white dark:bg-neutral-950 p-6 text-center">
-        <Confetti active={completion.stars >= 1} count={completion.stars >= 3 ? 60 : 40} />
-        <Mascot mood="cheer" size={140} />
-        <h2 className="text-2xl font-extrabold">{lang === "ru" ? "Урок завершён!" : lang === "en" ? "Lesson complete!" : "Dars yakunlandi!"}</h2>
+        <Confetti active={passed && completion.stars >= 1} count={completion.stars >= 3 ? 60 : 40} />
+        <Mascot mood={passed ? "cheer" : "sad"} size={140} />
+        <h2 className="text-2xl font-extrabold">
+          {passed
+            ? lang === "ru" ? "Урок завершён!" : lang === "en" ? "Lesson complete!" : "Dars yakunlandi!"
+            : lang === "ru" ? "Ещё раз!" : lang === "en" ? "Let's try again" : "Yana bir marta!"}
+        </h2>
+        {!passed && (
+          <p className="max-w-sm text-sm text-neutral-600 dark:text-neutral-400">
+            {lang === "ru"
+              ? `Пожалуйста, изучите тему ещё раз — для прохождения нужно минимум ${threshold}% правильных ответов.`
+              : lang === "en"
+              ? `Please study this lesson again — you need at least ${threshold}% correct to pass.`
+              : `Iltimos, mavzuni yana bir marta o'rganing — o'tish uchun kamida ${threshold}% to'g'ri javob kerak.`}
+          </p>
+        )}
         <div className="flex gap-1 text-3xl">
           {[1, 2, 3].map((i) => (
             <span key={i} className={i <= completion.stars ? "" : "opacity-20"}>

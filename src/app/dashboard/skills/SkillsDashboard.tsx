@@ -42,6 +42,10 @@ import {
   completeLightning,
   getMarathon,
   completeMarathon,
+  isLanguageSubject,
+  getUnitExam,
+  completeUnitExam,
+  type SkillTreeUnit,
   type SkillSubject,
   type SkillTreeResponse,
   type SkillTreeLesson,
@@ -51,6 +55,7 @@ import {
 } from "@/lib/skillTreeApi";
 import HeartsXpHeader from "@/components/skills/HeartsXpHeader";
 import LessonPath from "@/components/skills/LessonPath";
+import LevelTest from "@/components/skills/LevelTest";
 import PracticeSession from "@/components/skills/PracticeSession";
 import Leaderboard from "@/components/skills/Leaderboard";
 import Achievements from "@/components/skills/Achievements";
@@ -118,6 +123,11 @@ export default function SkillsDashboard({ user }: { user: User }) {
   const [practiceQuestions, setPracticeQuestions] = useState<PracticeQuestion[]>([]);
   const [practiceLoading, setPracticeLoading] = useState(false);
   const [dailyDone, setDailyDone] = useState(false);
+  // Placement test, offered only on language subjects (ingliz/koreys/fransuz tili).
+  const [showLevelTest, setShowLevelTest] = useState(false);
+  // End-of-unit checkpoint exam (all subjects) — passing it unlocks the next bob.
+  const [examUnit, setExamUnit] = useState<SkillTreeUnit | null>(null);
+  const [examQuestions, setExamQuestions] = useState<PracticeQuestion[]>([]);
   const [marathonSubject, setMarathonSubject] = useState<SkillSubject | null>(null);
   const [mockSubject, setMockSubject] = useState<SkillSubject | null>(null);
 
@@ -200,6 +210,20 @@ export default function SkillsDashboard({ user }: { user: User }) {
       setPracticeQuestions([]);
     } finally {
       setPracticeLoading(false);
+    }
+  }
+
+  async function onSelectUnitExam(unit: SkillTreeUnit) {
+    setLoading(true);
+    try {
+      const data = await getUnitExam(user.id, unit.id);
+      setExamQuestions(data.questions);
+      setExamUnit(unit);
+    } catch {
+      setExamUnit(null);
+      setExamQuestions([]);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -383,6 +407,42 @@ export default function SkillsDashboard({ user }: { user: User }) {
   }
 
   if (view === "path" && selected) {
+    // The checkpoint exam takes over the screen while it runs.
+    if (examUnit && examQuestions.length > 0) {
+      const unitTitle =
+        lang === "ru" ? examUnit.title_ru : lang === "en" ? examUnit.title_en : examUnit.title_uz;
+      return (
+        <PracticeSession
+          lang={lang}
+          title={`${lang === "ru" ? "Экзамен по разделу" : lang === "en" ? "Unit exam" : "Bob imtihoni"} · ${unitTitle}`}
+          accent={tree?.subject.color || "#58CC02"}
+          questions={examQuestions}
+          onFinish={async (results: PracticeResultItem[]) => {
+            const r = await completeUnitExam({ user_id: user.id, unit_id: examUnit.id, results });
+            return {
+              xp_awarded: r.xp_awarded,
+              extraLine: r.passed
+                ? lang === "ru"
+                  ? "Раздел сдан — следующий открыт!"
+                  : lang === "en"
+                  ? "Unit passed — the next one is unlocked!"
+                  : "Bob topshirildi — keyingisi ochildi!"
+                : lang === "ru"
+                ? `Нужно минимум ${Math.round(r.pass_threshold_pct)}% — повторите раздел`
+                : lang === "en"
+                ? `You need at least ${Math.round(r.pass_threshold_pct)}% — review the unit`
+                : `Kamida ${Math.round(r.pass_threshold_pct)}% kerak — bobni takrorlang`,
+            };
+          }}
+          onExit={() => {
+            setExamUnit(null);
+            setExamQuestions([]);
+            // Reload so a freshly passed checkpoint opens the next unit.
+            if (selected) loadTree(selected);
+          }}
+        />
+      );
+    }
     return (
       <div>
         <div className="flex items-center justify-between mb-4">
@@ -399,10 +459,50 @@ export default function SkillsDashboard({ user }: { user: User }) {
             </div>
           ) : tree ? (
             <motion.div key={tree.subject.slug} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-              <LessonPath tree={tree} onSelectLesson={onSelectLesson} />
+              {/* Language subjects get a CEFR placement test before the path. */}
+              {isLanguageSubject(tree.subject.slug) && (
+                <button
+                  onClick={() => setShowLevelTest(true)}
+                  className="w-full mb-5 flex items-center gap-3 p-3 rounded-2xl border-2 border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-left"
+                >
+                  <span
+                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: `${tree.subject.color || "#58CC02"}22` }}
+                  >
+                    <GraduationCap className="w-5 h-5" style={{ color: tree.subject.color || "#58CC02" }} />
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-sm font-bold">
+                      {lang === "ru"
+                        ? "Тест на уровень языка"
+                        : lang === "en"
+                        ? "Language level test"
+                        : "Til darajasi testi"}
+                    </span>
+                    <span className="block text-xs text-neutral-500">
+                      {lang === "ru"
+                        ? "Узнайте свой уровень A1–C1"
+                        : lang === "en"
+                        ? "Find your A1–C1 level"
+                        : "Darajangizni A1–C1 shkalasida aniqlang"}
+                    </span>
+                  </span>
+                </button>
+              )}
+              <LessonPath tree={tree} onSelectLesson={onSelectLesson} onSelectUnitExam={onSelectUnitExam} />
             </motion.div>
           ) : null}
         </AnimatePresence>
+        {showLevelTest && tree && (
+          <LevelTest
+            userId={user.id}
+            subjectSlug={tree.subject.slug}
+            subjectName={nameFor(lang, tree.subject)}
+            accent={tree.subject.color || "#58CC02"}
+            lang={lang}
+            onClose={() => setShowLevelTest(false)}
+          />
+        )}
       </div>
     );
   }

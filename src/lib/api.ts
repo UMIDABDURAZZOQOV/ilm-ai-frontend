@@ -83,7 +83,11 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   const startTime = performance.now();
   const method = options.method || "GET";
 
-  let res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  // `no-store`: never serve an API response from the HTTP cache. Without it the
+  // browser happily replays a cached GET (e.g. /gaps/report/<id>), so freshly
+  // finished quizzes/lessons didn't show up until a manual page refresh.
+  // Placed before ...options so a caller can still opt out explicitly.
+  let res = await fetch(`${API_BASE}${path}`, { cache: "no-store", ...options, headers });
   const duration = performance.now() - startTime;
 
   // Track API call with Sentry
@@ -94,7 +98,7 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
     if (refreshed) {
       headers["Authorization"] = `Bearer ${refreshed.access_token}`;
       const retryStartTime = performance.now();
-      res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+      res = await fetch(`${API_BASE}${path}`, { cache: "no-store", ...options, headers });
       const retryDuration = performance.now() - retryStartTime;
       trackApiCall(`${method} (retry)`, path, res.status, retryDuration);
     }

@@ -45,6 +45,7 @@ const IELTS_NAV: NavItem[] = [
   { href: "/sat/ielts/writing", label: "Writing", icon: BookText, exact: false, group: "PRACTICE" },
   { href: "/sat/ielts/speaking", label: "Speaking", icon: BookText, exact: false, group: "PRACTICE" },
   { href: "/sat/ielts/listening", label: "Listening", icon: BookText, exact: false, group: "PRACTICE" },
+  { href: "/sat/ielts/dictionary", label: "Dictionary", icon: BookText, exact: false, group: "PRACTICE" },
   { href: "/sat/ielts/calculator", label: "Score Calculator", icon: Calculator, exact: false, group: "PROGRESS" },
 ];
 

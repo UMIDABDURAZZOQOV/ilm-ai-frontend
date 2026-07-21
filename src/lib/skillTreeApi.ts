@@ -27,6 +27,15 @@ export interface SkillTreeLesson {
   best_score_pct: number | null;
 }
 
+/** Checkpoint exam at the end of a unit. Passing it unlocks the next unit. */
+export interface UnitExamInfo {
+  /** "none" = unit has no lessons (never gates) */
+  status: "none" | "locked" | "unlocked" | "passed";
+  passed: boolean;
+  best_score_pct: number | null;
+  attempts: number;
+}
+
 export interface SkillTreeUnit {
   id: number;
   slug: string;
@@ -35,6 +44,7 @@ export interface SkillTreeUnit {
   title_en: string;
   order_index: number;
   lessons: SkillTreeLesson[];
+  exam?: UnitExamInfo;
 }
 
 export interface GamificationSummary {
@@ -79,6 +89,10 @@ export interface LessonResultItem {
 }
 
 export interface LessonCompleteResponse {
+  /** False when the learner scored below `pass_threshold_pct` — the lesson is NOT
+   *  marked completed and the next node stays locked, so they should study and retry. */
+  passed: boolean;
+  pass_threshold_pct: number;
   stars: number;
   score: number;
   total: number;
@@ -530,4 +544,89 @@ export async function explainQuestion(data: {
   lang: string;
 }): Promise<{ explanation: string }> {
   return apiFetch("/skills/tutor/explain", { method: "POST", body: JSON.stringify(data) });
+}
+
+// ─── Language placement test ────────────────────────────────────────────────
+// Offered when opening a language subject, so the learner knows their CEFR
+// level before starting the path.
+
+export const LANGUAGE_SUBJECT_SLUGS = ["ingliz_tili", "koreys_tili", "fransuz_tili"];
+
+export function isLanguageSubject(slug: string): boolean {
+  return LANGUAGE_SUBJECT_SLUGS.includes(slug);
+}
+
+export interface LevelTestQuestion {
+  id: number;
+  question_text: string;
+  options: string[];
+  correct_answer: string;
+  explanation?: string | null;
+  difficulty?: string;
+}
+
+export interface LevelInfo {
+  level: string;
+  score: number;
+  total: number;
+  score_pct: number;
+  taken_at?: string | null;
+}
+
+export interface LevelTestResponse {
+  subject: { slug: string; name_uz: string; color?: string };
+  current_level: LevelInfo | null;
+  questions: LevelTestQuestion[];
+}
+
+export async function getLevelTest(userId: number, subjectSlug: string): Promise<LevelTestResponse> {
+  return apiFetch(`/skills/${userId}/level-test?subject=${encodeURIComponent(subjectSlug)}`);
+}
+
+export async function completeLevelTest(data: {
+  user_id: number;
+  subject_slug: string;
+  results: { question_id: number; is_correct: boolean }[];
+}): Promise<{ level: string; score: number; total: number; score_pct: number }> {
+  return apiFetch("/skills/level-test/complete", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// ─── Unit checkpoint exam ───────────────────────────────────────────────────
+// Taken at the end of a unit (bob) over every lesson in it; passing unlocks the
+// next unit. Applies to every subject.
+
+export interface UnitExamResponse {
+  unit: { id: number; title_uz: string; title_ru: string; title_en: string };
+  pass_threshold_pct: number;
+  previous: { passed: boolean; best_score_pct: number | null; attempts: number } | null;
+  questions: PracticeQuestion[];
+}
+
+export interface UnitExamResult {
+  passed: boolean;
+  pass_threshold_pct: number;
+  score: number;
+  total: number;
+  score_pct: number;
+  xp_awarded: number;
+  xp_total: number;
+  streak_days: number;
+}
+
+export async function getUnitExam(userId: number, unitId: number): Promise<UnitExamResponse> {
+  return apiFetch(`/skills/${userId}/unit-exam?unit_id=${unitId}`);
+}
+
+export async function completeUnitExam(data: {
+  user_id: number;
+  unit_id: number;
+  results: PracticeResultItem[];
+}): Promise<UnitExamResult> {
+  return apiFetch("/skills/unit-exam/complete", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }
