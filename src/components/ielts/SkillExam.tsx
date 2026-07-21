@@ -94,8 +94,12 @@ export default function SkillExam({
           <div className="h-full overflow-y-auto p-6 max-w-3xl mx-auto">
             <h2 className="text-2xl font-black mb-6 capitalize">{skill}</h2>
             <div className="rounded-2xl border border-slate-200 dark:border-neutral-800 p-6 mb-6">
-              <div className="text-5xl font-black" style={{ color: bandColor(band) }}>
-                {formatBand(band)}
+              {/* Nothing answered is not band 0 — it is no band. */}
+              <div
+                className="text-5xl font-black"
+                style={{ color: answered ? bandColor(band) : undefined }}
+              >
+                {answered ? formatBand(band) : "—"}
               </div>
               <div className="mt-3 text-sm text-slate-500 space-x-4">
                 <span className="text-emerald-600 font-bold">✓ {correct}</span>

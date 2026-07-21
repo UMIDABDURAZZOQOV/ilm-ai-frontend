@@ -80,7 +80,8 @@ export default function IeltsHubPage() {
         if (overall !== null) next[`${book}/${test}`] = overall;
         for (const skill of SKILLS) {
           const r = loadSkillResult(book, test, skill);
-          if (r) next[`${book}/${test}/${skill}`] = r.band;
+          // A paper only looked at has no band — see saveSkillResult.
+          if (r && r.answered > 0) next[`${book}/${test}/${skill}`] = r.band;
         }
       }
     }

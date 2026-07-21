@@ -21,6 +21,13 @@ export interface SkillResult {
 const key = (book: number, test: number, skill: IeltsSkill) =>
   `ielts-score-${book}-${test}-${skill}`;
 
+/**
+ * Store a band, or clear it when nothing has been answered.
+ *
+ * Merely opening a paper used to record band 0, so a test you had only looked at
+ * showed "0.0" on its card as if you had sat it and failed. A paper with no answers
+ * has no band at all.
+ */
 export function saveSkillResult(
   book: number,
   test: number,
@@ -28,7 +35,8 @@ export function saveSkillResult(
   result: SkillResult
 ): void {
   try {
-    localStorage.setItem(key(book, test, skill), JSON.stringify(result));
+    if (result.answered <= 0) localStorage.removeItem(key(book, test, skill));
+    else localStorage.setItem(key(book, test, skill), JSON.stringify(result));
   } catch {
     /* quota — the score is a convenience, not the exam */
   }
@@ -51,10 +59,11 @@ export function loadSkillResult(
  * The overall band is the mean of the four skills, rounded the IELTS way (.25 up to
  * the half, .75 up to the whole). A skill not yet taken counts as 0, which is what
  * the real report does — the overall only means anything once all four are sat.
+ * Nothing is shown at all until at least one skill has been answered.
  */
 export function overallFor(book: number, test: number): number | null {
   const results = IELTS_SKILLS.map((s) => loadSkillResult(book, test, s));
-  if (!results.some(Boolean)) return null;
+  if (!results.some((r) => r && r.answered > 0)) return null;
   const total = results.reduce((sum, r) => sum + (r?.band ?? 0), 0);
   return roundBand(total / IELTS_SKILLS.length);
 }
