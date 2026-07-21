@@ -459,8 +459,9 @@ export default function SkillsDashboard({ user }: { user: User }) {
             </div>
           ) : tree ? (
             <motion.div key={tree.subject.slug} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-              {/* Language subjects get a CEFR placement test before the path. */}
-              {isLanguageSubject(tree.subject.slug) && (
+              {/* Every subject gets a placement test before the path: languages are
+                  placed on CEFR, the rest on the Milliy Sertifikat 1-5 scale. */}
+              {(
                 <button
                   onClick={() => setShowLevelTest(true)}
                   className="w-full mb-5 flex items-center gap-3 p-3 rounded-2xl border-2 border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-left"
@@ -474,17 +475,23 @@ export default function SkillsDashboard({ user }: { user: User }) {
                   <span className="flex-1 min-w-0">
                     <span className="block text-sm font-bold">
                       {lang === "ru"
-                        ? "Тест на уровень языка"
+                        ? "Тест на уровень"
                         : lang === "en"
-                        ? "Language level test"
-                        : "Til darajasi testi"}
+                        ? "Placement test"
+                        : "Daraja aniqlash testi"}
                     </span>
                     <span className="block text-xs text-neutral-500">
-                      {lang === "ru"
-                        ? "Узнайте свой уровень A1–C1"
+                      {isLanguageSubject(tree.subject.slug)
+                        ? lang === "ru"
+                          ? "Узнайте свой уровень A1–C2"
+                          : lang === "en"
+                          ? "Find your A1–C2 level"
+                          : "Darajangizni A1–C2 shkalasida aniqlang"
+                        : lang === "ru"
+                        ? "Узнайте свой уровень 1–5"
                         : lang === "en"
-                        ? "Find your A1–C1 level"
-                        : "Darajangizni A1–C1 shkalasida aniqlang"}
+                        ? "Find your 1–5 level"
+                        : "Darajangizni 1–5 shkalasida aniqlang"}
                     </span>
                   </span>
                 </button>

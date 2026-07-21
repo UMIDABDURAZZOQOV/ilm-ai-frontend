@@ -546,9 +546,11 @@ export async function explainQuestion(data: {
   return apiFetch("/skills/tutor/explain", { method: "POST", body: JSON.stringify(data) });
 }
 
-// ─── Language placement test ────────────────────────────────────────────────
-// Offered when opening a language subject, so the learner knows their CEFR
-// level before starting the path.
+// ─── Placement test ─────────────────────────────────────────────────────────
+// Offered when opening a subject, so the learner knows where they stand before
+// starting the path. Languages are placed on CEFR, the other subjects on the
+// Milliy Sertifikat 1-5 scale. The level comes from per-level mastery, not from a
+// percentage — see services/placement.py on the backend.
 
 export const LANGUAGE_SUBJECT_SLUGS = ["ingliz_tili", "koreys_tili", "fransuz_tili"];
 
@@ -558,23 +560,38 @@ export function isLanguageSubject(slug: string): boolean {
 
 export interface LevelTestQuestion {
   id: number;
+  /** The band this question was authored at — shown in the result breakdown. */
+  level: string;
+  skill?: string | null;
   question_text: string;
   options: string[];
   correct_answer: string;
   explanation?: string | null;
-  difficulty?: string;
+}
+
+export interface LevelBreakdownRow {
+  level: string;
+  label: string;
+  correct: number;
+  asked: number;
+  pct: number;
+  mastered: boolean;
 }
 
 export interface LevelInfo {
   level: string;
+  label?: string;
   score: number;
   total: number;
   score_pct: number;
   taken_at?: string | null;
+  breakdown?: LevelBreakdownRow[];
 }
 
 export interface LevelTestResponse {
   subject: { slug: string; name_uz: string; color?: string };
+  scale: "cefr" | "milliy";
+  levels: { level: string; label: string }[];
   current_level: LevelInfo | null;
   questions: LevelTestQuestion[];
 }
@@ -587,7 +604,7 @@ export async function completeLevelTest(data: {
   user_id: number;
   subject_slug: string;
   results: { question_id: number; is_correct: boolean }[];
-}): Promise<{ level: string; score: number; total: number; score_pct: number }> {
+}): Promise<LevelInfo> {
   return apiFetch("/skills/level-test/complete", {
     method: "POST",
     body: JSON.stringify(data),
