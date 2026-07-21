@@ -9,6 +9,8 @@ export interface ListeningSection {
   section: number;              // 1–4
   title: string;
   audio_url?: string | null;
+  /** Set when the recording was ripped as several files; they play back to back. */
+  audio_parts?: string[] | null;
   /** Speaker-tagged lines: "WOMAN: So, who runs the classes?" */
   transcript?: string | null;
 }
@@ -34,6 +36,20 @@ export default function ListeningExam({
   const [showUnanswered, setShowUnanswered] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const loaded = useRef(false);
+  const audioRefs = useRef<(HTMLAudioElement | null)[]>([]);
+
+  // A part that was ripped in two plays as one continuous recording: starting any
+  // track pauses the others, and finishing one starts the next.
+  const tracks = useMemo(
+    () => section.audio_parts?.length ? section.audio_parts : section.audio_url ? [section.audio_url] : [],
+    [section.audio_parts, section.audio_url]
+  );
+
+  function stopOthers(index: number) {
+    audioRefs.current.forEach((el, i) => {
+      if (el && i !== index) el.pause();
+    });
+  }
 
   useEffect(() => {
     try {
@@ -94,10 +110,30 @@ export default function ListeningExam({
         <div className="overflow-y-auto pr-2 pt-4">
           <h2 className="text-lg font-black border-l-4 border-emerald-500 pl-2 mb-3">{section.title}</h2>
 
-          {section.audio_url ? (
-            <audio controls src={section.audio_url} className="w-full mb-4">
-              Your browser does not support audio playback.
-            </audio>
+          {tracks.length ? (
+            <div className="mb-4 space-y-2">
+              {tracks.map((src, i) => (
+                <div key={src}>
+                  {tracks.length > 1 && (
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                      Recording {i + 1} of {tracks.length}
+                    </div>
+                  )}
+                  <audio
+                    controls
+                    src={src}
+                    ref={(el) => {
+                      audioRefs.current[i] = el;
+                    }}
+                    onPlay={() => stopOthers(i)}
+                    onEnded={() => audioRefs.current[i + 1]?.play()}
+                    className="w-full"
+                  >
+                    Your browser does not support audio playback.
+                  </audio>
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="rounded-xl border border-dashed border-slate-300 dark:border-neutral-700 p-4 text-sm text-slate-500 mb-4">
               Audio will appear here once this section&apos;s recording is attached.

@@ -1,133 +1,121 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
-import { Mic, ArrowLeft, Clock, Play, Square, ChevronRight } from "lucide-react";
-import { IELTS_SPEAKING, type IeltsSpeakingSet } from "@/lib/ielts";
+export const dynamic = "force-dynamic";
+
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Loader2, Mic } from "lucide-react";
+import { getSpeaking, type IeltsSpeaking } from "@/lib/ieltsApi";
+import { bookTitle, groupByTest, parseCambridgeTitle } from "@/lib/cambridge";
+import SpeakingExam, { type SpeakingPart } from "@/components/ielts/SpeakingExam";
+
+const PART_INTRO: Record<number, string> = {
+  1: "The examiner asks you about yourself, your home, work or studies and other familiar topics.",
+  2: "You will have to talk about the topic for 1 to 2 minutes. You have 1 minute to think about what you are going to say. You can make some notes to help you if you wish.",
+  3: "Discussion topics — the examiner asks broader questions related to the Part 2 topic.",
+};
 
 export default function IeltsSpeakingPage() {
-  const [set, setSet] = useState<IeltsSpeakingSet | null>(null);
-  const [filter, setFilter] = useState<"All" | "Part 1" | "Part 2" | "Part 3">("All");
-  const [seconds, setSeconds] = useState(0);
-  const [running, setRunning] = useState(false);
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const list = IELTS_SPEAKING.filter((s) => filter === "All" || s.part === filter);
+  const [parts, setParts] = useState<IeltsSpeaking[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState<IeltsSpeaking | null>(null);
 
   useEffect(() => {
-    if (running) {
-      timer.current = setInterval(() => setSeconds((s) => s + 1), 1000);
-    }
-    return () => {
-      if (timer.current) clearInterval(timer.current);
+    getSpeaking()
+      .then(setParts)
+      .catch(() => setError("Could not load the speaking topics."));
+  }, []);
+
+  const books = useMemo(() => groupByTest(parts ?? [], (p) => p.topic), [parts]);
+
+  if (open) {
+    const ref = parseCambridgeTitle(open.topic);
+    const part: SpeakingPart = {
+      part: (open.part as 1 | 2 | 3) ?? 1,
+      intro: PART_INTRO[open.part] ?? "",
+      topic: ref?.title ?? open.topic,
+      // Part 2 has no question list — the cue card is the prompt.
+      questions: open.questions?.length ? open.questions : open.cue_card ? [open.cue_card] : [],
+      prep_seconds: open.prep_seconds ?? undefined,
+      speak_seconds: open.speak_seconds ?? undefined,
     };
-  }, [running]);
-
-  function open(s: IeltsSpeakingSet) {
-    setSet(s);
-    setSeconds(0);
-    setRunning(false);
-  }
-
-  const mmss = `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, "0")}`;
-
-  if (!set) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-black flex items-center gap-3">
-            <Mic className="h-7 w-7 text-[#0d3b4f] dark:text-amber-400" /> IELTS Speaking
-          </h1>
-          <p className="text-slate-500 mt-1">Original Part 1, Part 2, and Part 3 questions — practice aloud with a timer.</p>
-        </div>
-
-        <div className="flex bg-slate-100 dark:bg-slate-900 rounded-xl p-1 gap-1 w-full sm:w-auto sm:inline-flex">
-          {(["All", "Part 1", "Part 2", "Part 3"] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                filter === f ? "bg-white dark:bg-slate-800 shadow text-slate-900 dark:text-white" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-              }`}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-
-        <div className="grid sm:grid-cols-2 gap-4">
-          {list.map((s, i) => (
-            <motion.button
-              key={s.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.03 }}
-              onClick={() => open(s)}
-              className="group text-left rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-900/5"
-            >
-              <div className="flex items-center justify-between">
-                <span className="inline-flex rounded-full bg-[#0d3b4f]/10 dark:bg-amber-400/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-[#0d3b4f] dark:text-amber-400">
-                  {s.part}
-                </span>
-                <span className="text-xs text-slate-400 font-semibold">{s.questions.length === 1 ? "cue card" : `${s.questions.length} questions`}</span>
-              </div>
-              <h3 className="font-bold text-lg mt-3">{s.topic}</h3>
-              <span className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-[#0d3b4f] dark:text-amber-400">
-                Practice <ChevronRight className="h-4 w-4" />
-              </span>
-            </motion.button>
-          ))}
-        </div>
+      <div className="space-y-3">
+        <button
+          onClick={() => setOpen(null)}
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-white"
+        >
+          <ArrowLeft className="w-4 h-4" /> All topics
+        </button>
+        {/* No `onSubmit`: the backend cannot transcribe audio yet, so the recorder is for
+            self-review only rather than showing a band score it cannot actually judge. */}
+        <SpeakingExam part={part} />
       </div>
     );
   }
 
-  const isCueCard = set.part === "Part 2";
   return (
-    <div className="space-y-5 max-w-2xl">
-      <div className="flex items-center gap-3">
-        <button onClick={() => setSet(null)} className="p-2 -ml-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <h1 className="text-lg font-black flex-1">{set.part} · {set.topic}</h1>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-black flex items-center gap-3">
+          <Mic className="h-7 w-7 text-[#0d3b4f] dark:text-amber-400" /> IELTS Speaking
+        </h1>
+        <p className="text-slate-500 mt-1">
+          The official Part 1–3 topics and cue cards, with a timer and a recorder so you can play
+          your answer back.
+        </p>
       </div>
 
-      {isCueCard ? (
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Cue card</p>
-          <p className="text-[15px] leading-relaxed text-slate-800 dark:text-slate-100">{set.questions[0]}</p>
-          <p className="text-xs text-slate-400 mt-4">You have 1 minute to prepare, then speak for 1–2 minutes.</p>
-        </div>
-      ) : (
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 divide-y divide-slate-100 dark:divide-slate-800">
-          {set.questions.map((q, i) => (
-            <div key={i} className="p-4 flex items-start gap-3">
-              <span className="shrink-0 h-6 w-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-black text-slate-500">{i + 1}</span>
-              <p className="text-sm text-slate-700 dark:text-slate-200">{q}</p>
-            </div>
-          ))}
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
+      {!parts && !error && (
+        <div className="grid place-items-center py-16 text-slate-500">
+          <Loader2 className="w-6 h-6 animate-spin" />
         </div>
       )}
 
-      {/* Timer */}
-      <div className="flex items-center justify-center gap-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-5">
-        <span className="flex items-center gap-2 text-2xl font-black tabular-nums">
-          <Clock className="h-5 w-5 text-slate-400" /> {mmss}
-        </span>
-        <button
-          onClick={() => setRunning((r) => !r)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#0d3b4f] text-white rounded-xl font-bold hover:opacity-90 transition-all"
-        >
-          {running ? <><Square className="h-4 w-4" /> Stop</> : <><Play className="h-4 w-4" /> Start</>}
-        </button>
-        <button
-          onClick={() => { setSeconds(0); setRunning(false); }}
-          className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-500 hover:border-slate-400 transition-all"
-        >
-          Reset
-        </button>
-      </div>
-      <p className="text-center text-xs text-slate-400">Tip: record yourself on your phone and compare against the band descriptors.</p>
+      {parts && !books.length && !error && (
+        <div className="rounded-2xl border border-dashed border-slate-300 dark:border-neutral-700 p-10 text-center text-slate-500">
+          No speaking topics have been loaded yet.
+        </div>
+      )}
+
+      {books.length > 0 && (
+        <section className="space-y-6">
+          <h2 className="text-xl font-black text-center text-red-700 dark:text-red-400">
+            {bookTitle(books[0].book)} ✨
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {books.map((g) => (
+              <div
+                key={`${g.book}-${g.test}`}
+                className="rounded-xl border border-slate-200 dark:border-neutral-800 overflow-hidden"
+              >
+                <div className="px-4 py-3 border-b border-slate-200 dark:border-neutral-800 font-bold">
+                  Test {g.test}
+                </div>
+                <div className="p-3 space-y-1">
+                  {g.items.map(({ ref, item }) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setOpen(item)}
+                      className="w-full text-left rounded-lg px-2 py-2 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
+                    >
+                      <div className="text-sm font-semibold leading-snug">
+                        Part {ref.index}. {ref.title}
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        {item.questions?.length
+                          ? `${item.questions.length} questions`
+                          : "Cue card"}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

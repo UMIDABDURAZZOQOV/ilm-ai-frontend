@@ -1,188 +1,157 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Headphones, ArrowLeft, Play, Square, RotateCcw, ChevronRight } from "lucide-react";
-import { IELTS_LISTENING, type IeltsListeningExercise } from "@/lib/ielts";
+export const dynamic = "force-dynamic";
 
-function norm(s: string) {
-  return s.trim().toLowerCase().replace(/\s+/g, " ");
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Headphones, Loader2, Volume2 } from "lucide-react";
+import {
+  getListening,
+  getListeningQuestions,
+  type IeltsListening,
+  type IeltsQuestion,
+} from "@/lib/ieltsApi";
+import { bookTitle, groupByTest, parseCambridgeTitle } from "@/lib/cambridge";
+import ListeningExam, { type ListeningSection } from "@/components/ielts/ListeningExam";
+import type { ExamQuestion } from "@/components/ielts/ReadingExam";
+
+function toExamQuestions(rows: IeltsQuestion[]): ExamQuestion[] {
+  return rows
+    .slice()
+    .sort((a, b) => a.order_index - b.order_index)
+    .map((q) => ({
+      id: q.id,
+      number: q.order_index,
+      question_type: q.question_type,
+      question_text: q.question_text,
+      options: q.options,
+      correct_answer: q.correct_answer,
+      group_instruction: q.hint,
+    }));
 }
 
 export default function IeltsListeningPage() {
-  const [ex, setEx] = useState<IeltsListeningExercise | null>(null);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [submitted, setSubmitted] = useState(false);
-  const [playing, setPlaying] = useState(false);
+  const [parts, setParts] = useState<IeltsListening[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState<IeltsListening | null>(null);
+  const [questions, setQuestions] = useState<ExamQuestion[] | null>(null);
 
-  // Stop any speech when leaving a page/exercise.
   useEffect(() => {
+    getListening()
+      .then(setParts)
+      .catch(() => setError("Could not load the listening tests."));
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      setQuestions(null);
+      return;
+    }
+    let live = true;
+    getListeningQuestions(open.id)
+      .then((rows) => live && setQuestions(toExamQuestions(rows)))
+      .catch(() => live && setError("Could not load the questions for this part."));
     return () => {
-      if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
+      live = false;
     };
-  }, [ex]);
+  }, [open]);
 
-  const score = useMemo(() => {
-    if (!ex) return 0;
-    return ex.questions.reduce((n, q) => (norm(answers[q.id] || "") === norm(q.answer) ? n + 1 : n), 0);
-  }, [ex, answers, submitted]); // eslint-disable-line react-hooks/exhaustive-deps
+  const books = useMemo(() => groupByTest(parts ?? []), [parts]);
 
-  function open(e: IeltsListeningExercise) {
-    setEx(e);
-    setAnswers({});
-    setSubmitted(false);
-    setPlaying(false);
-  }
+  if (open) {
+    const ref = parseCambridgeTitle(open.title);
+    const section: ListeningSection = {
+      section: open.section,
+      title: ref?.title ?? open.title,
+      audio_url: open.audio_url,
+      audio_parts: open.audio_parts,
+      transcript: open.transcript,
+    };
 
-  function play() {
-    if (!ex || typeof window === "undefined" || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(ex.script);
-    u.rate = 0.95;
-    u.onend = () => setPlaying(false);
-    u.onerror = () => setPlaying(false);
-    setPlaying(true);
-    window.speechSynthesis.speak(u);
-  }
-
-  function stop() {
-    if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
-    setPlaying(false);
-  }
-
-  if (!ex) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-black flex items-center gap-3">
-            <Headphones className="h-7 w-7 text-[#0d3b4f] dark:text-amber-400" /> IELTS Listening
-          </h1>
-          <p className="text-slate-500 mt-1">Original scripts read aloud by your browser — listen, then answer.</p>
-        </div>
-
-        <div className="grid sm:grid-cols-2 gap-4">
-          {IELTS_LISTENING.map((e, i) => (
-            <motion.button
-              key={e.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              onClick={() => open(e)}
-              className="group text-left rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-900/5"
-            >
-              <span className="inline-flex rounded-full bg-[#0d3b4f]/10 dark:bg-amber-400/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-[#0d3b4f] dark:text-amber-400">
-                {e.section}
-              </span>
-              <h3 className="font-bold text-lg mt-3">{e.title}</h3>
-              <div className="text-xs text-slate-400 mt-2">{e.questions.length} questions</div>
-              <span className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-[#0d3b4f] dark:text-amber-400">
-                Start <ChevronRight className="h-4 w-4" />
-              </span>
-            </motion.button>
-          ))}
-        </div>
-
-        <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 text-sm text-slate-500">
-          <p className="font-bold text-slate-700 dark:text-slate-300 mb-1">How it works</p>
-          The audio is generated by your browser's speech engine from an original script, so no copyrighted
-          recordings are used. Play it once or twice, answer from memory, then check the transcript.
-        </div>
+      <div className="h-[calc(100vh-8rem)] flex flex-col">
+        <button
+          onClick={() => setOpen(null)}
+          className="self-start inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-white mb-1"
+        >
+          <ArrowLeft className="w-4 h-4" /> All parts
+        </button>
+        {questions ? (
+          <ListeningExam
+            section={section}
+            questions={questions}
+            storageKey={`ielts-listening-${open.id}`}
+          />
+        ) : (
+          <div className="flex-1 grid place-items-center text-slate-500">
+            <Loader2 className="w-6 h-6 animate-spin" />
+          </div>
+        )}
       </div>
     );
   }
 
-  const answeredCount = ex.questions.filter((q) => answers[q.id]).length;
   return (
-    <div className="space-y-5 max-w-2xl">
-      <div className="flex items-center gap-3">
-        <button onClick={() => { stop(); setEx(null); }} className="p-2 -ml-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <h1 className="text-lg font-black flex-1 truncate">{ex.title}</h1>
-        {submitted && <span className="shrink-0 text-sm font-black tabular-nums text-[#0d3b4f] dark:text-amber-400">{score}/{ex.questions.length}</span>}
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-black flex items-center gap-3">
+          <Headphones className="h-7 w-7 text-[#0d3b4f] dark:text-amber-400" /> IELTS Listening
+        </h1>
+        <p className="text-slate-500 mt-1">
+          The official recordings with the printed questions, the audioscript and an instant band
+          estimate.
+        </p>
       </div>
 
-      {/* Player */}
-      <div className="flex items-center justify-center gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-5">
-        {!playing ? (
-          <button onClick={play} className="flex items-center gap-2 px-5 py-2.5 bg-[#0d3b4f] text-white rounded-xl font-bold hover:opacity-90 transition-all">
-            <Play className="h-4 w-4" /> Play audio
-          </button>
-        ) : (
-          <button onClick={stop} className="flex items-center gap-2 px-5 py-2.5 bg-red-500 text-white rounded-xl font-bold hover:opacity-90 transition-all">
-            <Square className="h-4 w-4" /> Stop
-          </button>
-        )}
-      </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
 
-      {/* Questions */}
-      <div className="space-y-4">
-        {ex.questions.map((q, qi) => {
-          const chosen = answers[q.id] || "";
-          const correct = submitted && norm(chosen) === norm(q.answer);
-          return (
-            <div
-              key={q.id}
-              className={`rounded-2xl border p-4 ${
-                submitted ? (correct ? "border-emerald-300 dark:border-emerald-500/40 bg-emerald-50/50 dark:bg-emerald-900/10" : "border-red-300 dark:border-red-500/40 bg-red-50/50 dark:bg-red-900/10") : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-              }`}
-            >
-              <div className="flex items-start gap-2 mb-3">
-                <span className="shrink-0 h-6 w-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-black text-slate-500">{qi + 1}</span>
-                <p className="text-sm font-medium">{q.prompt}{q.hint && <span className="ml-1 text-xs font-normal text-slate-400">({q.hint})</span>}</p>
-              </div>
-              {q.type === "completion" ? (
-                <input
-                  value={chosen}
-                  onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))}
-                  disabled={submitted}
-                  placeholder="Type your answer…"
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm outline-none focus:border-[#0d3b4f] dark:focus:border-amber-400 disabled:opacity-70"
-                />
-              ) : (
-                <div className="space-y-2">
-                  {q.options!.map((opt) => {
-                    const isChosen = chosen === opt;
-                    const isAnswer = submitted && norm(opt) === norm(q.answer);
-                    return (
-                      <button
-                        key={opt}
-                        onClick={() => !submitted && setAnswers((a) => ({ ...a, [q.id]: opt }))}
-                        disabled={submitted}
-                        className={`w-full text-left flex items-center gap-2.5 px-3 py-2 rounded-lg border text-sm transition-all ${
-                          isAnswer ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20" : isChosen ? (submitted ? "border-red-400 bg-red-50 dark:bg-red-900/20" : "border-[#0d3b4f] dark:border-amber-400 bg-[#0d3b4f]/5 dark:bg-amber-400/10") : "border-slate-200 dark:border-slate-700 hover:border-slate-400"
-                        }`}
-                      >
-                        <span className="shrink-0 h-4 w-4 rounded-full border-2 border-current opacity-40" />
-                        {opt}
-                      </button>
-                    );
-                  })}
+      {!parts && !error && (
+        <div className="grid place-items-center py-16 text-slate-500">
+          <Loader2 className="w-6 h-6 animate-spin" />
+        </div>
+      )}
+
+      {parts && !books.length && !error && (
+        <div className="rounded-2xl border border-dashed border-slate-300 dark:border-neutral-700 p-10 text-center text-slate-500">
+          No practice tests have been loaded yet.
+        </div>
+      )}
+
+      {books.length > 0 && (
+        <section className="space-y-6">
+          <h2 className="text-xl font-black text-center text-red-700 dark:text-red-400">
+            {bookTitle(books[0].book)} ✨
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {books.map((g) => (
+              <div
+                key={`${g.book}-${g.test}`}
+                className="rounded-xl border border-slate-200 dark:border-neutral-800 overflow-hidden"
+              >
+                <div className="px-4 py-3 border-b border-slate-200 dark:border-neutral-800 font-bold">
+                  Test {g.test}
                 </div>
-              )}
-              {submitted && !correct && (
-                <p className="mt-2 text-xs text-slate-500">Correct answer: <span className="font-bold text-emerald-600 dark:text-emerald-400">{q.answer}</span></p>
-              )}
-            </div>
-          );
-        })}
-
-        {!submitted ? (
-          <button onClick={() => { stop(); setSubmitted(true); }} disabled={answeredCount === 0} className="w-full py-3.5 bg-[#0d3b4f] text-white rounded-xl font-bold hover:opacity-90 disabled:opacity-40 transition-all">
-            Submit answers ({answeredCount}/{ex.questions.length})
-          </button>
-        ) : (
-          <>
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Transcript</p>
-              <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">{ex.script}</p>
-            </div>
-            <button onClick={() => { setAnswers({}); setSubmitted(false); }} className="w-full flex items-center justify-center gap-2 py-3.5 border border-slate-200 dark:border-slate-700 rounded-xl font-bold hover:border-[#0d3b4f] dark:hover:border-amber-400 transition-all">
-              <RotateCcw className="h-4 w-4" /> Try again
-            </button>
-          </>
-        )}
-      </div>
+                <div className="p-3 space-y-1">
+                  {g.items.map(({ ref, item }) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setOpen(item)}
+                      className="w-full text-left rounded-lg px-2 py-2 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
+                    >
+                      <div className="text-sm font-semibold leading-snug">
+                        Part {ref.index}. {ref.title}
+                      </div>
+                      <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                        <Volume2 className="w-3 h-3" />
+                        {item.audio_url ? "Official recording" : "No audio"}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

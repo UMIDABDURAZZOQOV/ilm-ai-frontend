@@ -2,93 +2,157 @@
 
 export const dynamic = "force-dynamic";
 
-import { useMemo, useState } from "react";
-import { ArrowLeft, BookText, Clock } from "lucide-react";
-import { IELTS_READING, type IeltsPassage } from "@/lib/ielts";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, BookText, Clock, Loader2 } from "lucide-react";
+import {
+  getReading,
+  getReadingQuestions,
+  type IeltsReading,
+  type IeltsQuestion,
+} from "@/lib/ieltsApi";
+import { bookTitle, groupByTest, parseCambridgeTitle } from "@/lib/cambridge";
 import ReadingExam, { type ExamPassage, type ExamQuestion } from "@/components/ielts/ReadingExam";
 
-/** Map the bundled sample passages onto the exam component's shape. */
-function toExam(p: IeltsPassage, index: number): { passage: ExamPassage; questions: ExamQuestion[] } {
-  const passage: ExamPassage = {
-    section: ((index % 3) + 1) as 1 | 2 | 3,
-    title: p.title,
-    passage_text: p.paragraphs.join("\n\n"),
-  };
-
-  const questions: ExamQuestion[] = p.questions.map((q, i) => ({
-    id: i + 1,
-    number: i + 1,
-    question_type: q.type,
-    question_text: q.prompt,
-    options: q.options ?? null,
-    correct_answer: q.answer,
-    group_instruction:
-      q.type === "tfng"
-        ? "Do the following statements agree with the information in the passage? Write TRUE, FALSE or NOT GIVEN."
-        : q.type === "mcq"
-        ? "Choose the correct letter, A, B, C or D."
-        : "Complete the sentence below. Choose ONE WORD ONLY from the passage.",
-  }));
-
-  return { passage, questions };
+/** The exam component takes the printed question number, which is what order_index holds. */
+function toExamQuestions(rows: IeltsQuestion[]): ExamQuestion[] {
+  return rows
+    .slice()
+    .sort((a, b) => a.order_index - b.order_index)
+    .map((q) => ({
+      id: q.id,
+      number: q.order_index,
+      question_type: q.question_type,
+      question_text: q.question_text,
+      options: q.options,
+      correct_answer: q.correct_answer,
+      group_instruction: q.hint,
+    }));
 }
 
 export default function IeltsReadingPage() {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [passages, setPassages] = useState<IeltsReading[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState<IeltsReading | null>(null);
+  const [questions, setQuestions] = useState<ExamQuestion[] | null>(null);
 
-  const exam = useMemo(
-    () => (openIndex === null ? null : toExam(IELTS_READING[openIndex], openIndex)),
-    [openIndex]
-  );
+  useEffect(() => {
+    getReading()
+      .then(setPassages)
+      .catch(() => setError("Could not load the reading tests."));
+  }, []);
 
-  if (exam && openIndex !== null) {
+  useEffect(() => {
+    if (!open) {
+      setQuestions(null);
+      return;
+    }
+    let live = true;
+    getReadingQuestions(open.id)
+      .then((rows) => live && setQuestions(toExamQuestions(rows)))
+      .catch(() => live && setError("Could not load the questions for this passage."));
+    return () => {
+      live = false;
+    };
+  }, [open]);
+
+  const books = useMemo(() => groupByTest(passages ?? []), [passages]);
+
+  if (open) {
+    const ref = parseCambridgeTitle(open.title);
+    const passage: ExamPassage = {
+      section: open.section,
+      title: ref?.title ?? open.title,
+      subtitle: ref ? `Cambridge ${ref.book} · Test ${ref.test} · Passage ${ref.index}` : null,
+      passage_text: open.passage_text,
+    };
+
     return (
       <div className="h-[calc(100vh-8rem)] flex flex-col">
         <button
-          onClick={() => setOpenIndex(null)}
+          onClick={() => setOpen(null)}
           className="self-start inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-white mb-1"
         >
           <ArrowLeft className="w-4 h-4" /> All passages
         </button>
-        <ReadingExam
-          passage={exam.passage}
-          questions={exam.questions}
-          storageKey={`ielts-reading-${IELTS_READING[openIndex].id}`}
-        />
+        {questions ? (
+          <ReadingExam
+            passage={passage}
+            questions={questions}
+            storageKey={`ielts-reading-${open.id}`}
+          />
+        ) : (
+          <div className="flex-1 grid place-items-center text-slate-500">
+            <Loader2 className="w-6 h-6 animate-spin" />
+          </div>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-black flex items-center gap-3">
           <BookText className="h-7 w-7 text-[#0d3b4f] dark:text-amber-400" /> IELTS Reading
         </h1>
         <p className="text-slate-500 mt-1">
-          Academic Reading practice in the real exam interface — split view, official question types,
-          answer keys and a band estimate.
+          Academic Reading practice in the real exam interface — split view, official question
+          types, answer keys and a band estimate.
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        {IELTS_READING.map((p, i) => (
-          <button
-            key={p.id}
-            onClick={() => setOpenIndex(i)}
-            className="text-left rounded-2xl border border-slate-200 dark:border-neutral-800 p-5 hover:border-slate-400 transition-colors"
-          >
-            <div className="font-bold text-lg mb-1">{p.title}</div>
-            <div className="text-sm text-slate-500 flex items-center gap-4">
-              <span className="inline-flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5" /> {p.minutes} min
-              </span>
-              <span>{p.questions.length} questions</span>
-              <span>{p.level}</span>
-            </div>
-          </button>
-        ))}
-      </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
+      {!passages && !error && (
+        <div className="grid place-items-center py-16 text-slate-500">
+          <Loader2 className="w-6 h-6 animate-spin" />
+        </div>
+      )}
+
+      {passages && !books.length && !error && (
+        <div className="rounded-2xl border border-dashed border-slate-300 dark:border-neutral-700 p-10 text-center text-slate-500">
+          No practice tests have been loaded yet.
+        </div>
+      )}
+
+      {books.length > 0 && (
+        <section className="space-y-6">
+          <h2 className="text-xl font-black text-center text-red-700 dark:text-red-400">
+            {bookTitle(books[0].book)} ✨
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {books.map((g) => (
+              <div
+                key={`${g.book}-${g.test}`}
+                className="rounded-xl border border-slate-200 dark:border-neutral-800 overflow-hidden"
+              >
+                <div className="px-4 py-3 border-b border-slate-200 dark:border-neutral-800 font-bold">
+                  Test {g.test}
+                </div>
+                <div className="p-3 space-y-1">
+                  {g.items.map(({ ref, item }) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setOpen(item)}
+                      className="w-full text-left rounded-lg px-2 py-2 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
+                    >
+                      <div className="text-sm font-semibold leading-snug">
+                        {ref.index}. {ref.title}
+                      </div>
+                      <div className="text-[11px] text-slate-500 flex items-center gap-3 mt-0.5">
+                        <span className="inline-flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> 20 min
+                        </span>
+                        <span>{item.word_count ?? 0} words</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

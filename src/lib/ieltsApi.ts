@@ -4,7 +4,7 @@ import { apiFetch } from "./api";
 
 export type IeltsDifficulty = "easy" | "medium" | "hard";
 export type IeltsTaskType = "Task1" | "Task2";
-export type IeltsQuestionType = "mcq" | "tfng" | "completion" | "matching" | "heading";
+export type IeltsQuestionType = "mcq" | "tfng" | "ynng" | "completion" | "matching" | "heading";
 export type IeltsTestType = "academic" | "general_training";
 
 export interface IeltsListening {
@@ -12,6 +12,8 @@ export interface IeltsListening {
   section: number;
   title: string;
   audio_url: string | null;
+  /** Ordered URLs when the recording was ripped as several files; play in sequence. */
+  audio_parts: string[] | null;
   transcript: string | null;
   difficulty: IeltsDifficulty;
   duration_seconds: number | null;

@@ -1,157 +1,156 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { PenLine, ArrowLeft, Clock, Sparkles, Loader2, ChevronRight } from "lucide-react";
+export const dynamic = "force-dynamic";
+
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Clock, Loader2, PenLine } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useI18n } from "@/hooks/useI18n";
-import { apiFetch } from "@/lib/api";
-import { IELTS_WRITING, type IeltsWritingTask } from "@/lib/ielts";
+import { getWriting, submitWriting, type IeltsWriting } from "@/lib/ieltsApi";
+import { bookTitle } from "@/lib/cambridge";
+import WritingExam, { type WritingFeedback, type WritingTask } from "@/components/ielts/WritingExam";
+
+/** "Cambridge 21 Test 3" → { book: 21, test: 3 } */
+function parseCategory(category: string) {
+  const m = /^Cambridge (\d+) Test (\d+)$/.exec(category);
+  return m ? { book: Number(m[1]), test: Number(m[2]) } : null;
+}
+
+/** The grader returns "6.5 - Ideas are arranged coherently…"; the band is the lead number. */
+function leadingBand(s: string | null): number | undefined {
+  const m = s && /^\s*(\d(?:\.\d)?)/.exec(s);
+  return m ? Number(m[1]) : undefined;
+}
 
 export default function IeltsWritingPage() {
   const { user } = useAuth();
-  const { lang } = useI18n();
-  const [task, setTask] = useState<IeltsWritingTask | null>(null);
-  const [filter, setFilter] = useState<"All" | "Task 1" | "Task 2">("All");
-  const [essay, setEssay] = useState("");
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [tasks, setTasks] = useState<IeltsWriting[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState<IeltsWriting | null>(null);
 
-  const words = useMemo(() => (essay.trim() ? essay.trim().split(/\s+/).length : 0), [essay]);
+  useEffect(() => {
+    getWriting()
+      .then(setTasks)
+      .catch(() => setError("Could not load the writing tasks."));
+  }, []);
 
-  const list = IELTS_WRITING.filter((t) => filter === "All" || t.task === filter);
-
-  function open(t: IeltsWritingTask) {
-    setTask(t);
-    setEssay("");
-    setFeedback(null);
-  }
-
-  async function getFeedback() {
-    if (!task || !user || words < 20) return;
-    setLoading(true);
-    setFeedback(null);
-    try {
-      const prompt = `You are an IELTS Writing examiner. Assess the following ${task.task} response against the four IELTS band criteria (Task Achievement, Coherence & Cohesion, Lexical Resource, Grammatical Range & Accuracy). Give an estimated band score (0-9) and 3 concise, specific improvement points. Prompt: "${task.prompt}". Response: "${essay}"`;
-      const res = await apiFetch("/assistant/ask", {
-        method: "POST",
-        body: JSON.stringify({ user_id: user.id, question: prompt, language: lang }),
-      });
-      setFeedback(res.answer || "No feedback returned.");
-    } catch (err: any) {
-      setFeedback(
-        err?.status === 403
-          ? "You've reached today's AI feedback limit. Try again tomorrow or upgrade."
-          : "AI feedback is unavailable right now. Your essay is still saved above."
-      );
-    } finally {
-      setLoading(false);
+  const tests = useMemo(() => {
+    const groups = new Map<string, { book: number; test: number; items: IeltsWriting[] }>();
+    for (const t of tasks ?? []) {
+      const ref = parseCategory(t.category);
+      if (!ref) continue;
+      const key = `${ref.book}/${ref.test}`;
+      let g = groups.get(key);
+      if (!g) {
+        g = { ...ref, items: [] };
+        groups.set(key, g);
+      }
+      g.items.push(t);
     }
+    const out = Array.from(groups.values());
+    for (const g of out) g.items.sort((a, b) => a.task_type.localeCompare(b.task_type));
+    return out.sort((a, b) => a.book - b.book || a.test - b.test);
+  }, [tasks]);
+
+  async function grade(text: string): Promise<WritingFeedback> {
+    if (!open || !user) throw new Error("Sign in to get a band score.");
+    const res = await submitWriting({ user_id: user.id, task_id: open.id, essay_text: text });
+    return {
+      band: res.band_score ?? 0,
+      task_achievement: leadingBand(res.task_response),
+      coherence: leadingBand(res.coherence),
+      lexical: leadingBand(res.lexical),
+      grammar: leadingBand(res.grammar),
+      feedback: res.feedback ?? "",
+    };
   }
 
-  // ── List ─────────────────────────────────────────────────────────────────
-  if (!task) {
+  if (open) {
+    const task: WritingTask = {
+      task: open.task_type === "Task1" ? 1 : 2,
+      prompt: open.prompt,
+      image_url: open.image_url,
+      min_words: open.min_words,
+      minutes: open.duration_minutes,
+    };
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-black flex items-center gap-3">
-            <PenLine className="h-7 w-7 text-[#0d3b4f] dark:text-amber-400" /> IELTS Writing
-          </h1>
-          <p className="text-slate-500 mt-1">Original Task 1 and Task 2 prompts with timing, word counts, and AI feedback.</p>
-        </div>
-
-        <div className="flex bg-slate-100 dark:bg-slate-900 rounded-xl p-1 gap-1 w-full sm:w-auto sm:inline-flex">
-          {(["All", "Task 1", "Task 2"] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                filter === f ? "bg-white dark:bg-slate-800 shadow text-slate-900 dark:text-white" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-              }`}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-
-        <div className="grid sm:grid-cols-2 gap-4">
-          {list.map((t, i) => (
-            <motion.button
-              key={t.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.03 }}
-              onClick={() => open(t)}
-              className="group text-left rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-900/5"
-            >
-              <div className="flex items-center justify-between">
-                <span className="inline-flex rounded-full bg-[#0d3b4f]/10 dark:bg-amber-400/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-[#0d3b4f] dark:text-amber-400">
-                  {t.task}
-                </span>
-                <span className="text-xs text-slate-400 font-semibold">{t.category}</span>
-              </div>
-              <p className="text-sm mt-3 line-clamp-3 text-slate-700 dark:text-slate-200">{t.prompt}</p>
-              <div className="flex items-center gap-4 text-xs text-slate-400 mt-3">
-                <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {t.minutes} min</span>
-                <span>min {t.minWords} words</span>
-              </div>
-            </motion.button>
-          ))}
-        </div>
+      <div className="h-[calc(100vh-8rem)] flex flex-col">
+        <button
+          onClick={() => setOpen(null)}
+          className="self-start inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-white mb-1"
+        >
+          <ArrowLeft className="w-4 h-4" /> All tasks
+        </button>
+        <WritingExam task={task} storageKey={`ielts-writing-${open.id}`} onSubmit={grade} />
       </div>
     );
   }
 
-  // ── Practice ─────────────────────────────────────────────────────────────
-  const enough = words >= task.minWords;
   return (
-    <div className="space-y-5 max-w-3xl">
-      <div className="flex items-center gap-3">
-        <button onClick={() => setTask(null)} className="p-2 -ml-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <h1 className="text-lg font-black flex-1">{task.task} · {task.category}</h1>
-        <span className={`shrink-0 text-sm font-bold tabular-nums ${enough ? "text-emerald-500" : "text-slate-400"}`}>
-          {words} / {task.minWords}
-        </span>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-black flex items-center gap-3">
+          <PenLine className="h-7 w-7 text-[#0d3b4f] dark:text-amber-400" /> IELTS Writing
+        </h1>
+        <p className="text-slate-500 mt-1">
+          The official Task 1 and Task 2 prompts, with a live word count and an examiner-rubric
+          band estimate.
+        </p>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
-        <p className="text-[15px] leading-relaxed text-slate-800 dark:text-slate-100">{task.prompt}</p>
-        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Examiner tips</p>
-          <ul className="space-y-1">
-            {task.tips.map((tip, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
-                <ChevronRight className="h-4 w-4 mt-0.5 shrink-0 text-[#0d3b4f] dark:text-amber-400" /> {tip}
-              </li>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
+      {!tasks && !error && (
+        <div className="grid place-items-center py-16 text-slate-500">
+          <Loader2 className="w-6 h-6 animate-spin" />
+        </div>
+      )}
+
+      {tasks && !tests.length && !error && (
+        <div className="rounded-2xl border border-dashed border-slate-300 dark:border-neutral-700 p-10 text-center text-slate-500">
+          No writing tasks have been loaded yet.
+        </div>
+      )}
+
+      {tests.length > 0 && (
+        <section className="space-y-6">
+          <h2 className="text-xl font-black text-center text-red-700 dark:text-red-400">
+            {bookTitle(tests[0].book)} ✨
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {tests.map((g) => (
+              <div
+                key={`${g.book}-${g.test}`}
+                className="rounded-xl border border-slate-200 dark:border-neutral-800 overflow-hidden"
+              >
+                <div className="px-4 py-3 border-b border-slate-200 dark:border-neutral-800 font-bold">
+                  Test {g.test}
+                </div>
+                <div className="p-3 space-y-1">
+                  {g.items.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => setOpen(t)}
+                      className="w-full text-left rounded-lg px-2 py-2 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
+                    >
+                      <div className="text-sm font-semibold">
+                        {t.task_type === "Task1" ? "Task 1" : "Task 2"}
+                      </div>
+                      <div className="text-[11px] text-slate-500 line-clamp-2 mt-0.5">
+                        {t.prompt}
+                      </div>
+                      <div className="text-[11px] text-slate-500 flex items-center gap-3 mt-1">
+                        <span className="inline-flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> {t.duration_minutes} min
+                        </span>
+                        <span>{t.min_words}+ words</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
-          </ul>
-        </div>
-      </div>
-
-      <textarea
-        value={essay}
-        onChange={(e) => setEssay(e.target.value)}
-        placeholder="Write your response here…"
-        className="w-full h-72 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm leading-relaxed outline-none focus:border-[#0d3b4f] dark:focus:border-amber-400 resize-y"
-      />
-
-      <button
-        onClick={getFeedback}
-        disabled={loading || words < 20}
-        className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#0d3b4f] text-white rounded-xl font-bold hover:opacity-90 disabled:opacity-40 transition-all"
-      >
-        {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Sparkles className="h-4 w-4" /> Get AI band feedback</>}
-      </button>
-
-      {feedback && (
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-5">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5" /> AI feedback
-          </p>
-          <p className="text-sm whitespace-pre-wrap text-slate-700 dark:text-slate-200">{feedback}</p>
-        </div>
+          </div>
+        </section>
       )}
     </div>
   );
