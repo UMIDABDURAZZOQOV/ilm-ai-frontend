@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { BookText, Clock, Loader2 } from "lucide-react";
 import {
   getReading,
@@ -56,7 +57,14 @@ export default function IeltsReadingPage() {
     };
   }, [open]);
 
-  const books = useMemo(() => groupByTest(passages ?? []), [passages]);
+  // Opened from the IELTS home as ?test=3 — show that test only, so a skill page
+  // reached from a test card is that test's paper rather than the whole catalogue.
+  const testFilter = Number(useSearchParams().get("test")) || null;
+
+  const books = useMemo(
+    () => groupByTest(passages ?? []).filter((g) => !testFilter || g.test === testFilter),
+    [passages, testFilter]
+  );
 
   if (open) {
     const ref = parseCambridgeTitle(open.title);

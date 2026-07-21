@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Loader2, Mic } from "lucide-react";
 import { getSpeaking, type IeltsSpeaking } from "@/lib/ieltsApi";
 import { bookTitle, groupByTest, parseCambridgeTitle } from "@/lib/cambridge";
@@ -26,7 +27,14 @@ export default function IeltsSpeakingPage() {
       .catch(() => setError("Could not load the speaking topics."));
   }, []);
 
-  const books = useMemo(() => groupByTest(parts ?? [], (p) => p.topic), [parts]);
+  // Opened from the IELTS home as ?test=3 — show that test only, so a skill page
+  // reached from a test card is that test's paper rather than the whole catalogue.
+  const testFilter = Number(useSearchParams().get("test")) || null;
+
+  const books = useMemo(
+    () => groupByTest(parts ?? [], (p) => p.topic).filter((g) => !testFilter || g.test === testFilter),
+    [parts, testFilter]
+  );
 
   if (open) {
     const ref = parseCambridgeTitle(open.topic);

@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Clock, Loader2, PenLine } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getWriting, submitWriting, type IeltsWriting } from "@/lib/ieltsApi";
@@ -34,6 +35,9 @@ export default function IeltsWritingPage() {
       .catch(() => setError("Could not load the writing tasks."));
   }, []);
 
+  // Opened from the IELTS home as ?test=3 — show that test only.
+  const testFilter = Number(useSearchParams().get("test")) || null;
+
   const tests = useMemo(() => {
     const groups = new Map<string, { book: number; test: number; items: IeltsWriting[] }>();
     for (const t of tasks ?? []) {
@@ -49,8 +53,10 @@ export default function IeltsWritingPage() {
     }
     const out = Array.from(groups.values());
     for (const g of out) g.items.sort((a, b) => a.task_type.localeCompare(b.task_type));
-    return out.sort((a, b) => a.book - b.book || a.test - b.test);
-  }, [tasks]);
+    return out
+      .filter((g) => !testFilter || g.test === testFilter)
+      .sort((a, b) => a.book - b.book || a.test - b.test);
+  }, [tasks, testFilter]);
 
   async function grade(text: string): Promise<WritingFeedback> {
     if (!open || !user) throw new Error("Sign in to get a band score.");
