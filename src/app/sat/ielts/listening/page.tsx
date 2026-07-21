@@ -15,6 +15,7 @@ import { bookTitle, groupByTest, parseCambridgeTitle } from "@/lib/cambridge";
 import ListeningExam, { type ListeningSection } from "@/components/ielts/ListeningExam";
 import type { ExamQuestion } from "@/components/ielts/ReadingExam";
 import FullScreenExam from "@/components/ielts/FullScreenExam";
+import SkillExam, { type SkillSection } from "@/components/ielts/SkillExam";
 
 function toExamQuestions(rows: IeltsQuestion[]): ExamQuestion[] {
   return rows
@@ -34,8 +35,8 @@ function toExamQuestions(rows: IeltsQuestion[]): ExamQuestion[] {
 export default function IeltsListeningPage() {
   const [parts, setParts] = useState<IeltsListening[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [open, setOpen] = useState<IeltsListening | null>(null);
-  const [questions, setQuestions] = useState<ExamQuestion[] | null>(null);
+  const [open, setOpen] = useState<IeltsListening[] | null>(null);
+  const [questions, setQuestions] = useState<ExamQuestion[][] | null>(null);
 
   useEffect(() => {
     getListening()
@@ -43,15 +44,17 @@ export default function IeltsListeningPage() {
       .catch(() => setError("Could not load the listening tests."));
   }, []);
 
+  // A test's whole Listening paper is one exam: 4 parts, 40 questions, one band.
+  // Scoring a part on its own gives a mark out of 10, which is not a band.
   useEffect(() => {
     if (!open) {
       setQuestions(null);
       return;
     }
     let live = true;
-    getListeningQuestions(open.id)
-      .then((rows) => live && setQuestions(toExamQuestions(rows)))
-      .catch(() => live && setError("Could not load the questions for this part."));
+    Promise.all(open.map((p) => getListeningQuestions(p.id)))
+      .then((lists) => live && setQuestions(lists.map(toExamQuestions)))
+      .catch(() => live && setError("Could not load the questions for this test."));
     return () => {
       live = false;
     };
@@ -67,26 +70,42 @@ export default function IeltsListeningPage() {
   );
 
   if (open) {
-    const ref = parseCambridgeTitle(open.title);
-    const section: ListeningSection = {
-      section: open.section,
-      title: ref?.title ?? open.title,
-      audio_url: open.audio_url,
-      audio_parts: open.audio_parts,
-      transcript: open.transcript,
-    };
+    const ref = parseCambridgeTitle(open[0].title);
+    const sections: SkillSection[] = (questions ?? []).map((qs, i) => ({
+      index: i + 1,
+      label: parseCambridgeTitle(open[i].title)?.title ?? `Part ${i + 1}`,
+      questions: qs,
+    }));
 
     return (
       <FullScreenExam
-        title={section.title}
-        subtitle={ref ? `Cambridge ${ref.book} · Test ${ref.test} · Part ${ref.index}` : null}
+        title={`Listening — Test ${ref?.test ?? ""}`}
+        subtitle={ref ? `Cambridge ${ref.book}` : null}
         onExit={() => setOpen(null)}
       >
-        {questions ? (
-          <ListeningExam
-            section={section}
-            questions={questions}
-            storageKey={`ielts-listening-${open.id}`}
+        {sections.length ? (
+          <SkillExam
+            skill="listening"
+            storageKey={`ielts-listening-test-${ref?.book}-${ref?.test}`}
+            sections={sections}
+            render={(section, ctl) => {
+              const p = open[section.index - 1];
+              const r = parseCambridgeTitle(p.title);
+              return (
+                <ListeningExam
+                  section={{
+                    section: p.section,
+                    title: r?.title ?? p.title,
+                    audio_url: p.audio_url,
+                    audio_parts: p.audio_parts,
+                    transcript: p.transcript,
+                  }}
+                  questions={section.questions}
+                  storageKey={`ielts-listening-${p.id}`}
+                  {...ctl}
+                />
+              );
+            }}
           />
         ) : (
           <div className="h-full grid place-items-center text-slate-500">
@@ -141,7 +160,7 @@ export default function IeltsListeningPage() {
                   {g.items.map(({ ref, item }) => (
                     <button
                       key={item.id}
-                      onClick={() => setOpen(item)}
+                      onClick={() => setOpen(g.items.map((x) => x.item))}
                       className="w-full text-left rounded-lg px-2 py-2 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
                     >
                       <div className="text-sm font-semibold leading-snug">

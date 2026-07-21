@@ -14,6 +14,7 @@ import {
 import { bookTitle, groupByTest, parseCambridgeTitle } from "@/lib/cambridge";
 import ReadingExam, { type ExamPassage, type ExamQuestion } from "@/components/ielts/ReadingExam";
 import FullScreenExam from "@/components/ielts/FullScreenExam";
+import SkillExam, { type SkillSection } from "@/components/ielts/SkillExam";
 
 /** The exam component takes the printed question number, which is what order_index holds. */
 function toExamQuestions(rows: IeltsQuestion[]): ExamQuestion[] {
@@ -34,8 +35,8 @@ function toExamQuestions(rows: IeltsQuestion[]): ExamQuestion[] {
 export default function IeltsReadingPage() {
   const [passages, setPassages] = useState<IeltsReading[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [open, setOpen] = useState<IeltsReading | null>(null);
-  const [questions, setQuestions] = useState<ExamQuestion[] | null>(null);
+  const [open, setOpen] = useState<IeltsReading[] | null>(null);
+  const [questions, setQuestions] = useState<ExamQuestion[][] | null>(null);
 
   useEffect(() => {
     getReading()
@@ -43,23 +44,24 @@ export default function IeltsReadingPage() {
       .catch(() => setError("Could not load the reading tests."));
   }, []);
 
+  // Opened from the IELTS home as ?test=3 — show that test only.
+  const testFilter = Number(useSearchParams().get("test")) || null;
+
+  // A test's whole Reading paper is one exam: 3 passages, 40 questions, one band.
+  // Opening a single passage on its own would score it out of 13, which is not a band.
   useEffect(() => {
     if (!open) {
       setQuestions(null);
       return;
     }
     let live = true;
-    getReadingQuestions(open.id)
-      .then((rows) => live && setQuestions(toExamQuestions(rows)))
-      .catch(() => live && setError("Could not load the questions for this passage."));
+    Promise.all(open.map((p) => getReadingQuestions(p.id)))
+      .then((lists) => live && setQuestions(lists.map(toExamQuestions)))
+      .catch(() => live && setError("Could not load the questions for this test."));
     return () => {
       live = false;
     };
   }, [open]);
-
-  // Opened from the IELTS home as ?test=3 — show that test only, so a skill page
-  // reached from a test card is that test's paper rather than the whole catalogue.
-  const testFilter = Number(useSearchParams().get("test")) || null;
 
   const books = useMemo(
     () => groupByTest(passages ?? []).filter((g) => !testFilter || g.test === testFilter),
@@ -67,25 +69,41 @@ export default function IeltsReadingPage() {
   );
 
   if (open) {
-    const ref = parseCambridgeTitle(open.title);
-    const passage: ExamPassage = {
-      section: open.section,
-      title: ref?.title ?? open.title,
-      subtitle: ref ? `Cambridge ${ref.book} · Test ${ref.test} · Passage ${ref.index}` : null,
-      passage_text: open.passage_text,
-    };
+    const ref = parseCambridgeTitle(open[0].title);
+    const sections: SkillSection[] = (questions ?? []).map((qs, i) => ({
+      index: i + 1,
+      label: parseCambridgeTitle(open[i].title)?.title ?? `Passage ${i + 1}`,
+      questions: qs,
+    }));
 
     return (
       <FullScreenExam
-        title={passage.title}
-        subtitle={passage.subtitle}
+        title={`Reading — Test ${ref?.test ?? ""}`}
+        subtitle={ref ? `Cambridge ${ref.book}` : null}
         onExit={() => setOpen(null)}
       >
-        {questions ? (
-          <ReadingExam
-            passage={passage}
-            questions={questions}
-            storageKey={`ielts-reading-${open.id}`}
+        {sections.length ? (
+          <SkillExam
+            skill="reading"
+            storageKey={`ielts-reading-test-${ref?.book}-${ref?.test}`}
+            sections={sections}
+            render={(section, ctl) => {
+              const p = open[section.index - 1];
+              const r = parseCambridgeTitle(p.title);
+              return (
+                <ReadingExam
+                  passage={{
+                    section: p.section,
+                    title: r?.title ?? p.title,
+                    subtitle: r ? `Cambridge ${r.book} · Test ${r.test} · Passage ${r.index}` : null,
+                    passage_text: p.passage_text,
+                  }}
+                  questions={section.questions}
+                  storageKey={`ielts-reading-${p.id}`}
+                  {...ctl}
+                />
+              );
+            }}
           />
         ) : (
           <div className="h-full grid place-items-center text-slate-500">
@@ -140,7 +158,7 @@ export default function IeltsReadingPage() {
                   {g.items.map(({ ref, item }) => (
                     <button
                       key={item.id}
-                      onClick={() => setOpen(item)}
+                      onClick={() => setOpen(g.items.map((x) => x.item))}
                       className="w-full text-left rounded-lg px-2 py-2 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
                     >
                       <div className="text-sm font-semibold leading-snug">

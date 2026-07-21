@@ -24,13 +24,24 @@ export default function ListeningExam({
   questions,
   storageKey,
   onFinished,
+  answers: controlledAnswers,
+  onAnswerChange,
+  scoreQuestions,
 }: {
   section: ListeningSection;
   questions: ExamQuestion[];
   storageKey: string;
   onFinished?: (raw: number, band: number) => void;
+  /** Controlled mode: the parent owns the answers so one score can span the whole
+      skill (40 questions across every part), the way the real paper is marked. */
+  answers?: Record<number, string>;
+  onAnswerChange?: (number: number, value: string) => void;
+  /** Every question in the skill, when the band must be computed over all of them. */
+  scoreQuestions?: ExamQuestion[];
 }) {
-  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [ownAnswers, setOwnAnswers] = useState<Record<number, string>>({});
+  const controlled = controlledAnswers !== undefined;
+  const answers = controlled ? controlledAnswers! : ownAnswers;
   const [showScript, setShowScript] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
   const [showUnanswered, setShowUnanswered] = useState(false);
@@ -52,9 +63,10 @@ export default function ListeningExam({
   }
 
   useEffect(() => {
+    if (controlled) return;          // the parent persists in controlled mode
     try {
       const raw = localStorage.getItem(storageKey);
-      if (raw) setAnswers(JSON.parse(raw));
+      if (raw) setOwnAnswers(JSON.parse(raw));
     } catch {
       /* ignore */
     }
@@ -62,7 +74,7 @@ export default function ListeningExam({
   }, [storageKey]);
 
   useEffect(() => {
-    if (!loaded.current) return;
+    if (!loaded.current || controlled) return;
     try {
       localStorage.setItem(storageKey, JSON.stringify(answers));
       setSavedAt(new Date().toLocaleString());
@@ -71,11 +83,13 @@ export default function ListeningExam({
     }
   }, [answers, storageKey]);
 
+  // The band is a property of the whole paper (40 questions), never of one part.
+  const scored = scoreQuestions ?? questions;
   const raw = useMemo(
-    () => questions.reduce((n, q) => (isCorrect(answers[q.number] || "", q.correct_answer) ? n + 1 : n), 0),
-    [answers, questions]
+    () => scored.reduce((n, q) => (isCorrect(answers[q.number] || "", q.correct_answer) ? n + 1 : n), 0),
+    [answers, scored]
   );
-  const band = rawToBand(Math.round((raw / Math.max(1, questions.length)) * 40), "listening");
+  const band = rawToBand(Math.round((raw / Math.max(1, scored.length)) * 40), "listening");
 
   const groups = useMemo(() => {
     const out: { instruction: string | null; items: ExamQuestion[] }[] = [];
@@ -187,7 +201,7 @@ export default function ListeningExam({
                     key={q.id}
                     q={q}
                     value={answers[q.number] || ""}
-                    onChange={(v) => setAnswers((a) => ({ ...a, [q.number]: v }))}
+                    onChange={(v) => (onAnswerChange ? onAnswerChange(q.number, v) : setOwnAnswers((a) => ({ ...a, [q.number]: v })))}
                   />
                 ))}
               </div>
