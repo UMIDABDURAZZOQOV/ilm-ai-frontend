@@ -49,6 +49,7 @@ export default function WritingExam({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [showSample, setShowSample] = useState(false);
+  const [zoomed, setZoomed] = useState(false);
   const [showFeedback, setShowFeedback] = useState(true);
   const loaded = useRef(false);
 
@@ -90,7 +91,9 @@ export default function WritingExam({
   }
 
   return (
-    <div className="flex-1 grid md:grid-cols-2 gap-6 overflow-hidden">
+    // px-6 to match SkillExam: without it the prompt sat flush against the left edge
+    // of the viewport, so "TASK 1" read as "ASK 1".
+    <div className="flex-1 grid md:grid-cols-2 gap-6 overflow-hidden px-6">
       {/* prompt side */}
       <div className="overflow-y-auto pr-2 pt-4">
         <h2 className="text-2xl font-black mb-2">TASK {task.task}</h2>
@@ -103,8 +106,24 @@ export default function WritingExam({
         <p className="text-sm mb-4">Write at least {task.min_words} words.</p>
 
         {task.image_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={task.image_url} alt={`Task ${task.task} figure`} className="w-full rounded-lg border border-slate-200 dark:border-neutral-800 mb-4" />
+          // The figure is fitted to the pane by default. Cambridge 20's farm plans are
+          // 1000x1708 — at full column width that is about 1600px tall, so the pane
+          // showed the top third and the rest was only reachable by scrolling past it
+          // with nothing to say there was more. Click to see it at full size.
+          <div className="mb-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={task.image_url}
+              alt={`Task ${task.task} figure`}
+              onClick={() => setZoomed((z) => !z)}
+              className={`w-full rounded-lg border border-slate-200 dark:border-neutral-800 bg-white ${
+                zoomed ? "cursor-zoom-out" : "max-h-[55vh] object-contain cursor-zoom-in"
+              }`}
+            />
+            <p className="text-[11px] text-slate-500 mt-1 text-center">
+              {zoomed ? "Click the figure to fit it to the panel" : "Click the figure to enlarge"}
+            </p>
+          </div>
         )}
 
         {task.sample_answer && (
