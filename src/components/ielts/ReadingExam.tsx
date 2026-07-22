@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BookOpen, FileText, Highlighter, KeyRound, X } from "lucide-react";
 import { bandColor, formatBand, rawToBand } from "@/lib/ieltsBand";
+import QuestionTable from "./QuestionTable";
 
 /** Question shape mirrors the backend `ielts_questions` table. */
 export type IeltsQuestionType = "mcq" | "tfng" | "ynng" | "completion" | "matching" | "heading";
@@ -21,6 +22,8 @@ export interface ExamPassage {
   section: number;                // 1–3
   title: string;
   subtitle?: string | null;
+  /** Tables printed in the paper; a cell marks its gap as "[[7]]". */
+  tables?: string[][][] | null;
   passage_text: string;           // paragraphs separated by blank lines; "A\n..." for lettered sections
 }
 
@@ -109,6 +112,16 @@ export default function ReadingExam({
 
   // ── passage rendering ─────────────────────────────────────────────────────
   const paragraphs = useMemo(() => passage.passage_text.split(/\n{2,}/), [passage.passage_text]);
+
+  /** The grids whose gaps all belong to this group of questions. */
+  function tableFor(items: ExamQuestion[]): string[][][] {
+    const owned = new Set(items.map((q) => q.number));
+    return (passage.tables ?? []).filter((grid) => {
+      const marks = grid.flat().join(" ").match(/\[\[(\d{1,2})\]\]/g) ?? [];
+      const nums = marks.map((m) => Number(m.slice(2, -2)));
+      return nums.length > 0 && nums.every((n) => owned.has(n));
+    });
+  }
 
   // Group consecutive questions that share an instruction, the way the real paper does.
   const groups = useMemo(() => {
@@ -199,8 +212,19 @@ export default function ReadingExam({
                   </div>
                 )}
 
+              {/* Where the paper prints a table, it IS the question — the flat rows
+                  would lose which column each gap sits in. */}
+              {tableFor(g.items).map((grid, ti) => (
+                <QuestionTable
+                  key={ti}
+                  grid={grid}
+                  answers={answers}
+                  onAnswer={setAnswer}
+                />
+              ))}
+
               <div className="space-y-4">
-                {g.items.map((q) => (
+                {(tableFor(g.items).length ? [] : g.items).map((q) => (
                   <QuestionRow
                     key={q.id}
                     q={q}

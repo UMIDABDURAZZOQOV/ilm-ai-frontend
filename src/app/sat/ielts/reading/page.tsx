@@ -107,6 +107,7 @@ export default function IeltsReadingPage() {
                     title: r?.title ?? p.title,
                     subtitle: r ? `Cambridge ${r.book} · Test ${r.test} · Passage ${r.index}` : null,
                     passage_text: p.passage_text,
+                    tables: p.tables,
                   }}
                   questions={section.questions}
                   storageKey={`ielts-reading-${p.id}`}

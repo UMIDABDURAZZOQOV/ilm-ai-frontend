@@ -15,6 +15,8 @@ export interface IeltsListening {
   /** Ordered URLs when the recording was ripped as several files; play in sequence. */
   audio_parts: string[] | null;
   transcript: string | null;
+  /** Tables printed in the paper; a cell marks its gap as "[[7]]". */
+  tables: string[][][] | null;
   difficulty: IeltsDifficulty;
   duration_seconds: number | null;
 }
@@ -24,6 +26,7 @@ export interface IeltsReading {
   section: number;
   title: string;
   passage_text: string;
+  tables: string[][][] | null;
   difficulty: IeltsDifficulty;
   word_count: number | null;
 }

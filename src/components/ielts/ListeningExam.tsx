@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronUp, KeyRound, X } from "lucide-react";
 import { bandColor, formatBand, rawToBand } from "@/lib/ieltsBand";
+import QuestionTable from "./QuestionTable";
 import { QuestionRow, isCorrect, type ExamQuestion } from "./ReadingExam";
 
 export interface ListeningSection {
@@ -13,6 +14,8 @@ export interface ListeningSection {
   audio_parts?: string[] | null;
   /** Speaker-tagged lines: "WOMAN: So, who runs the classes?" */
   transcript?: string | null;
+  /** Tables printed in the paper; a cell marks its gap as "[[7]]". */
+  tables?: string[][][] | null;
 }
 
 /**
@@ -85,6 +88,11 @@ export default function ListeningExam({
 
   // The band is a property of the whole paper (40 questions), never of one part.
   const scored = scoreQuestions ?? questions;
+
+  function setAnswer(number: number, value: string) {
+    if (onAnswerChange) onAnswerChange(number, value);
+    else setOwnAnswers((a) => ({ ...a, [number]: value }));
+  }
   const raw = useMemo(
     () => scored.reduce((n, q) => (isCorrect(answers[q.number] || "", q.correct_answer) ? n + 1 : n), 0),
     [answers, scored]
@@ -101,6 +109,16 @@ export default function ListeningExam({
     }
     return out;
   }, [questions]);
+
+  /** The grids whose gaps all belong to this group of questions. */
+  function tableFor(items: ExamQuestion[]): string[][][] {
+    const owned = new Set(items.map((q) => q.number));
+    return (section.tables ?? []).filter((grid) => {
+      const marks = grid.flat().join(" ").match(/\[\[(\d{1,2})\]\]/g) ?? [];
+      const nums = marks.map((m) => Number(m.slice(2, -2)));
+      return nums.length > 0 && nums.every((n) => owned.has(n));
+    });
+  }
 
   const scriptLines = useMemo(
     () => (section.transcript ? section.transcript.split(/\n+/).filter(Boolean) : []),
@@ -195,8 +213,19 @@ export default function ListeningExam({
                 {g.items.length > 1 ? `–${g.items[g.items.length - 1].number}` : ""}
               </h4>
               {g.instruction && <p className="text-sm mb-3">{g.instruction}</p>}
+              {/* Where the paper prints a table, it IS the question — the flat rows
+                  would lose which column each gap sits in. */}
+              {tableFor(g.items).map((grid, ti) => (
+                <QuestionTable
+                  key={ti}
+                  grid={grid}
+                  answers={answers}
+                  onAnswer={setAnswer}
+                />
+              ))}
+
               <div className="space-y-4">
-                {g.items.map((q) => (
+                {(tableFor(g.items).length ? [] : g.items).map((q) => (
                   <QuestionRow
                     key={q.id}
                     q={q}

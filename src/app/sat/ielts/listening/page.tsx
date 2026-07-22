@@ -109,6 +109,7 @@ export default function IeltsListeningPage() {
                     audio_url: p.audio_url,
                     audio_parts: p.audio_parts,
                     transcript: p.transcript,
+                    tables: p.tables,
                   }}
                   questions={section.questions}
                   storageKey={`ielts-listening-${p.id}`}
