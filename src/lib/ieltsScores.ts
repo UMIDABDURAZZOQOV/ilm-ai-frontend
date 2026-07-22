@@ -56,14 +56,23 @@ export function loadSkillResult(
 }
 
 /**
- * The overall band is the mean of the four skills, rounded the IELTS way (.25 up to
- * the half, .75 up to the whole). A skill not yet taken counts as 0, which is what
- * the real report does — the overall only means anything once all four are sat.
- * Nothing is shown at all until at least one skill has been answered.
+ * The overall band is the mean of the skills this paper actually has, rounded the IELTS
+ * way (.25 up to the half, .75 up to the whole). A skill not yet taken counts as 0,
+ * which is what the real report does — the overall only means anything once every skill
+ * is sat. Nothing is shown at all until at least one has been answered.
+ *
+ * `skills` defaults to all four but must be narrowed for a book that ships fewer:
+ * Cambridge 20 arrived with Listening and Reading only, and averaging those two over
+ * four would have reported band 4.0 to a candidate who scored 8.0 on both.
  */
-export function overallFor(book: number, test: number): number | null {
-  const results = IELTS_SKILLS.map((s) => loadSkillResult(book, test, s));
+export function overallFor(
+  book: number,
+  test: number,
+  skills: readonly IeltsSkill[] = IELTS_SKILLS
+): number | null {
+  if (!skills.length) return null;
+  const results = skills.map((s) => loadSkillResult(book, test, s));
   if (!results.some((r) => r && r.answered > 0)) return null;
   const total = results.reduce((sum, r) => sum + (r?.band ?? 0), 0);
-  return roundBand(total / IELTS_SKILLS.length);
+  return roundBand(total / skills.length);
 }

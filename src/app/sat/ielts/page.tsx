@@ -76,7 +76,9 @@ export default function IeltsHubPage() {
     const next: Record<string, number> = {};
     for (const [book, tests] of Array.from(books.entries())) {
       for (const test of Array.from(tests)) {
-        const overall = overallFor(book, test);
+        // Only the skills this paper ships with — see overallFor.
+        const present = SKILLS.filter((s) => available[`${book}/${test}/${s}`]);
+        const overall = overallFor(book, test, present);
         if (overall !== null) next[`${book}/${test}`] = overall;
         for (const skill of SKILLS) {
           const r = loadSkillResult(book, test, skill);
@@ -86,7 +88,7 @@ export default function IeltsHubPage() {
       }
     }
     setScores(next);
-  }, [books]);
+  }, [books, available]);
 
   const ordered = useMemo(
     () =>
@@ -147,7 +149,7 @@ export default function IeltsHubPage() {
                       <button
                         key={skill}
                         disabled={!ready}
-                        onClick={() => router.push(`/sat/ielts/${skill}?test=${test}`)}
+                        onClick={() => router.push(`/sat/ielts/${skill}?book=${book}&test=${test}`)}
                         className={`flex w-full items-center justify-between gap-2 text-left text-sm transition-colors ${
                           ready
                             ? "hover:text-emerald-600 dark:hover:text-emerald-400"

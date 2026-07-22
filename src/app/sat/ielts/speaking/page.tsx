@@ -31,11 +31,17 @@ export default function IeltsSpeakingPage() {
 
   // Opened from the IELTS home as ?test=3 — show that test only, so a skill page
   // reached from a test card is that test's paper rather than the whole catalogue.
-  const testFilter = Number(useSearchParams().get("test")) || null;
+  const params = useSearchParams();
+  const testFilter = Number(params.get("test")) || null;
+  // Two books now ship a "Test 1", so the test number alone no longer identifies a
+  // paper: opening Cambridge 20 Test 1 listed Cambridge 21's Test 1 beside it, and the
+  // "one match, open it straight away" shortcut stopped firing because there were two.
+  const bookFilter = Number(params.get("book")) || null;
 
   const books = useMemo(
-    () => groupByTest(parts ?? [], (p) => p.topic).filter((g) => !testFilter || g.test === testFilter),
-    [parts, testFilter]
+    () => groupByTest(parts ?? [], (p) => p.topic).filter(
+      (g) => (!testFilter || g.test === testFilter) && (!bookFilter || g.book === bookFilter)),
+    [parts, testFilter, bookFilter]
   );
 
   // Arriving from a test card means "sit this paper", so open it straight away.

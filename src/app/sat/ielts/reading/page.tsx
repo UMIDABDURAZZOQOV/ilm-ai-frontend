@@ -46,7 +46,12 @@ export default function IeltsReadingPage() {
   }, []);
 
   // Opened from the IELTS home as ?test=3 — show that test only.
-  const testFilter = Number(useSearchParams().get("test")) || null;
+  const params = useSearchParams();
+  const testFilter = Number(params.get("test")) || null;
+  // Two books now ship a "Test 1", so the test number alone no longer identifies a
+  // paper: opening Cambridge 20 Test 1 listed Cambridge 21's Test 1 beside it, and the
+  // "one match, open it straight away" shortcut stopped firing because there were two.
+  const bookFilter = Number(params.get("book")) || null;
 
   // A test's whole Reading paper is one exam: 3 passages, 40 questions, one band.
   // Opening a single passage on its own would score it out of 13, which is not a band.
@@ -65,8 +70,9 @@ export default function IeltsReadingPage() {
   }, [open]);
 
   const books = useMemo(
-    () => groupByTest(passages ?? []).filter((g) => !testFilter || g.test === testFilter),
-    [passages, testFilter]
+    () => groupByTest(passages ?? []).filter(
+      (g) => (!testFilter || g.test === testFilter) && (!bookFilter || g.book === bookFilter)),
+    [passages, testFilter, bookFilter]
   );
 
   // Arriving from a test card means "sit this paper", so open it rather than showing a

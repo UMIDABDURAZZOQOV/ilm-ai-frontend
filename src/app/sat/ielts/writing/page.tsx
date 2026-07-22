@@ -37,8 +37,13 @@ export default function IeltsWritingPage() {
       .catch(() => setError("Could not load the writing tasks."));
   }, []);
 
-  // Opened from the IELTS home as ?test=3 — show that test only.
-  const testFilter = Number(useSearchParams().get("test")) || null;
+  // Opened from the IELTS home as ?book=20&test=3 — show that one paper.
+  const params = useSearchParams();
+  const testFilter = Number(params.get("test")) || null;
+  // Two books now ship a "Test 1", so the test number alone no longer identifies a
+  // paper: opening Cambridge 20 Test 1 listed Cambridge 21's Test 1 beside it, and the
+  // "one match, open it straight away" shortcut stopped firing because there were two.
+  const bookFilter = Number(params.get("book")) || null;
 
   const tests = useMemo(() => {
     const groups = new Map<string, { book: number; test: number; items: IeltsWriting[] }>();
@@ -56,9 +61,10 @@ export default function IeltsWritingPage() {
     const out = Array.from(groups.values());
     for (const g of out) g.items.sort((a, b) => a.task_type.localeCompare(b.task_type));
     return out
-      .filter((g) => !testFilter || g.test === testFilter)
+      .filter((g) => (!testFilter || g.test === testFilter)
+                  && (!bookFilter || g.book === bookFilter))
       .sort((a, b) => a.book - b.book || a.test - b.test);
-  }, [tasks, testFilter]);
+  }, [tasks, testFilter, bookFilter]);
 
   // Arriving from a test card means "sit this paper", so open it straight away.
   useEffect(() => {
