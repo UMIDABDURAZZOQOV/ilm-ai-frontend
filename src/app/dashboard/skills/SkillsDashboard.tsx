@@ -22,6 +22,7 @@ import {
   Zap,
   Trophy,
   TrendingUp,
+  Mic,
   Award,
   Share2,
   GraduationCap,
@@ -61,6 +62,7 @@ import HeartsXpHeader from "@/components/skills/HeartsXpHeader";
 import LessonPath from "@/components/skills/LessonPath";
 import LevelTest from "@/components/skills/LevelTest";
 import PracticeSession from "@/components/skills/PracticeSession";
+import PronunciationPractice from "@/components/skills/PronunciationPractice";
 import Leaderboard from "@/components/skills/Leaderboard";
 import Achievements from "@/components/skills/Achievements";
 import ShareCard from "@/components/skills/ShareCard";
@@ -101,6 +103,8 @@ type View =
   | "marathonPick"
   | "subjectExam"
   | "subjectExamPick"
+  | "pronunciation"
+  | "pronunciationPick"
   | "leaderboard"
   | "achievements"
   | "share"
@@ -136,6 +140,7 @@ export default function SkillsDashboard({ user }: { user: User }) {
   const [examQuestions, setExamQuestions] = useState<PracticeQuestion[]>([]);
   const [marathonSubject, setMarathonSubject] = useState<SkillSubject | null>(null);
   const [examSubject, setExamSubject] = useState<SkillSubject | null>(null);
+  const [pronSubject, setPronSubject] = useState<SkillSubject | null>(null);
   const [examQ, setExamQ] = useState<SubjectExamQuestion[]>([]);
   const [examDuration, setExamDuration] = useState(0);
   const [examLoading, setExamLoading] = useState(false);
@@ -396,6 +401,47 @@ export default function SkillsDashboard({ user }: { user: User }) {
           })}
         </div>
       </div>
+    );
+  }
+
+  if (view === "pronunciationPick") {
+    const langSubjects = subjects.filter((s) => ["ingliz_tili", "koreys_tili", "fransuz_tili"].includes(s.slug));
+    return (
+      <div>
+        <button onClick={backHome} className="flex items-center gap-1.5 text-sm font-semibold text-neutral-500 hover:text-neutral-800 dark:hover:text-white mb-4">
+          <ChevronLeft className="w-4 h-4" />
+          {lang === "ru" ? "Назад" : lang === "en" ? "Back" : "Orqaga"}
+        </button>
+        <h2 className="text-lg font-extrabold mb-1">{lang === "ru" ? "Произношение" : lang === "en" ? "Pronunciation" : "Talaffuz mashqi"}</h2>
+        <p className="text-sm text-neutral-500 mb-4">
+          {lang === "ru" ? "Выбери язык" : lang === "en" ? "Pick a language" : "Tilni tanlang"}
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-xl">
+          {langSubjects.map((s) => {
+            const Icon = SUBJECT_ICONS[s.slug] || BookOpen;
+            return (
+              <button key={s.id} onClick={() => { setPronSubject(s); setView("pronunciation"); }}
+                className="flex items-center gap-2 p-3 rounded-2xl border-2 border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-left">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${s.color}22` }}>
+                  <Icon className="w-4.5 h-4.5" style={{ color: s.color || "#58CC02" }} />
+                </div>
+                <span className="font-bold text-sm leading-tight">{nameFor(lang, s)}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (view === "pronunciation" && pronSubject) {
+    return (
+      <PronunciationPractice
+        userId={user.id}
+        subjectSlug={pronSubject.slug}
+        subjectName={nameFor(lang, pronSubject)}
+        onBack={backHome}
+      />
     );
   }
 
@@ -689,6 +735,13 @@ export default function SkillsDashboard({ user }: { user: User }) {
       sub: lang === "ru" ? "На время, весь предмет" : lang === "en" ? "Timed, whole subject" : "Vaqtli, butun fan",
     },
     {
+      id: "pronunciation",
+      icon: Mic,
+      color: "#E64980",
+      title: lang === "ru" ? "Произношение" : lang === "en" ? "Pronunciation" : "Talaffuz",
+      sub: lang === "ru" ? "Говорите — ИИ оценит" : lang === "en" ? "Speak, AI scores it" : "Ayting — AI baholaydi",
+    },
+    {
       id: "referral",
       icon: Gift,
       color: "#F06595",
@@ -783,6 +836,7 @@ export default function SkillsDashboard({ user }: { user: User }) {
               if (c.id === "daily" || c.id === "mistakes" || c.id === "lightning") openPractice(c.id);
               else if (c.id === "marathon") setView("marathonPick");
               else if (c.id === "subjectExam") setView("subjectExamPick");
+              else if (c.id === "pronunciation") setView("pronunciationPick");
               else if (c.id === "mock") setView("mockPick");
               else if (c.id === "progress") router.push("/skills/progress");
               else setView(c.id);

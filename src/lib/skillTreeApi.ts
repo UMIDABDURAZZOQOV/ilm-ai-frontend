@@ -158,6 +158,31 @@ export interface SubjectExamResult {
   weak_units: { title_uz: string; pct: number }[];
 }
 
+export interface PronunciationPhrase {
+  text: string;
+  uz: string;
+}
+
+export async function getPronunciationPhrases(
+  userId: number,
+  subjectSlug: string
+): Promise<{ phrases: PronunciationPhrase[]; language: string }> {
+  return apiFetch(`/skills/${userId}/pronunciation?subject=${subjectSlug}`);
+}
+
+export async function scorePronunciation(data: {
+  user_id: number;
+  subject: string;
+  target_text: string;
+  audio_base64: string;
+  mime_type: string;
+}): Promise<{ heard: string; score: number; tip: string }> {
+  return apiFetch(`/skills/pronunciation/score`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
 export async function completeSubjectExam(
   userId: number,
   subject: string,
