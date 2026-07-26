@@ -629,8 +629,8 @@ export default function SkillsDashboard({ user }: { user: User }) {
       id: "mistakes",
       icon: NotebookPen,
       color: "#FF4B4B",
-      title: lang === "ru" ? "Работа над ошибками" : lang === "en" ? "Mistakes" : "Xatolar daftari",
-      sub: lang === "ru" ? "Исправь свои ошибки" : lang === "en" ? "Fix your mistakes" : "Xatolaringizni tuzating",
+      title: lang === "ru" ? "Повторение ошибок" : lang === "en" ? "Review mistakes" : "Xatolarni takrorlash",
+      sub: lang === "ru" ? "Интервальное повторение" : lang === "en" ? "Spaced repetition" : "Muddati kelgan takror",
     },
     {
       id: "lightning",
