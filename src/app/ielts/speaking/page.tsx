@@ -20,6 +20,7 @@ export default function IeltsSpeakingPage() {
   const [loading, setLoading] = useState(true);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const audioBlobRef = useRef<Blob | null>(null);
 
   useEffect(() => {
     getSpeaking().then((data) => {
@@ -62,6 +63,7 @@ export default function IeltsSpeakingPage() {
 
       mediaRecorderRef.current.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        audioBlobRef.current = audioBlob;
         const audioUrl = URL.createObjectURL(audioBlob);
         setAudioUrl(audioUrl);
       };
@@ -89,15 +91,22 @@ export default function IeltsSpeakingPage() {
   };
 
   const handleSubmit = async () => {
-    if (!user || !currentTopic || !audioUrl) return;
+    if (!user || !currentTopic || !audioBlobRef.current) return;
 
-    // In a real implementation, you would upload the audio file to your server
-    // For now, we'll simulate the submission
     try {
+      // The recording is graded by Gemini from the audio itself — send it base64-encoded.
+      const blob = audioBlobRef.current;
+      const audio_base64 = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onloadend = () => resolve(String(r.result).split(",")[1] ?? "");
+        r.onerror = reject;
+        r.readAsDataURL(blob);
+      });
       const submission = await submitSpeaking({
         user_id: user.id,
         topic_id: currentTopic.id,
-        audio_url: audioUrl, // This would be the uploaded URL in production
+        audio_base64,
+        mime_type: blob.type || "audio/webm",
         duration_seconds: recordingTime,
       });
       setSubmissions([submission, ...submissions]);

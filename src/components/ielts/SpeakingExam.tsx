@@ -22,6 +22,7 @@ export interface SpeakingFeedback {
   grammar?: number;
   pronunciation?: number;
   feedback: string;
+  transcript?: string;
 }
 
 function mmss(total: number) {
@@ -185,6 +186,12 @@ export default function SpeakingExam({
               <Criterion label="Pronunciation" value={feedback.pronunciation} />
             </div>
             <p className="text-sm leading-relaxed whitespace-pre-line">{feedback.feedback}</p>
+            {feedback.transcript && (
+              <details className="rounded-xl border border-slate-200 dark:border-neutral-800 p-3">
+                <summary className="text-xs font-bold text-slate-500 cursor-pointer">Transcript</summary>
+                <p className="text-sm mt-2 whitespace-pre-line italic">{feedback.transcript}</p>
+              </details>
+            )}
           </div>
         )}
       </div>

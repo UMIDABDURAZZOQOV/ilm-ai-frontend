@@ -5,10 +5,27 @@ export const dynamic = "force-dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Mic } from "lucide-react";
-import { getSpeaking, type IeltsSpeaking } from "@/lib/ieltsApi";
+import { getSpeaking, submitSpeaking, type IeltsSpeaking } from "@/lib/ieltsApi";
 import { bookTitle, groupByTest, parseCambridgeTitle } from "@/lib/cambridge";
-import SpeakingExam, { type SpeakingPart } from "@/components/ielts/SpeakingExam";
+import SpeakingExam, { type SpeakingPart, type SpeakingFeedback } from "@/components/ielts/SpeakingExam";
 import FullScreenExam from "@/components/ielts/FullScreenExam";
+import { useAuth } from "@/hooks/useAuth";
+
+/** The grader returns "6.5 - Fluency…"; the band is the leading number. */
+function leadingBand(s: string | null): number | undefined {
+  const m = s && /(\d(?:\.\d)?)/.exec(s);
+  return m ? Number(m[1]) : undefined;
+}
+
+/** Blob → bare base64 (no data: prefix), for the JSON body. */
+function toBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onloadend = () => resolve(String(r.result).split(",")[1] ?? "");
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
+}
 
 const PART_INTRO: Record<number, string> = {
   1: "The examiner asks you about yourself, your home, work or studies and other familiar topics.",
@@ -18,6 +35,7 @@ const PART_INTRO: Record<number, string> = {
 
 export default function IeltsSpeakingPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [parts, setParts] = useState<IeltsSpeaking[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<IeltsSpeaking[] | null>(null);
@@ -90,10 +108,30 @@ export default function IeltsSpeakingPage() {
           </div>
         }
       >
-        {/* No `onSubmit`: the backend cannot transcribe audio yet, so the recorder is
-            for self-review rather than a band score it has no basis to give. */}
         <div className="h-full overflow-y-auto p-4">
-          <SpeakingExam key={current.id} part={part} />
+          <SpeakingExam
+            key={current.id}
+            part={part}
+            onSubmit={async (audio: Blob, seconds: number): Promise<SpeakingFeedback> => {
+              if (!user) throw new Error("Sign in to get a band score.");
+              const res = await submitSpeaking({
+                user_id: user.id,
+                topic_id: current.id,
+                audio_base64: await toBase64(audio),
+                mime_type: audio.type || "audio/webm",
+                duration_seconds: seconds,
+              });
+              return {
+                band: res.band_score ?? 0,
+                fluency: leadingBand(res.fluency),
+                lexical: leadingBand(res.lexical),
+                grammar: leadingBand(res.grammar),
+                pronunciation: leadingBand(res.pronunciation),
+                feedback: res.feedback ?? "",
+                transcript: res.transcript ?? undefined,
+              };
+            }}
+          />
         </div>
       </FullScreenExam>
     );

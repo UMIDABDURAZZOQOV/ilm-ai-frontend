@@ -87,6 +87,7 @@ export interface IeltsSpeakingSubmission {
   audio_url: string;
   duration_seconds: number | null;
   band_score: number | null;
+  transcript: string | null;
   feedback: string | null;
   fluency: string | null;
   lexical: string | null;
@@ -197,7 +198,8 @@ export async function getSpeakingById(id: number): Promise<IeltsSpeaking> {
 export async function submitSpeaking(data: {
   user_id: number;
   topic_id: number;
-  audio_url: string;
+  audio_base64: string;
+  mime_type: string;
   duration_seconds?: number;
 }): Promise<IeltsSpeakingSubmission> {
   return apiFetch("/ielts/speaking/submit", {
