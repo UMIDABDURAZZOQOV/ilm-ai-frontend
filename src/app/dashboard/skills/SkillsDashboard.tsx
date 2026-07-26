@@ -21,6 +21,7 @@ import {
   NotebookPen,
   Zap,
   Trophy,
+  TrendingUp,
   Award,
   Share2,
   GraduationCap,
@@ -524,7 +525,8 @@ export default function SkillsDashboard({ user }: { user: User }) {
     );
   }
 
-  const featureCards: { id: View; icon: typeof Zap; color: string; title: string; sub: string; badge?: string }[] = [
+  // "progress" is not a View — its tile routes to /skills/progress instead of setView.
+  const featureCards: { id: View | "progress"; icon: typeof Zap; color: string; title: string; sub: string; badge?: string }[] = [
     {
       id: "daily",
       icon: CalendarCheck,
@@ -581,6 +583,13 @@ export default function SkillsDashboard({ user }: { user: User }) {
       color: "#FF9600",
       title: lang === "ru" ? "Рейтинг" : lang === "en" ? "Leaderboard" : "Reyting",
       sub: lang === "ru" ? "Лучшие за неделю" : lang === "en" ? "Weekly top" : "Haftaning eng zo'rlari",
+    },
+    {
+      id: "progress",
+      icon: TrendingUp,
+      color: "#12B886",
+      title: lang === "ru" ? "Мой прогресс" : lang === "en" ? "My progress" : "Mening progressim",
+      sub: lang === "ru" ? "Освоение по предметам" : lang === "en" ? "Mastery by subject" : "Fanlar bo'yicha o'zlashtirish",
     },
     {
       id: "referral",
@@ -677,6 +686,7 @@ export default function SkillsDashboard({ user }: { user: User }) {
               if (c.id === "daily" || c.id === "mistakes" || c.id === "lightning") openPractice(c.id);
               else if (c.id === "marathon") setView("marathonPick");
               else if (c.id === "mock") setView("mockPick");
+              else if (c.id === "progress") router.push("/skills/progress");
               else setView(c.id);
             }}
             className="relative flex flex-col items-start gap-1.5 p-4 rounded-2xl border-2 border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-left"

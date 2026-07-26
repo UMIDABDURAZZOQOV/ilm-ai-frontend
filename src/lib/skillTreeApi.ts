@@ -116,6 +116,25 @@ export async function getGamificationSummary(userId: number): Promise<Gamificati
   return apiFetch(`/skills/${userId}/summary`);
 }
 
+export interface SubjectProgress {
+  slug: string;
+  name_uz: string;
+  name_ru: string;
+  name_en: string;
+  icon: string;
+  color: string;
+  total_lessons: number;
+  attempted: number;
+  completed: number;
+  mastery_pct: number;
+  progress_pct: number;
+  weak_units: { title_uz: string; avg_pct: number }[];
+}
+
+export async function getProgress(userId: number): Promise<{ subjects: SubjectProgress[] }> {
+  return apiFetch(`/skills/${userId}/progress`);
+}
+
 export async function startLesson(lessonId: number, userId: number): Promise<LessonStartResponse> {
   return apiFetch(`/skills/lessons/${lessonId}/start`, {
     method: "POST",
