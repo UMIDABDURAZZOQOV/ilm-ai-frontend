@@ -16,6 +16,8 @@ import {
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
+  Calculator,
+  SquareSigma,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/hooks/useI18n";
@@ -30,6 +32,8 @@ import {
 } from "@/lib/satIeltsApi";
 import AiAnalysisPanel from "@/app/dashboard/sat-ielts/AiAnalysisPanel";
 import { MathText } from "@/components/MathText";
+import DesmosCalculator from "@/components/sat/DesmosCalculator";
+import ReferenceSheet from "@/components/sat/ReferenceSheet";
 
 interface PlanStep {
   section: string;
@@ -96,6 +100,9 @@ export default function SatSessionPage() {
   const [phase, setPhase] = useState<Phase>("loading");
   const [stored, setStored] = useState<StoredSession | null>(null);
   const [current, setCurrent] = useState(0);
+  // Desmos calculator and the reference sheet — Math section only, like the real SAT.
+  const [showCalc, setShowCalc] = useState(false);
+  const [showRef, setShowRef] = useState(false);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [flagged, setFlagged] = useState<Set<number>>(new Set());
   const [eliminated, setEliminated] = useState<Record<number, Set<string>>>({});
@@ -131,6 +138,13 @@ export default function SatSessionPage() {
   const remaining = timed ? (session!.duration_seconds as number) - elapsed : null;
   const plan = stored?.plan ?? null;
   const hasNextSection = !!plan && plan.index < plan.steps.length - 1;
+  // The Math tools show in the Math section only, like the real SAT. A mock drives the
+  // section from its plan step ("Math"); a plain practice session has no section, so the
+  // current question's domain decides — the four SAT Math domains all match these stems.
+  const MATH_DOMAIN = /algebra|math|geometr|trigonom|data analysis/i;
+  const planSection = plan ? plan.steps[plan.index]?.section ?? "" : "";
+  const isMath = /math/i.test(planSection) ||
+    (!plan && MATH_DOMAIN.test(question?.domain ?? ""));
 
   useEffect(() => {
     if (phase !== "exam") return;
@@ -531,6 +545,55 @@ export default function SatSessionPage() {
             {stored?.mode === "mock" ? "Mock test" : "Practice"} · {questions.length} questions
           </p>
         </div>
+        {isMath && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setShowCalc((v) => !v)}
+              className={`flex flex-col items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors ${
+                showCalc ? "bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300" : "hover:bg-slate-100 dark:hover:bg-slate-800"
+              }`}
+              title="Graphing / Scientific calculator"
+            >
+              <Calculator className="h-4 w-4" />
+              Calculator
+            </button>
+            <button
+              onClick={() => setShowRef((v) => !v)}
+              className={`flex flex-col items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors ${
+                showRef ? "bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300" : "hover:bg-slate-100 dark:hover:bg-slate-800"
+              }`}
+              title="Formula reference sheet"
+            >
+              <SquareSigma className="h-4 w-4" />
+              Reference
+            </button>
+          </div>
+        )}
+        {/* Math tools — only on Math questions, like the real Digital SAT. */}
+        {isMath && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setShowCalc((v) => !v)}
+              className={`flex flex-col items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors ${
+                showCalc ? "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
+              }`}
+              title="Calculator (Desmos)"
+            >
+              <Calculator className="h-4 w-4" />
+              Calculator
+            </button>
+            <button
+              onClick={() => setShowRef((v) => !v)}
+              className={`flex flex-col items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors ${
+                showRef ? "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
+              }`}
+              title="Reference sheet"
+            >
+              <SquareSigma className="h-4 w-4" />
+              Reference
+            </button>
+          </div>
+        )}
         <div className={`flex items-center gap-2 font-bold tabular-nums ${timed && remaining !== null && remaining <= 60 ? "text-red-500" : ""}`}>
           <Clock className="h-4 w-4" />
           {timed ? formatClock(remaining ?? 0) : formatClock(elapsed)}
@@ -547,6 +610,10 @@ export default function SatSessionPage() {
           )}
         </div>
       </header>
+
+      {/* Math tools — float over the exam, only while a Math question is open. */}
+      {isMath && showCalc && <DesmosCalculator onClose={() => setShowCalc(false)} />}
+      {isMath && showRef && <ReferenceSheet onClose={() => setShowRef(false)} />}
 
       {submitError && (
         <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800/40 text-red-600 dark:text-red-400 text-sm px-6 py-2">
