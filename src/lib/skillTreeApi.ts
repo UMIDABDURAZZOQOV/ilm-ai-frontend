@@ -135,6 +135,42 @@ export async function getProgress(userId: number): Promise<{ subjects: SubjectPr
   return apiFetch(`/skills/${userId}/progress`);
 }
 
+export interface SubjectExamQuestion extends PracticeQuestion {
+  unit_id: number;
+  unit_title: string;
+}
+
+export async function getSubjectExam(
+  userId: number,
+  subjectSlug: string
+): Promise<{ questions: SubjectExamQuestion[]; subject_name: string; duration_seconds: number }> {
+  return apiFetch(`/skills/${userId}/subject-exam?subject=${subjectSlug}`);
+}
+
+export interface SubjectExamResult {
+  score: number;
+  total: number;
+  score_pct: number;
+  passed: boolean;
+  xp_awarded: number;
+  xp_total: number;
+  streak_days: number;
+  weak_units: { title_uz: string; pct: number }[];
+}
+
+export async function completeSubjectExam(
+  userId: number,
+  subject: string,
+  score: number,
+  total: number,
+  perUnit: Record<string, [number, number]>
+): Promise<SubjectExamResult> {
+  return apiFetch(`/skills/subject-exam/complete`, {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId, subject, score, total, per_unit: perUnit }),
+  });
+}
+
 export async function startLesson(lessonId: number, userId: number): Promise<LessonStartResponse> {
   return apiFetch(`/skills/lessons/${lessonId}/start`, {
     method: "POST",

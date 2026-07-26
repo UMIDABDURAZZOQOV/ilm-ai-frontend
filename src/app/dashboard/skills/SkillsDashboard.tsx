@@ -43,6 +43,9 @@ import {
   completeLightning,
   getMarathon,
   completeMarathon,
+  getSubjectExam,
+  completeSubjectExam,
+  type SubjectExamQuestion,
   isLanguageSubject,
   getUnitExam,
   completeUnitExam,
@@ -96,6 +99,8 @@ type View =
   | "lightning"
   | "marathon"
   | "marathonPick"
+  | "subjectExam"
+  | "subjectExamPick"
   | "leaderboard"
   | "achievements"
   | "share"
@@ -130,6 +135,10 @@ export default function SkillsDashboard({ user }: { user: User }) {
   const [examUnit, setExamUnit] = useState<SkillTreeUnit | null>(null);
   const [examQuestions, setExamQuestions] = useState<PracticeQuestion[]>([]);
   const [marathonSubject, setMarathonSubject] = useState<SkillSubject | null>(null);
+  const [examSubject, setExamSubject] = useState<SkillSubject | null>(null);
+  const [examQ, setExamQ] = useState<SubjectExamQuestion[]>([]);
+  const [examDuration, setExamDuration] = useState(0);
+  const [examLoading, setExamLoading] = useState(false);
   const [mockSubject, setMockSubject] = useState<SkillSubject | null>(null);
 
   const refreshSummary = useCallback(() => {
@@ -211,6 +220,21 @@ export default function SkillsDashboard({ user }: { user: User }) {
       setPracticeQuestions([]);
     } finally {
       setPracticeLoading(false);
+    }
+  }
+
+  async function startSubjectExam(subject: SkillSubject) {
+    setExamSubject(subject);
+    setExamLoading(true);
+    setView("subjectExam");
+    try {
+      const d = await getSubjectExam(user.id, subject.slug);
+      setExamQ(d.questions);
+      setExamDuration(d.duration_seconds);
+    } catch {
+      setExamQ([]);
+    } finally {
+      setExamLoading(false);
     }
   }
 
@@ -337,6 +361,72 @@ export default function SkillsDashboard({ user }: { user: User }) {
           const score = results.filter((x) => x.is_correct).length;
           const r = await completeMarathon(user.id, score, results.length);
           return { xp_awarded: r.xp_awarded };
+        }}
+        onExit={backHome}
+      />
+    );
+  }
+
+  if (view === "subjectExamPick") {
+    return (
+      <div>
+        <button onClick={backHome} className="flex items-center gap-1.5 text-sm font-semibold text-neutral-500 hover:text-neutral-800 dark:hover:text-white mb-4">
+          <ChevronLeft className="w-4 h-4" />
+          {lang === "ru" ? "Назад" : lang === "en" ? "Back" : "Orqaga"}
+        </button>
+        <h2 className="text-lg font-extrabold mb-1">{lang === "ru" ? "Экзамен по предмету" : lang === "en" ? "Subject exam" : "Fan imtihoni"}</h2>
+        <p className="text-sm text-neutral-500 mb-4">
+          {lang === "ru" ? "На время, весь предмет — 30 вопросов" : lang === "en" ? "Timed, the whole subject — 30 questions" : "Vaqtli, butun fan — 30 savol"}
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-w-2xl">
+          {subjects.map((s) => {
+            const Icon = SUBJECT_ICONS[s.slug] || BookOpen;
+            return (
+              <button
+                key={s.id}
+                onClick={() => startSubjectExam(s)}
+                className="flex items-center gap-2 p-3 rounded-2xl border-2 border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-left"
+              >
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${s.color}22` }}>
+                  <Icon className="w-4.5 h-4.5" style={{ color: s.color || "#58CC02" }} />
+                </div>
+                <span className="font-bold text-xs leading-tight">{nameFor(lang, s)}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (view === "subjectExam") {
+    if (examLoading) {
+      return (
+        <div className="flex justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
+        </div>
+      );
+    }
+    return (
+      <PracticeSession
+        lang={lang}
+        title={`${lang === "ru" ? "Экзамен" : lang === "en" ? "Exam" : "Imtihon"} · ${examSubject ? nameFor(lang, examSubject) : ""}`}
+        accent="#4C6EF5"
+        questions={examQ}
+        timerSeconds={examDuration}
+        onFinish={async (results: PracticeResultItem[]) => {
+          const score = results.filter((x) => x.is_correct).length;
+          // Tally correct/total per unit so the result can name the weakest bob.
+          const perUnit: Record<string, [number, number]> = {};
+          results.forEach((r, i) => {
+            const title = examQ[i]?.unit_title || "";
+            const cell = perUnit[title] || [0, 0];
+            cell[0] += r.is_correct ? 1 : 0;
+            cell[1] += 1;
+            perUnit[title] = cell;
+          });
+          const res = await completeSubjectExam(user.id, examSubject?.slug ?? "", score, results.length, perUnit);
+          return { xp_awarded: res.xp_awarded };
         }}
         onExit={backHome}
       />
@@ -592,6 +682,13 @@ export default function SkillsDashboard({ user }: { user: User }) {
       sub: lang === "ru" ? "Освоение по предметам" : lang === "en" ? "Mastery by subject" : "Fanlar bo'yicha o'zlashtirish",
     },
     {
+      id: "subjectExam",
+      icon: GraduationCap,
+      color: "#4C6EF5",
+      title: lang === "ru" ? "Экзамен по предмету" : lang === "en" ? "Subject exam" : "Fan imtihoni",
+      sub: lang === "ru" ? "На время, весь предмет" : lang === "en" ? "Timed, whole subject" : "Vaqtli, butun fan",
+    },
+    {
       id: "referral",
       icon: Gift,
       color: "#F06595",
@@ -685,6 +782,7 @@ export default function SkillsDashboard({ user }: { user: User }) {
             onClick={() => {
               if (c.id === "daily" || c.id === "mistakes" || c.id === "lightning") openPractice(c.id);
               else if (c.id === "marathon") setView("marathonPick");
+              else if (c.id === "subjectExam") setView("subjectExamPick");
               else if (c.id === "mock") setView("mockPick");
               else if (c.id === "progress") router.push("/skills/progress");
               else setView(c.id);
