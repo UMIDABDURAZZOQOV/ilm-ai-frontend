@@ -114,8 +114,9 @@ export default function IeltsWritingPage() {
                       <span className="text-sm text-slate-500">Grading...</span>
                     )}
                   </div>
+                  <BandCriteria sub={sub} />
                   {sub.feedback && (
-                    <p className="text-sm text-slate-600 dark:text-slate-400">{sub.feedback}</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-3">{sub.feedback}</p>
                   )}
                 </div>
               ))}
@@ -225,6 +226,59 @@ export default function IeltsWritingPage() {
           </li>
         </ul>
       </div>
+    </div>
+  );
+}
+
+// The backend grades each of the four official IELTS Writing criteria and stores
+// them as strings like "6.0 - Ideas are arranged coherently…". We split the
+// leading band off the description so each criterion reads as a labelled row with
+// its own band chip — the detail candidates actually want, not just an overall score.
+const CRITERIA: { key: keyof IeltsWritingSubmission; label: string }[] = [
+  { key: "task_response", label: "Task Response" },
+  { key: "coherence", label: "Coherence & Cohesion" },
+  { key: "lexical", label: "Lexical Resource" },
+  { key: "grammar", label: "Grammar & Accuracy" },
+];
+
+function bandChipColor(band: number): string {
+  if (band >= 7) return "#16a34a";
+  if (band >= 5.5) return "#f59e0b";
+  return "#ef4444";
+}
+
+function BandCriteria({ sub }: { sub: IeltsWritingSubmission }) {
+  const rows = CRITERIA.map(({ key, label }) => {
+    const raw = sub[key];
+    if (typeof raw !== "string" || !raw.trim()) return null;
+    const m = raw.match(/^\s*(\d+(?:\.\d+)?)\s*[-–—:]?\s*([\s\S]*)$/);
+    const band = m ? parseFloat(m[1]) : null;
+    const text = m ? m[2].trim() : raw.trim();
+    return { label, band, text };
+  }).filter(Boolean) as { label: string; band: number | null; text: string }[];
+
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="space-y-2 mt-1">
+      {rows.map((r) => (
+        <div key={r.label} className="flex items-start gap-2.5">
+          {r.band !== null ? (
+            <span
+              className="shrink-0 w-9 text-center text-xs font-black text-white rounded-md py-0.5"
+              style={{ backgroundColor: bandChipColor(r.band) }}
+            >
+              {r.band.toFixed(1)}
+            </span>
+          ) : (
+            <span className="shrink-0 w-9" />
+          )}
+          <div className="min-w-0">
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{r.label}</span>
+            {r.text && <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">{r.text}</p>}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
