@@ -778,6 +778,21 @@ export default function SkillsDashboard({ user }: { user: User }) {
         <HeartsXpHeader summary={summary} />
       </div>
 
+      {/* Streak about to break — a nudge before midnight takes it. */}
+      {summary && (summary.streak_days ?? 0) > 0 && todayXp === 0 && (
+        <div className="rounded-2xl border-2 border-orange-300 dark:border-orange-800/60 bg-orange-50 dark:bg-orange-900/15 p-4 mb-5 max-w-lg flex items-center gap-3">
+          <span className="text-2xl">🔥</span>
+          <div className="flex-1">
+            <p className="text-sm font-extrabold text-orange-700 dark:text-orange-400">
+              {lang === "ru" ? `Серия ${summary.streak_days} дней под угрозой!` : lang === "en" ? `${summary.streak_days}-day streak at risk!` : `${summary.streak_days} kunlik streak xavf ostida!`}
+            </p>
+            <p className="text-xs text-orange-600/80 dark:text-orange-400/70">
+              {lang === "ru" ? "Пройди один урок сегодня, чтобы сохранить её." : lang === "en" ? "Do one lesson today to keep it." : "Saqlab qolish uchun bugun bitta dars yeching."}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Daily goal */}
       <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 mb-5 max-w-lg">
         <div className="flex items-center justify-between mb-2">
