@@ -158,6 +158,25 @@ export interface SubjectExamResult {
   weak_units: { title_uz: string; pct: number }[];
 }
 
+export async function getWrittenExam(
+  userId: number,
+  subjectSlug: string
+): Promise<{ prompt: string; min_words: number; subject_name: string }> {
+  return apiFetch(`/skills/${userId}/written-exam?subject=${subjectSlug}`);
+}
+
+export async function gradeWrittenExam(data: {
+  user_id: number;
+  subject: string;
+  prompt: string;
+  essay_text: string;
+}): Promise<{ score: number; content: string; structure: string; language: string; feedback: string }> {
+  return apiFetch(`/skills/written-exam/grade`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
 export interface Flashcard {
   front: string;
   back: string;

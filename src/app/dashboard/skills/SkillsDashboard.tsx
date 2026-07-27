@@ -24,6 +24,7 @@ import {
   TrendingUp,
   Mic,
   Layers,
+  PenLine,
   Award,
   Share2,
   GraduationCap,
@@ -65,6 +66,7 @@ import LevelTest from "@/components/skills/LevelTest";
 import PracticeSession from "@/components/skills/PracticeSession";
 import PronunciationPractice from "@/components/skills/PronunciationPractice";
 import Flashcards from "@/components/skills/Flashcards";
+import WrittenExam from "@/components/skills/WrittenExam";
 import Leaderboard from "@/components/skills/Leaderboard";
 import Achievements from "@/components/skills/Achievements";
 import ShareCard from "@/components/skills/ShareCard";
@@ -109,6 +111,8 @@ type View =
   | "pronunciationPick"
   | "flashcards"
   | "flashcardsPick"
+  | "writtenExam"
+  | "writtenExamPick"
   | "leaderboard"
   | "achievements"
   | "share"
@@ -146,6 +150,7 @@ export default function SkillsDashboard({ user }: { user: User }) {
   const [examSubject, setExamSubject] = useState<SkillSubject | null>(null);
   const [pronSubject, setPronSubject] = useState<SkillSubject | null>(null);
   const [flashSubject, setFlashSubject] = useState<SkillSubject | null>(null);
+  const [writtenSubject, setWrittenSubject] = useState<SkillSubject | null>(null);
   const [examQ, setExamQ] = useState<SubjectExamQuestion[]>([]);
   const [examDuration, setExamDuration] = useState(0);
   const [examLoading, setExamLoading] = useState(false);
@@ -490,6 +495,46 @@ export default function SkillsDashboard({ user }: { user: User }) {
     );
   }
 
+  if (view === "writtenExamPick") {
+    return (
+      <div>
+        <button onClick={backHome} className="flex items-center gap-1.5 text-sm font-semibold text-neutral-500 hover:text-neutral-800 dark:hover:text-white mb-4">
+          <ChevronLeft className="w-4 h-4" />
+          {lang === "ru" ? "Назад" : lang === "en" ? "Back" : "Orqaga"}
+        </button>
+        <h2 className="text-lg font-extrabold mb-1">{lang === "ru" ? "Письменный экзамен" : lang === "en" ? "Written exam" : "Yozma imtihon"}</h2>
+        <p className="text-sm text-neutral-500 mb-4">
+          {lang === "ru" ? "Выбери предмет" : lang === "en" ? "Pick a subject" : "Fanni tanlang"}
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-w-2xl">
+          {subjects.map((s) => {
+            const Icon = SUBJECT_ICONS[s.slug] || BookOpen;
+            return (
+              <button key={s.id} onClick={() => { setWrittenSubject(s); setView("writtenExam"); }}
+                className="flex items-center gap-2 p-3 rounded-2xl border-2 border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-left">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${s.color}22` }}>
+                  <Icon className="w-4.5 h-4.5" style={{ color: s.color || "#58CC02" }} />
+                </div>
+                <span className="font-bold text-xs leading-tight">{nameFor(lang, s)}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (view === "writtenExam" && writtenSubject) {
+    return (
+      <WrittenExam
+        userId={user.id}
+        subjectSlug={writtenSubject.slug}
+        subjectName={nameFor(lang, writtenSubject)}
+        onBack={backHome}
+      />
+    );
+  }
+
   if (view === "subjectExam") {
     if (examLoading) {
       return (
@@ -794,6 +839,13 @@ export default function SkillsDashboard({ user }: { user: User }) {
       sub: lang === "ru" ? "Повтори понятия" : lang === "en" ? "Review the concepts" : "Tushunchalarni takrorlang",
     },
     {
+      id: "writtenExam",
+      icon: PenLine,
+      color: "#0CA678",
+      title: lang === "ru" ? "Письменный экзамен" : lang === "en" ? "Written exam" : "Yozma imtihon",
+      sub: lang === "ru" ? "Эссе + оценка ИИ" : lang === "en" ? "Essay + AI grading" : "Insho + AI baho",
+    },
+    {
       id: "referral",
       icon: Gift,
       color: "#F06595",
@@ -905,6 +957,7 @@ export default function SkillsDashboard({ user }: { user: User }) {
               else if (c.id === "subjectExam") setView("subjectExamPick");
               else if (c.id === "pronunciation") setView("pronunciationPick");
               else if (c.id === "flashcards") setView("flashcardsPick");
+              else if (c.id === "writtenExam") setView("writtenExamPick");
               else if (c.id === "mock") setView("mockPick");
               else if (c.id === "progress") router.push("/skills/progress");
               else setView(c.id);
