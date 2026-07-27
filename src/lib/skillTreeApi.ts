@@ -260,6 +260,7 @@ export interface LeaderboardEntry {
   name: string;
   profile_picture: string | null;
   weekly_xp: number;
+  league: string;
   is_me: boolean;
 }
 

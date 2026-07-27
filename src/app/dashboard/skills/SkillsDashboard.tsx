@@ -296,7 +296,7 @@ export default function SkillsDashboard({ user }: { user: User }) {
 
   // ── Sub-views ──────────────────────────────────────────────────────────────
 
-  if (view === "leaderboard") return <Leaderboard lang={lang} onBack={backHome} />;
+  if (view === "leaderboard") return <Leaderboard lang={lang} userId={user.id} onBack={backHome} />;
   if (view === "achievements") return <Achievements lang={lang} userId={user.id} onBack={backHome} />;
   if (view === "share") return <ShareCard lang={lang} userName={user.name} summary={summary} onBack={backHome} />;
   if (view === "referral") return <Referral lang={lang} userId={user.id} onBack={backHome} />;
@@ -911,8 +911,8 @@ export default function SkillsDashboard({ user }: { user: User }) {
       id: "leaderboard",
       icon: Trophy,
       color: "#FF9600",
-      title: lang === "ru" ? "Рейтинг" : lang === "en" ? "Leaderboard" : "Reyting",
-      sub: lang === "ru" ? "Лучшие за неделю" : lang === "en" ? "Weekly top" : "Haftaning eng zo'rlari",
+      title: lang === "ru" ? "Лига" : lang === "en" ? "League" : "Liga",
+      sub: lang === "ru" ? "Лига недели + рейтинг" : lang === "en" ? "Weekly league + ranking" : "Haftalik liga + reyting",
     },
     {
       id: "progress",
