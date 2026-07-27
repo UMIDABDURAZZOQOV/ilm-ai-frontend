@@ -686,6 +686,31 @@ export async function tutorChat(data: {
   return apiFetch("/skills/tutor/chat", { method: "POST", body: JSON.stringify(data) });
 }
 
+export interface VoiceCheckResult {
+  understood: boolean;
+  transcript: string;
+  feedback: string;
+}
+
+/**
+ * Spoken-answer check: the learner explains an answer out loud (in Uzbek) and
+ * Gemini transcribes it and judges whether they actually understand — for
+ * non-speaking subjects like history/biology where saying it out loud proves it.
+ */
+export async function voiceCheckAnswer(data: {
+  questionText: string;
+  correctAnswer: string;
+  lang: string;
+  audio: Blob;
+}): Promise<VoiceCheckResult> {
+  const form = new FormData();
+  form.append("question_text", data.questionText);
+  form.append("correct_answer", data.correctAnswer);
+  form.append("lang", data.lang);
+  form.append("audio", data.audio, "answer.webm");
+  return apiFetch("/skills/tutor/voice-check", { method: "POST", body: form });
+}
+
 // ─── Placement test ─────────────────────────────────────────────────────────
 // Offered when opening a subject, so the learner knows where they stand before
 // starting the path. Languages are placed on CEFR, the other subjects on the

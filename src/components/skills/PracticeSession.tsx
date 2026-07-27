@@ -6,6 +6,7 @@ import { X, Timer } from "lucide-react";
 import type { PracticeQuestion, PracticeResultItem } from "@/lib/skillTreeApi";
 import Mascot from "./Mascot";
 import AiTutor from "./AiTutor";
+import VoiceAnswer from "./VoiceAnswer";
 
 interface FinishSummary {
   xp_awarded: number;
@@ -215,6 +216,11 @@ export default function PracticeSession({
                   userAnswer={selected}
                 />
               )}
+              <VoiceAnswer
+                lang={lang}
+                questionText={q.question_text}
+                correctAnswer={q.correct_answer}
+              />
               <button
                 onClick={nextQuestion}
                 disabled={submitting}
