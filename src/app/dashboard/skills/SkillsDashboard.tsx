@@ -64,6 +64,7 @@ import {
   type PracticeResultItem,
 } from "@/lib/skillTreeApi";
 import HeartsXpHeader from "@/components/skills/HeartsXpHeader";
+import ExamCountdown from "@/components/skills/ExamCountdown";
 import LessonPath from "@/components/skills/LessonPath";
 import LevelTest from "@/components/skills/LevelTest";
 import PracticeSession from "@/components/skills/PracticeSession";
@@ -998,6 +999,11 @@ export default function SkillsDashboard({ user }: { user: User }) {
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <h2 className="text-xl font-bold">{t("dash_skills") || "Fanlar"}</h2>
         <HeartsXpHeader summary={summary} />
+      </div>
+
+      {/* Exam countdown — days left + a paced daily XP target. */}
+      <div className="max-w-lg">
+        <ExamCountdown lang={lang} userId={user.id} />
       </div>
 
       {/* Streak about to break — a nudge before midnight takes it. */}

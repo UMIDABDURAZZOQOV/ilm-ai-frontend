@@ -374,6 +374,29 @@ export async function getLeague(userId: number): Promise<LeagueResponse> {
   return apiFetch(`/skills/${userId}/league`);
 }
 
+export interface ExamCountdown {
+  has_date: boolean;
+  target_date?: string;
+  days_left?: number;
+  passed?: boolean;
+  weeks_left?: number;
+  weekly_xp?: number;
+  suggested_daily_xp?: number;
+  studied_today?: boolean;
+  streak_days?: number;
+}
+
+export async function getExamCountdown(userId: number): Promise<ExamCountdown> {
+  return apiFetch(`/skills/${userId}/exam-countdown`);
+}
+
+export async function setExamDate(userId: number, targetDate: string): Promise<{ ok: boolean; target_date: string }> {
+  return apiFetch(`/skills/${userId}/exam-date`, {
+    method: "POST",
+    body: JSON.stringify({ target_date: targetDate }),
+  });
+}
+
 export interface ReferralResponse {
   code: string;
   invited_count: number;
