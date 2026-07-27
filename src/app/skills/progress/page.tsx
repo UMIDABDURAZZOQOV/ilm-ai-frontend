@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2, TrendingUp, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Loader2, TrendingUp, AlertTriangle, Award } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getProgress, type SubjectProgress } from "@/lib/skillTreeApi";
 import ThemeToggle from "@/components/ThemeToggle";
+import Certificate from "@/components/skills/Certificate";
 
 /** A subject's mastery ring — colour by band so weak subjects read at a glance. */
 function Ring({ pct, color }: { pct: number; color: string }) {
@@ -33,6 +34,7 @@ export default function ProgressDashboard() {
   const router = useRouter();
   const [rows, setRows] = useState<SubjectProgress[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [certFor, setCertFor] = useState<SubjectProgress | null>(null);
 
   useEffect(() => {
     if (!isLoading && !user) router.push("/login");
@@ -116,30 +118,48 @@ export default function ProgressDashboard() {
 
             {/* per-subject cards */}
             <div className="grid sm:grid-cols-2 gap-3">
-              {rows.map((r) => (
-                <Link key={r.slug} href={`/skills?subject=${r.slug}`}
-                  className="rounded-2xl border border-slate-200 dark:border-neutral-800 p-4 flex gap-4 hover:shadow-md transition-shadow">
-                  <Ring pct={r.attempted ? r.mastery_pct : 0} color={r.color || band(r.mastery_pct)} />
+              {rows.map((r) => {
+                const complete = r.total_lessons > 0 && r.completed >= r.total_lessons;
+                return (
+                <div key={r.slug}
+                  className="rounded-2xl border border-slate-200 dark:border-neutral-800 p-4 flex gap-4">
+                  <Link href={`/skills?subject=${r.slug}`} className="shrink-0">
+                    <Ring pct={r.attempted ? r.mastery_pct : 0} color={r.color || band(r.mastery_pct)} />
+                  </Link>
                   <div className="flex-1 min-w-0">
-                    <div className="font-black truncate">{r.name_uz}</div>
+                    <Link href={`/skills?subject=${r.slug}`} className="font-black truncate block hover:underline">{r.name_uz}</Link>
                     <div className="text-xs text-slate-500 mb-2">
                       {r.completed}/{r.total_lessons} dars tugatilgan
                     </div>
                     <div className="h-1.5 rounded-full bg-slate-200 dark:bg-neutral-800 overflow-hidden">
                       <div className="h-full rounded-full" style={{ width: `${r.progress_pct}%`, background: r.color || "#22c55e" }} />
                     </div>
-                    {r.weak_units.length > 0 && r.attempted > 0 && (
+                    {complete ? (
+                      <button onClick={() => setCertFor(r)}
+                        className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline">
+                        <Award className="h-3.5 w-3.5" /> Sertifikatni olish
+                      </button>
+                    ) : r.weak_units.length > 0 && r.attempted > 0 ? (
                       <div className="text-[11px] text-slate-400 mt-2 truncate">
                         Kuchsiz: {r.weak_units.map((u) => u.title_uz).join(", ")}
                       </div>
-                    )}
+                    ) : null}
                   </div>
-                </Link>
-              ))}
+                </div>
+              );})}
             </div>
           </>
         )}
       </div>
+
+      {certFor && (
+        <Certificate
+          name={user.name || user.email}
+          subject={certFor.name_uz}
+          lessons={certFor.total_lessons}
+          onClose={() => setCertFor(null)}
+        />
+      )}
     </div>
   );
 }
