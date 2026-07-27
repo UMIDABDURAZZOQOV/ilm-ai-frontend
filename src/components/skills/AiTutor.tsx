@@ -2,8 +2,9 @@
 
 import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Loader2, Send } from "lucide-react";
+import { Sparkles, Loader2, Send, Volume2, Square } from "lucide-react";
 import { explainQuestion, tutorChat, type TutorMessage } from "@/lib/skillTreeApi";
+import { speakText } from "@/lib/assistantApi";
 
 function tr(lang: string, uz: string, ru: string, en: string) {
   return lang === "ru" ? ru : lang === "en" ? en : uz;
@@ -33,10 +34,47 @@ export default function AiTutor({
   const [messages, setMessages] = useState<TutorMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  // Which assistant message is currently being read aloud (index), and whether
+  // its audio is still being fetched. Only one plays at a time.
+  const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
+  const [loadingIdx, setLoadingIdx] = useState<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const scrollDown = () =>
     requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: 1e9, behavior: "smooth" }));
+
+  function stopAudio() {
+    audioRef.current?.pause();
+    audioRef.current = null;
+    setSpeakingIdx(null);
+    setLoadingIdx(null);
+  }
+
+  // Read a tutor reply aloud via ElevenLabs. Tapping again (or another message)
+  // stops the current playback first. On any TTS failure we just stay silent —
+  // the text is already on screen, so nothing is lost.
+  async function speak(text: string, idx: number) {
+    if (speakingIdx === idx || loadingIdx === idx) {
+      stopAudio();
+      return;
+    }
+    stopAudio();
+    setLoadingIdx(idx);
+    try {
+      const r = await speakText(text, lang);
+      const audio = new Audio(`data:audio/mpeg;base64,${r.audio_base64}`);
+      audioRef.current = audio;
+      audio.onended = () => setSpeakingIdx((cur) => (cur === idx ? null : cur));
+      audio.onerror = () => stopAudio();
+      await audio.play();
+      setSpeakingIdx(idx);
+    } catch {
+      // silent fallback — the explanation is still readable on screen
+    } finally {
+      setLoadingIdx((cur) => (cur === idx ? null : cur));
+    }
+  }
 
   async function explain() {
     if (loading || messages.length) return;
@@ -125,15 +163,34 @@ export default function AiTutor({
       <div ref={scrollRef} className="space-y-2 max-h-72 overflow-y-auto pr-1">
         {messages.map((m, i) => (
           <div key={i} className={m.role === "user" ? "flex justify-end" : ""}>
-            <p
-              className={`text-sm leading-relaxed whitespace-pre-line rounded-xl px-3 py-2 ${
-                m.role === "user"
-                  ? "bg-violet-600 text-white max-w-[85%]"
-                  : "text-neutral-700 dark:text-neutral-200"
-              }`}
-            >
-              {m.content}
-            </p>
+            {m.role === "assistant" ? (
+              <div className="flex items-start gap-1.5">
+                <button
+                  onClick={() => speak(m.content, i)}
+                  className="mt-0.5 shrink-0 text-violet-500 hover:text-violet-600 disabled:opacity-50"
+                  aria-label={
+                    speakingIdx === i
+                      ? tr(lang, "To'xtatish", "Остановить", "Stop")
+                      : tr(lang, "Ovoz bilan o'qish", "Озвучить", "Read aloud")
+                  }
+                >
+                  {loadingIdx === i ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : speakingIdx === i ? (
+                    <Square className="w-4 h-4 fill-current" />
+                  ) : (
+                    <Volume2 className="w-4 h-4" />
+                  )}
+                </button>
+                <p className="text-sm leading-relaxed whitespace-pre-line text-neutral-700 dark:text-neutral-200">
+                  {m.content}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm leading-relaxed whitespace-pre-line rounded-xl px-3 py-2 bg-violet-600 text-white max-w-[85%]">
+                {m.content}
+              </p>
+            )}
           </div>
         ))}
         {sending && (
