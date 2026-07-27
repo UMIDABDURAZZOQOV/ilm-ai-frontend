@@ -23,6 +23,7 @@ import {
   Trophy,
   TrendingUp,
   Mic,
+  Layers,
   Award,
   Share2,
   GraduationCap,
@@ -63,6 +64,7 @@ import LessonPath from "@/components/skills/LessonPath";
 import LevelTest from "@/components/skills/LevelTest";
 import PracticeSession from "@/components/skills/PracticeSession";
 import PronunciationPractice from "@/components/skills/PronunciationPractice";
+import Flashcards from "@/components/skills/Flashcards";
 import Leaderboard from "@/components/skills/Leaderboard";
 import Achievements from "@/components/skills/Achievements";
 import ShareCard from "@/components/skills/ShareCard";
@@ -105,6 +107,8 @@ type View =
   | "subjectExamPick"
   | "pronunciation"
   | "pronunciationPick"
+  | "flashcards"
+  | "flashcardsPick"
   | "leaderboard"
   | "achievements"
   | "share"
@@ -141,6 +145,7 @@ export default function SkillsDashboard({ user }: { user: User }) {
   const [marathonSubject, setMarathonSubject] = useState<SkillSubject | null>(null);
   const [examSubject, setExamSubject] = useState<SkillSubject | null>(null);
   const [pronSubject, setPronSubject] = useState<SkillSubject | null>(null);
+  const [flashSubject, setFlashSubject] = useState<SkillSubject | null>(null);
   const [examQ, setExamQ] = useState<SubjectExamQuestion[]>([]);
   const [examDuration, setExamDuration] = useState(0);
   const [examLoading, setExamLoading] = useState(false);
@@ -445,6 +450,46 @@ export default function SkillsDashboard({ user }: { user: User }) {
     );
   }
 
+  if (view === "flashcardsPick") {
+    return (
+      <div>
+        <button onClick={backHome} className="flex items-center gap-1.5 text-sm font-semibold text-neutral-500 hover:text-neutral-800 dark:hover:text-white mb-4">
+          <ChevronLeft className="w-4 h-4" />
+          {lang === "ru" ? "Назад" : lang === "en" ? "Back" : "Orqaga"}
+        </button>
+        <h2 className="text-lg font-extrabold mb-1">{lang === "ru" ? "Карточки" : lang === "en" ? "Flashcards" : "Flashcardlar"}</h2>
+        <p className="text-sm text-neutral-500 mb-4">
+          {lang === "ru" ? "Выбери предмет" : lang === "en" ? "Pick a subject" : "Fanni tanlang"}
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-w-2xl">
+          {subjects.map((s) => {
+            const Icon = SUBJECT_ICONS[s.slug] || BookOpen;
+            return (
+              <button key={s.id} onClick={() => { setFlashSubject(s); setView("flashcards"); }}
+                className="flex items-center gap-2 p-3 rounded-2xl border-2 border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-left">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${s.color}22` }}>
+                  <Icon className="w-4.5 h-4.5" style={{ color: s.color || "#58CC02" }} />
+                </div>
+                <span className="font-bold text-xs leading-tight">{nameFor(lang, s)}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (view === "flashcards" && flashSubject) {
+    return (
+      <Flashcards
+        userId={user.id}
+        subjectSlug={flashSubject.slug}
+        subjectName={nameFor(lang, flashSubject)}
+        onBack={backHome}
+      />
+    );
+  }
+
   if (view === "subjectExam") {
     if (examLoading) {
       return (
@@ -742,6 +787,13 @@ export default function SkillsDashboard({ user }: { user: User }) {
       sub: lang === "ru" ? "Говорите — ИИ оценит" : lang === "en" ? "Speak, AI scores it" : "Ayting — AI baholaydi",
     },
     {
+      id: "flashcards",
+      icon: Layers,
+      color: "#7950F2",
+      title: lang === "ru" ? "Карточки" : lang === "en" ? "Flashcards" : "Flashcardlar",
+      sub: lang === "ru" ? "Повтори понятия" : lang === "en" ? "Review the concepts" : "Tushunchalarni takrorlang",
+    },
+    {
       id: "referral",
       icon: Gift,
       color: "#F06595",
@@ -852,6 +904,7 @@ export default function SkillsDashboard({ user }: { user: User }) {
               else if (c.id === "marathon") setView("marathonPick");
               else if (c.id === "subjectExam") setView("subjectExamPick");
               else if (c.id === "pronunciation") setView("pronunciationPick");
+              else if (c.id === "flashcards") setView("flashcardsPick");
               else if (c.id === "mock") setView("mockPick");
               else if (c.id === "progress") router.push("/skills/progress");
               else setView(c.id);

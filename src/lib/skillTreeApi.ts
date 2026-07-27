@@ -158,6 +158,19 @@ export interface SubjectExamResult {
   weak_units: { title_uz: string; pct: number }[];
 }
 
+export interface Flashcard {
+  front: string;
+  back: string;
+  lesson: string;
+}
+
+export async function getFlashcards(
+  userId: number,
+  subjectSlug: string
+): Promise<{ cards: Flashcard[]; subject_name: string; total: number }> {
+  return apiFetch(`/skills/${userId}/flashcards?subject=${subjectSlug}`);
+}
+
 export interface PronunciationPhrase {
   text: string;
   uz: string;
