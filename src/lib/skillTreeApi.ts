@@ -158,6 +158,13 @@ export interface SubjectExamResult {
   weak_units: { title_uz: string; pct: number }[];
 }
 
+export async function getAdaptivePool(
+  userId: number,
+  subjectSlug: string
+): Promise<{ easy: PracticeQuestion[]; medium: PracticeQuestion[]; hard: PracticeQuestion[]; subject_name: string }> {
+  return apiFetch(`/skills/${userId}/adaptive?subject=${subjectSlug}`);
+}
+
 export async function getWrittenExam(
   userId: number,
   subjectSlug: string
