@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Mic, Send, Volume2, Trash2, Sparkles, Radio } from "lucide-react";
+import { Loader2, Mic, Send, Volume2, Trash2, Sparkles, Radio, FileText, ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { useI18n } from "@/hooks/useI18n";
 import {
   askAssistant,
@@ -9,9 +10,14 @@ import {
   getAssistantHistory,
   clearAssistantHistory,
   type AssistantMessage,
+  type AssistantAction,
 } from "@/lib/assistantApi";
 import LiveVoiceOverlay from "./LiveVoiceOverlay";
 import { MarkdownText } from "@/components/MarkdownText";
+
+// The chat carries a little more than the stored transcript: the companion may
+// attach an in-app action button and cite which uploaded materials it used.
+type ChatMessage = AssistantMessage & { action?: AssistantAction | null; sources?: string[] };
 
 interface User {
   id: number;
@@ -26,7 +32,7 @@ interface AssistantDashboardProps {
 
 export default function AssistantDashboard({ user, onNavigate }: AssistantDashboardProps) {
   const { t, lang } = useI18n();
-  const [messages, setMessages] = useState<AssistantMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [historyLoading, setHistoryLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -112,8 +118,8 @@ export default function AssistantDashboard({ user, onNavigate }: AssistantDashbo
     setMessages((prev) => [...prev, { role: "user", content: question }]);
     setSending(true);
     try {
-      const { answer } = await askAssistant(user.id, question, lang);
-      setMessages((prev) => [...prev, { role: "assistant", content: answer }]);
+      const { answer, action, sources } = await askAssistant(user.id, question, lang);
+      setMessages((prev) => [...prev, { role: "assistant", content: answer, action, sources }]);
     } catch (err: any) {
       if (err?.status === 403) {
         alert(t("assistant_limit_reached"));
@@ -200,6 +206,31 @@ export default function AssistantDashboard({ user, onNavigate }: AssistantDashbo
                   >
                     {msg.role === "user" ? msg.content : <MarkdownText>{msg.content}</MarkdownText>}
                   </div>
+
+                  {/* Materials the answer drew from (RAG). */}
+                  {msg.role === "assistant" && msg.sources && msg.sources.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {msg.sources.map((s) => (
+                        <span
+                          key={s}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-full px-2 py-0.5"
+                        >
+                          <FileText className="h-3 w-3" /> {s}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Suggested in-app next step (routing/action). */}
+                  {msg.role === "assistant" && msg.action && (
+                    <Link
+                      href={msg.action.href}
+                      className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 text-xs font-bold transition-colors"
+                    >
+                      {msg.action.label} <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  )}
+
                   {msg.role === "assistant" && (
                     <button
                       onClick={() => handleListenClick(i, msg.content)}

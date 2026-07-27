@@ -157,6 +157,14 @@ function DashboardContent() {
   const router = useRouter();
   const [activePanel, setActivePanel] = useState("overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // Deep-link a panel via ?panel=… so the AI companion (and any other link) can
+  // send the learner straight to Quiz / Materials / Flashcards / Review / Gaps.
+  useEffect(() => {
+    const panel = new URLSearchParams(window.location.search).get("panel");
+    const allowed = ["overview", "quiz", "files", "flashcards", "chat", "assistant", "plans", "gaps", "review", "telegram", "settings", "subscription"];
+    if (panel && allowed.includes(panel)) setActivePanel(panel);
+  }, []);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [platformMenuOpen, setPlatformMenuOpen] = useState(false);
 

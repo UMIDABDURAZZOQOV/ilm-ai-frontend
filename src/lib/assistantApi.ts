@@ -11,8 +11,17 @@ export interface AssistantHistoryResponse {
   history: AssistantMessage[];
 }
 
+export interface AssistantAction {
+  label: string;
+  href: string;
+}
+
 export interface AssistantAskResponse {
   answer: string;
+  /** Optional in-app next step the companion suggests. */
+  action?: AssistantAction | null;
+  /** Filenames of the learner's uploaded materials the answer drew from. */
+  sources?: string[];
 }
 
 export interface AssistantSpeakResponse {
@@ -61,4 +70,13 @@ export async function getAssistantHistory(userId: number): Promise<AssistantHist
  */
 export async function clearAssistantHistory(userId: number): Promise<{ message: string }> {
   return apiFetch(`/assistant/history/${userId}`, { method: "DELETE" });
+}
+
+/** What the companion has remembered about the learner (durable facts). */
+export async function getAssistantMemory(userId: number): Promise<{ memories: string[] }> {
+  return apiFetch(`/assistant/memory/${userId}`);
+}
+
+export async function clearAssistantMemory(userId: number): Promise<{ message: string }> {
+  return apiFetch(`/assistant/memory/${userId}`, { method: "DELETE" });
 }
