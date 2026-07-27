@@ -27,6 +27,7 @@ import {
   PenLine,
   Gauge,
   Headphones,
+  Camera,
   Award,
   Share2,
   GraduationCap,
@@ -74,6 +75,7 @@ import WrittenExam from "@/components/skills/WrittenExam";
 import AdaptivePractice from "@/components/skills/AdaptivePractice";
 import Dictation from "@/components/skills/Dictation";
 import Leaderboard from "@/components/skills/Leaderboard";
+import PhotoAnswer from "@/components/skills/PhotoAnswer";
 import Achievements from "@/components/skills/Achievements";
 import ShareCard from "@/components/skills/ShareCard";
 import Referral from "@/components/skills/Referral";
@@ -125,6 +127,7 @@ type View =
   | "dictation"
   | "dictationPick"
   | "leaderboard"
+  | "photo"
   | "achievements"
   | "share"
   | "referral"
@@ -298,6 +301,7 @@ export default function SkillsDashboard({ user }: { user: User }) {
   // ── Sub-views ──────────────────────────────────────────────────────────────
 
   if (view === "leaderboard") return <Leaderboard lang={lang} userId={user.id} onBack={backHome} />;
+  if (view === "photo") return <PhotoAnswer lang={lang} onBack={backHome} />;
   if (view === "achievements") return <Achievements lang={lang} userId={user.id} onBack={backHome} />;
   if (view === "share") return <ShareCard lang={lang} userName={user.name} summary={summary} onBack={backHome} />;
   if (view === "referral") return <Referral lang={lang} userId={user.id} onBack={backHome} />;
@@ -893,6 +897,13 @@ export default function SkillsDashboard({ user }: { user: User }) {
       color: "#12B886",
       title: lang === "ru" ? "Пробный экзамен" : lang === "en" ? "Mock exam" : "Sinov imtihoni",
       sub: lang === "ru" ? "Оценка + прогноз балла" : lang === "en" ? "Grade + score prediction" : "Baho + ball bashorati",
+    },
+    {
+      id: "photo",
+      icon: Camera,
+      color: "#F43F5E",
+      title: lang === "ru" ? "Ответ по фото" : lang === "en" ? "Photo answer" : "Rasm orqali javob",
+      sub: lang === "ru" ? "Сфотографируйте и проверьте" : lang === "en" ? "Snap a handwritten answer" : "Qo'lda yozganni suratga oling",
     },
     {
       id: "classes",

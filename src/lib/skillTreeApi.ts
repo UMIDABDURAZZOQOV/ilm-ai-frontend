@@ -710,6 +710,30 @@ export async function tutorChat(data: {
   return apiFetch("/skills/tutor/chat", { method: "POST", body: JSON.stringify(data) });
 }
 
+export interface PhotoCheckResult {
+  correct: boolean;
+  score: number | null;
+  transcript: string;
+  feedback: string;
+}
+
+/**
+ * Read a photo of the learner's handwritten answer (any subject) and evaluate it.
+ * Optional questionText: with it the answer is judged against the question; without
+ * it the writing is assessed on its own.
+ */
+export async function photoCheckAnswer(data: {
+  questionText: string;
+  lang: string;
+  image: Blob;
+}): Promise<PhotoCheckResult> {
+  const form = new FormData();
+  form.append("question_text", data.questionText);
+  form.append("lang", data.lang);
+  form.append("image", data.image, "answer.jpg");
+  return apiFetch("/skills/tutor/photo-check", { method: "POST", body: form });
+}
+
 export interface VoiceCheckResult {
   understood: boolean;
   transcript: string;
