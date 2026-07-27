@@ -41,6 +41,7 @@ import {
   getSkillTree,
   getGamificationSummary,
   getMistakes,
+  getMixedReview,
   completeMistakes,
   getDailyChallenge,
   completeDailyChallenge,
@@ -106,6 +107,7 @@ type View =
   | "path"
   | "daily"
   | "mistakes"
+  | "mixed"
   | "lightning"
   | "marathon"
   | "marathonPick"
@@ -212,7 +214,7 @@ export default function SkillsDashboard({ user }: { user: User }) {
     router.push(`/skills/session/${lesson.id}?subject=${selected?.slug ?? ""}`);
   }
 
-  async function openPractice(target: "daily" | "mistakes" | "lightning") {
+  async function openPractice(target: "daily" | "mistakes" | "lightning" | "mixed") {
     setPracticeLoading(true);
     setView(target);
     try {
@@ -222,6 +224,9 @@ export default function SkillsDashboard({ user }: { user: User }) {
         setDailyDone(d.completed);
       } else if (target === "mistakes") {
         const d = await getMistakes(user.id);
+        setPracticeQuestions(d.questions);
+      } else if (target === "mixed") {
+        const d = await getMixedReview(user.id);
         setPracticeQuestions(d.questions);
       } else {
         const d = await getLightningRound(user.id);
@@ -660,7 +665,7 @@ export default function SkillsDashboard({ user }: { user: User }) {
     );
   }
 
-  if (view === "daily" || view === "mistakes" || view === "lightning") {
+  if (view === "daily" || view === "mistakes" || view === "lightning" || view === "mixed") {
     if (practiceLoading) {
       return (
         <div className="flex justify-center py-20">
@@ -688,8 +693,9 @@ export default function SkillsDashboard({ user }: { user: User }) {
       daily: lang === "ru" ? "Ежедневный вызов" : lang === "en" ? "Daily challenge" : "Kunlik sinov",
       mistakes: lang === "ru" ? "Работа над ошибками" : lang === "en" ? "Mistakes practice" : "Xatolar ustida ishlash",
       lightning: lang === "ru" ? "Молниеносный раунд" : lang === "en" ? "Lightning round" : "Tezlik raundi",
+      mixed: lang === "ru" ? "Смешанный день" : lang === "en" ? "Daily mix" : "Kunlik aralash",
     };
-    const accents = { daily: "#58CC02", mistakes: "#FF4B4B", lightning: "#FFC800" };
+    const accents = { daily: "#58CC02", mistakes: "#FF4B4B", lightning: "#FFC800", mixed: "#20C997" };
     return (
       <PracticeSession
         lang={lang}
@@ -858,6 +864,13 @@ export default function SkillsDashboard({ user }: { user: User }) {
       color: "#FF4B4B",
       title: lang === "ru" ? "Повторение ошибок" : lang === "en" ? "Review mistakes" : "Xatolarni takrorlash",
       sub: lang === "ru" ? "Интервальное повторение" : lang === "en" ? "Spaced repetition" : "Muddati kelgan takror",
+    },
+    {
+      id: "mixed",
+      icon: Layers,
+      color: "#20C997",
+      title: lang === "ru" ? "Смешанный день" : lang === "en" ? "Daily mix" : "Kunlik aralash",
+      sub: lang === "ru" ? "15 вопросов из всех предметов" : lang === "en" ? "15 questions across subjects" : "15 savol — barcha fanlardan",
     },
     {
       id: "lightning",
@@ -1057,7 +1070,7 @@ export default function SkillsDashboard({ user }: { user: User }) {
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
             onClick={() => {
-              if (c.id === "daily" || c.id === "mistakes" || c.id === "lightning") openPractice(c.id);
+              if (c.id === "daily" || c.id === "mistakes" || c.id === "lightning" || c.id === "mixed") openPractice(c.id);
               else if (c.id === "marathon") setView("marathonPick");
               else if (c.id === "subjectExam") setView("subjectExamPick");
               else if (c.id === "pronunciation") setView("pronunciationPick");

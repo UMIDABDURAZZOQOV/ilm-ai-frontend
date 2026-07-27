@@ -665,6 +665,12 @@ export async function explainQuestion(data: {
   return apiFetch("/skills/tutor/explain", { method: "POST", body: JSON.stringify(data) });
 }
 
+export async function getMixedReview(
+  userId: number
+): Promise<{ questions: PracticeQuestion[]; due_count: number }> {
+  return apiFetch(`/skills/${userId}/mixed-review`);
+}
+
 export interface TutorMessage {
   role: "user" | "assistant";
   content: string;
