@@ -665,6 +665,21 @@ export async function explainQuestion(data: {
   return apiFetch("/skills/tutor/explain", { method: "POST", body: JSON.stringify(data) });
 }
 
+export interface TutorMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export async function tutorChat(data: {
+  question_text: string;
+  options?: string[] | null;
+  correct_answer: string;
+  messages: TutorMessage[];
+  lang: string;
+}): Promise<{ reply: string }> {
+  return apiFetch("/skills/tutor/chat", { method: "POST", body: JSON.stringify(data) });
+}
+
 // ─── Placement test ─────────────────────────────────────────────────────────
 // Offered when opening a subject, so the learner knows where they stand before
 // starting the path. Languages are placed on CEFR, the other subjects on the
