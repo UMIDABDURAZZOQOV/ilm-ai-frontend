@@ -26,6 +26,7 @@ import {
   Layers,
   PenLine,
   Gauge,
+  Headphones,
   Award,
   Share2,
   GraduationCap,
@@ -69,6 +70,7 @@ import PronunciationPractice from "@/components/skills/PronunciationPractice";
 import Flashcards from "@/components/skills/Flashcards";
 import WrittenExam from "@/components/skills/WrittenExam";
 import AdaptivePractice from "@/components/skills/AdaptivePractice";
+import Dictation from "@/components/skills/Dictation";
 import Leaderboard from "@/components/skills/Leaderboard";
 import Achievements from "@/components/skills/Achievements";
 import ShareCard from "@/components/skills/ShareCard";
@@ -117,6 +119,8 @@ type View =
   | "writtenExamPick"
   | "adaptive"
   | "adaptivePick"
+  | "dictation"
+  | "dictationPick"
   | "leaderboard"
   | "achievements"
   | "share"
@@ -156,6 +160,7 @@ export default function SkillsDashboard({ user }: { user: User }) {
   const [flashSubject, setFlashSubject] = useState<SkillSubject | null>(null);
   const [writtenSubject, setWrittenSubject] = useState<SkillSubject | null>(null);
   const [adaptiveSubject, setAdaptiveSubject] = useState<SkillSubject | null>(null);
+  const [dictSubject, setDictSubject] = useState<SkillSubject | null>(null);
   const [examQ, setExamQ] = useState<SubjectExamQuestion[]>([]);
   const [examDuration, setExamDuration] = useState(0);
   const [examLoading, setExamLoading] = useState(false);
@@ -580,6 +585,47 @@ export default function SkillsDashboard({ user }: { user: User }) {
     );
   }
 
+  if (view === "dictationPick") {
+    const langSubjects = subjects.filter((s) => ["ingliz_tili", "koreys_tili", "fransuz_tili"].includes(s.slug));
+    return (
+      <div>
+        <button onClick={backHome} className="flex items-center gap-1.5 text-sm font-semibold text-neutral-500 hover:text-neutral-800 dark:hover:text-white mb-4">
+          <ChevronLeft className="w-4 h-4" />
+          {lang === "ru" ? "Назад" : lang === "en" ? "Back" : "Orqaga"}
+        </button>
+        <h2 className="text-lg font-extrabold mb-1">{lang === "ru" ? "Диктант" : lang === "en" ? "Dictation" : "Diktant"}</h2>
+        <p className="text-sm text-neutral-500 mb-4">
+          {lang === "ru" ? "Выбери язык" : lang === "en" ? "Pick a language" : "Tilni tanlang"}
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-xl">
+          {langSubjects.map((s) => {
+            const Icon = SUBJECT_ICONS[s.slug] || BookOpen;
+            return (
+              <button key={s.id} onClick={() => { setDictSubject(s); setView("dictation"); }}
+                className="flex items-center gap-2 p-3 rounded-2xl border-2 border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-left">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${s.color}22` }}>
+                  <Icon className="w-4.5 h-4.5" style={{ color: s.color || "#58CC02" }} />
+                </div>
+                <span className="font-bold text-sm leading-tight">{nameFor(lang, s)}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (view === "dictation" && dictSubject) {
+    return (
+      <Dictation
+        userId={user.id}
+        subjectSlug={dictSubject.slug}
+        subjectName={nameFor(lang, dictSubject)}
+        onBack={backHome}
+      />
+    );
+  }
+
   if (view === "subjectExam") {
     if (examLoading) {
       return (
@@ -898,6 +944,13 @@ export default function SkillsDashboard({ user }: { user: User }) {
       sub: lang === "ru" ? "Сложность под вас" : lang === "en" ? "Difficulty follows you" : "Qiyinlik sizga moslashadi",
     },
     {
+      id: "dictation",
+      icon: Headphones,
+      color: "#15AABF",
+      title: lang === "ru" ? "Диктант" : lang === "en" ? "Dictation" : "Diktant",
+      sub: lang === "ru" ? "Слушай и пиши" : lang === "en" ? "Listen and type" : "Eshiting va yozing",
+    },
+    {
       id: "referral",
       icon: Gift,
       color: "#F06595",
@@ -1011,6 +1064,7 @@ export default function SkillsDashboard({ user }: { user: User }) {
               else if (c.id === "flashcards") setView("flashcardsPick");
               else if (c.id === "writtenExam") setView("writtenExamPick");
               else if (c.id === "adaptive") setView("adaptivePick");
+              else if (c.id === "dictation") setView("dictationPick");
               else if (c.id === "mock") setView("mockPick");
               else if (c.id === "progress") router.push("/skills/progress");
               else setView(c.id);
