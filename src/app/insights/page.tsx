@@ -10,6 +10,7 @@ import { useI18n } from "@/hooks/useI18n";
 import ThemeToggle from "@/components/ThemeToggle";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { getInsights, type Insights } from "@/lib/insightsApi";
 
 function tr(lang: string, uz: string, ru: string, en: string) {
@@ -84,7 +85,13 @@ export default function InsightsPage() {
         </p>
 
         {loading ? (
-          <div className="flex justify-center py-20"><Loader2 className="w-7 h-7 animate-spin text-neutral-400" /></div>
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-3">
+              {[0, 1, 2].map((i) => <Skeleton key={i} className="h-20 rounded-2xl" />)}
+            </div>
+            <Skeleton className="h-24 rounded-2xl" />
+            <Skeleton className="h-32 rounded-2xl" />
+          </div>
         ) : !data || !data.has_data ? (
           <div className="rounded-3xl border-2 border-dashed border-neutral-300 dark:border-neutral-700 p-8 text-center">
             <p className="text-sm text-neutral-500">{tr(lang, "Hali ma'lumot yo'q — material yuklab, viktorina yeching.", "Пока нет данных — загрузите материал и пройдите тест.", "No data yet — upload material and take a quiz.")}</p>

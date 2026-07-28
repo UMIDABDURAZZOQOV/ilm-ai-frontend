@@ -1005,27 +1005,35 @@ function DashboardContent() {
                 className="space-y-6 mt-4"
               >
                 {/* Hero greeting strip */}
-                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 p-6 sm:p-7 text-white shadow-xl shadow-slate-900/10">
-                  <div className="absolute -right-10 -top-10 h-44 w-44 rounded-full bg-primary/30 blur-3xl" />
-                  <div className="absolute -bottom-16 left-1/3 h-40 w-40 rounded-full bg-secondary/20 blur-3xl" />
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+                  className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 p-6 sm:p-7 text-white shadow-xl shadow-slate-900/10"
+                >
+                  <motion.div className="absolute -right-10 -top-10 h-44 w-44 rounded-full bg-primary/30 blur-3xl" animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0.8, 0.5] }} transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }} />
+                  <motion.div className="absolute -bottom-16 left-1/3 h-40 w-40 rounded-full bg-secondary/20 blur-3xl" animate={{ scale: [1, 1.2, 1], x: [0, 30, 0] }} transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }} />
                   <div className="relative flex flex-wrap items-center justify-between gap-4">
                     <div>
                       <p className="text-sm text-slate-400 font-medium">
-                        {lang === "uz" ? "Xush kelibsiz" : lang === "ru" ? "Добро пожаловать" : "Welcome back"}
+                        {(() => {
+                          const h = new Date().getHours();
+                          if (h < 12) return lang === "ru" ? "Доброе утро" : lang === "en" ? "Good morning" : "Xayrli tong";
+                          if (h < 18) return lang === "ru" ? "Добрый день" : lang === "en" ? "Good afternoon" : "Xayrli kun";
+                          return lang === "ru" ? "Добрый вечер" : lang === "en" ? "Good evening" : "Xayrli kech";
+                        })()}
                       </p>
                       <h3 className="text-2xl font-bold mt-0.5">{user?.name?.split(" ")[0] || t("brand")} 👋</h3>
                     </div>
                     {stats.streak > 0 && (
-                      <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-2xl px-4 py-2.5 border border-white/10">
-                        <span className="text-xl">🔥</span>
+                      <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-2xl px-4 py-2.5 border border-white/10">
+                        <motion.span className="text-xl" animate={{ rotate: [0, -12, 12, 0] }} transition={{ duration: 1.6, repeat: Infinity, repeatDelay: 2 }}>🔥</motion.span>
                         <div>
                           <p className="text-lg font-bold leading-none">{stats.streak} {t("days_suffix")}</p>
                           <p className="text-[11px] text-slate-400 leading-none mt-1">{t("streak_label")}</p>
                         </div>
-                      </div>
+                      </motion.div>
                     )}
                   </div>
-                </div>
+                </motion.div>
 
                 {/* New: build a course or open the Studio, straight from your materials */}
                 <div className="grid sm:grid-cols-2 gap-4">

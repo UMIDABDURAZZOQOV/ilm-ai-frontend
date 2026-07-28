@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Mic, Send, Volume2, Trash2, Sparkles, Radio, FileText, ArrowRight, ImagePlus, X, Layers, Baby, Brain } from "lucide-react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { useI18n } from "@/hooks/useI18n";
 import { rephraseAnswer } from "@/lib/assistantApi";
 import { textFlashcards, type Flashcard } from "@/lib/studioApi";
@@ -324,7 +325,13 @@ export default function AssistantDashboard({ user, onNavigate }: AssistantDashbo
             </div>
           ) : (
             messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              >
                 <div className={`group max-w-[80%] flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
                   <div
                     className={`px-4 py-2.5 rounded-2xl text-sm ${
@@ -440,7 +447,7 @@ export default function AssistantDashboard({ user, onNavigate }: AssistantDashbo
                     </div>
                   )}
                 </div>
-              </div>
+              </motion.div>
             ))
           )}
           {sending && (

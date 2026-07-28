@@ -10,6 +10,7 @@ import { useI18n } from "@/hooks/useI18n";
 import ThemeToggle from "@/components/ThemeToggle";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import Celebration from "@/components/ui/Celebration";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { listDecks, getDueCards, reviewDeck, deleteDeck, type DeckSummary, type DueCard } from "@/lib/deckApi";
 
 function tr(lang: string, uz: string, ru: string, en: string) {
@@ -143,7 +144,9 @@ export default function DecksPage() {
         <p className="text-sm text-neutral-500 mb-6">{tr(lang, "Saqlangan to'plamlarni takrorlash bilan yodlang — muddati kelganlari birinchi.", "Учите сохранённые колоды с интервальным повторением.", "Learn your saved decks with spaced repetition — due cards first.")}</p>
 
         {decks === null ? (
-          <div className="flex justify-center py-16"><Loader2 className="w-7 h-7 animate-spin text-neutral-400" /></div>
+          <div className="space-y-2">
+            {[0, 1, 2].map((i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}
+          </div>
         ) : decks.length === 0 ? (
           <div className="rounded-3xl border-2 border-dashed border-neutral-300 dark:border-neutral-700 p-8 text-center">
             <p className="text-sm text-neutral-500">{tr(lang, "Hali to'plam yo'q. Studio yoki companion flashcardlarini 'To'plamga saqlash' bilan qo'shing.", "Пока нет колод. Сохраните карточки из Studio.", "No decks yet. Save flashcards from Studio or the companion.")}</p>

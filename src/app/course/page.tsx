@@ -11,6 +11,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import PracticeSession from "@/components/skills/PracticeSession";
 import ShareButton from "@/components/ui/ShareButton";
+import { Skeleton } from "@/components/ui/Skeleton";
 import {
   getCourse,
   generateCourse,
@@ -171,7 +172,15 @@ export default function CoursePage() {
         </p>
 
         {loading ? (
-          <div className="flex justify-center py-20"><Loader2 className="w-7 h-7 animate-spin text-neutral-400" /></div>
+          <div className="space-y-4">
+            <Skeleton className="h-7 w-1/2 rounded-lg" />
+            {[0, 1].map((ci) => (
+              <div key={ci} className="space-y-2">
+                <Skeleton className="h-4 w-1/3 rounded" />
+                {[0, 1].map((li) => <Skeleton key={li} className="h-16 rounded-2xl ml-4" />)}
+              </div>
+            ))}
+          </div>
         ) : !course ? (
           <div className="rounded-3xl border-2 border-dashed border-neutral-300 dark:border-neutral-700 p-8 text-center">
             <Sparkles className="w-10 h-10 text-violet-500 mx-auto mb-3" />
