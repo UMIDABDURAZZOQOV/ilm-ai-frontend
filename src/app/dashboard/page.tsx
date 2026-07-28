@@ -55,6 +55,7 @@ import ReviewDashboard from "./review/ReviewDashboard";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import ThemeToggle from "@/components/ThemeToggle";
 import DailyTip from "@/components/ui/DailyTip";
+import OnboardingTour from "@/components/ui/OnboardingTour";
 
 const PRESET_AVATARS = [
   "/avatars/avatar-1.svg",
@@ -806,6 +807,7 @@ function DashboardContent() {
 
   return (
     <div className="flex h-screen bg-transparent overflow-hidden text-slate-900 dark:text-slate-100 relative z-10">
+      <OnboardingTour lang={lang} />
       {/* Mobile backdrop — tap to close the drawer */}
       {isMobileMenuOpen && (
         <div
