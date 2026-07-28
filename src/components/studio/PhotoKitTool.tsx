@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Camera, Loader2, RotateCcw, ChevronRight } from "lucide-react";
 import { photoKit, type PhotoKit } from "@/lib/studioApi";
+import SaveDeckButton from "@/components/ui/SaveDeckButton";
 import PracticeSession from "@/components/skills/PracticeSession";
 import type { PracticeResultItem } from "@/lib/skillTreeApi";
 
@@ -115,7 +116,10 @@ export default function PhotoKitTool({ lang, userId }: { lang: string; userId: n
 
           {kit.flashcards.length > 0 && (
             <div>
-              <h3 className="font-extrabold text-sm mb-2">{tr(lang, "Flashcardlar", "Карточки", "Flashcards")} ({kit.flashcards.length})</h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-extrabold text-sm">{tr(lang, "Flashcardlar", "Карточки", "Flashcards")} ({kit.flashcards.length})</h3>
+                <SaveDeckButton userId={userId} title={kit.title || tr(lang, "Rasmdan to'plam", "Из фото", "Photo kit")} cards={kit.flashcards} lang={lang} />
+              </div>
               <div className="space-y-2">
                 {kit.flashcards.map((c, i) => (
                   <button

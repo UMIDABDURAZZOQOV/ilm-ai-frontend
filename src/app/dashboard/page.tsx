@@ -954,6 +954,7 @@ function DashboardContent() {
                       { href: "/studio", label: "Ilm AI Studio", sub: "Rasm, audio, xarita, shpargalka", icon: Sparkles, color: "text-rose-600" },
                       { href: "/focus", label: "Fokus rejimi", sub: "Pomodoro + tanaffus viktorinasi", icon: Sparkles, color: "text-indigo-600" },
                       { href: "/insights", label: "O'rganish tahlili", sub: "Qamrov, natijalar, mavzular", icon: Sparkles, color: "text-cyan-600" },
+                      { href: "/decks", label: "Flashcard to'plamlari", sub: "Takrorlash bilan yodlash (SRS)", icon: Sparkles, color: "text-violet-600" },
                     ].map((p) => (
                       <Link
                         key={p.href}

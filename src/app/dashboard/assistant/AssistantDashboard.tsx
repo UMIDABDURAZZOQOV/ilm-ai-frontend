@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useI18n } from "@/hooks/useI18n";
 import { rephraseAnswer } from "@/lib/assistantApi";
 import { textFlashcards, type Flashcard } from "@/lib/studioApi";
+import SaveDeckButton from "@/components/ui/SaveDeckButton";
 import {
   askAssistant,
   askAssistantImage,
@@ -433,6 +434,9 @@ export default function AssistantDashboard({ user, onNavigate }: AssistantDashbo
                           </button>
                         );
                       })}
+                      <div className="pt-1">
+                        <SaveDeckButton userId={user.id} title={lang === "ru" ? "Из чата" : lang === "en" ? "From chat" : "Suhbatdan"} cards={cardsByMsg[i]} lang={lang} />
+                      </div>
                     </div>
                   )}
                 </div>

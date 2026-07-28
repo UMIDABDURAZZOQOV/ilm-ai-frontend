@@ -27,6 +27,7 @@ const COMMANDS: Cmd[] = [
   { label: "Daftaringizni qidirish", href: "/studio", icon: Search, group: "Studio", keywords: "search qidiruv" },
   { label: "Materiallarim", href: "/studio", icon: FolderOpen, group: "Studio", keywords: "documents hujjat" },
   { label: "Fokus rejimi", href: "/focus", icon: Timer, group: "Ilm AI", keywords: "pomodoro focus taymer" },
+  { label: "Flashcard to'plamlari", href: "/decks", icon: BookOpen, group: "Ilm AI", keywords: "decks flashcards srs takrorlash" },
   { label: "O'rganish tahlili", href: "/insights", icon: BarChart3, group: "Ilm AI", keywords: "insights analytics tahlil" },
   { label: "Fanlar", href: "/skills", icon: Trophy, group: "O'quv", keywords: "skills milliy sertifikat ona tili tarix" },
   { label: "Liga", href: "/skills", icon: Trophy, group: "O'quv", keywords: "league leaderboard reyting" },
