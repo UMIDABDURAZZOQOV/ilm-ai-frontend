@@ -140,6 +140,22 @@ export async function cheatSheet(
   });
 }
 
+export interface PodcastLine {
+  speaker: "A" | "B";
+  text: string;
+}
+
+export async function generatePodcast(
+  userId: number,
+  language: string,
+  filename?: string
+): Promise<{ title: string; script: PodcastLine[]; sources: string[] }> {
+  return apiFetch("/studio/podcast", {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId, language, filename: filename ?? null }),
+  });
+}
+
 export async function generateDiagram(data: {
   userId: number;
   topic: string;

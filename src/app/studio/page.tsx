@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Camera, Headphones, Network, ScrollText, ClipboardList, Sparkles, Languages, NotebookPen, FolderOpen, Search } from "lucide-react";
+import { ArrowLeft, Loader2, Camera, Headphones, Network, ScrollText, ClipboardList, Sparkles, Languages, NotebookPen, FolderOpen, Search, Mic } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/hooks/useI18n";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -19,12 +19,13 @@ import NotesTool from "@/components/studio/NotesTool";
 import DocsTool from "@/components/studio/DocsTool";
 import SearchTool from "@/components/studio/SearchTool";
 import DiagramTool from "@/components/studio/DiagramTool";
+import PodcastTool from "@/components/studio/PodcastTool";
 
 function tr(lang: string, uz: string, ru: string, en: string) {
   return lang === "ru" ? ru : lang === "en" ? en : uz;
 }
 
-type Tool = "photo" | "audio" | "map" | "cheat" | "mock" | "translate" | "notes" | "docs" | "search" | "diagram";
+type Tool = "photo" | "audio" | "map" | "cheat" | "mock" | "translate" | "notes" | "docs" | "search" | "diagram" | "podcast";
 
 export default function StudioPage() {
   const { user, isLoading } = useAuth();
@@ -51,6 +52,13 @@ export default function StudioPage() {
       color: "#F43F5E",
       title: tr(lang, "Rasmdan to'plam", "Набор из фото", "Photo study kit"),
       sub: tr(lang, "Sahifa surati → konspekt + flashcard + viktorina", "Фото → конспект + карточки + тест", "Page photo → summary + flashcards + quiz"),
+    },
+    {
+      id: "podcast",
+      icon: Mic,
+      color: "#D946EF",
+      title: tr(lang, "AI podkast", "AI-подкаст", "AI podcast"),
+      sub: tr(lang, "Ikki suhbatdosh ovozli podkast", "Подкаст с двумя ведущими", "Two-host audio podcast"),
     },
     {
       id: "audio",
@@ -193,6 +201,7 @@ export default function StudioPage() {
         {tool === "translate" && <TranslateTool lang={lang} userId={user.id} />}
         {tool === "notes" && <NotesTool lang={lang} userId={user.id} />}
         {tool === "diagram" && <DiagramTool lang={lang} userId={user.id} />}
+        {tool === "podcast" && <PodcastTool lang={lang} userId={user.id} />}
         {tool === "search" && <SearchTool lang={lang} userId={user.id} />}
         {tool === "docs" && <DocsTool lang={lang} userId={user.id} />}
       </div>
