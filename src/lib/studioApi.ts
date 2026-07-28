@@ -46,6 +46,13 @@ export interface StudyDocument {
   topic: string;
 }
 
+export async function importUrl(userId: number, url: string): Promise<{ filename: string; chunks: number }> {
+  return apiFetch("/files/import-url", {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId, url }),
+  });
+}
+
 export async function listDocuments(userId: number): Promise<{ documents: StudyDocument[] }> {
   return apiFetch(`/files/documents/${userId}`);
 }
