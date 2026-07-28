@@ -58,6 +58,7 @@ import DailyTip from "@/components/ui/DailyTip";
 import OnboardingTour from "@/components/ui/OnboardingTour";
 import GamifyCard from "@/components/ui/GamifyCard";
 import ResumeCard from "@/components/ui/ResumeCard";
+import ReminderSettings from "@/components/ui/ReminderSettings";
 
 const PRESET_AVATARS = [
   "/avatars/avatar-1.svg",
@@ -2373,6 +2374,9 @@ function DashboardContent() {
                 exit={{ opacity: 0, y: -10 }}
                 className="max-w-2xl space-y-6 mt-4"
               >
+                {/* Daily study reminder */}
+                {user && <ReminderSettings userId={user.id} lang={lang} />}
+
                 {/* Profile: name + avatar */}
                 <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                   <div className="flex items-center gap-4 mb-6">
