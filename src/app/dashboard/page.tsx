@@ -1018,6 +1018,26 @@ function DashboardContent() {
                   </div>
                 </div>
 
+                {/* New: build a course or open the Studio, straight from your materials */}
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <Link href="/course" className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 to-indigo-600 p-5 text-white shadow-lg">
+                    <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+                    <div className="relative">
+                      <Sparkles className="h-6 w-6 mb-2" />
+                      <p className="font-bold text-lg leading-tight">{lang === "ru" ? "Курс из материалов" : lang === "en" ? "Course from materials" : "Materialdan kurs"}</p>
+                      <p className="text-sm text-white/80 mt-0.5">{lang === "ru" ? "Ilm AI построит курс из ваших PDF" : lang === "en" ? "Ilm AI builds a course from your PDFs" : "Ilm AI yuklagan PDF'dan kurs yasaydi"}</p>
+                    </div>
+                  </Link>
+                  <Link href="/studio" className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-rose-500 to-pink-600 p-5 text-white shadow-lg">
+                    <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+                    <div className="relative">
+                      <Sparkles className="h-6 w-6 mb-2" />
+                      <p className="font-bold text-lg leading-tight">Ilm AI Studio</p>
+                      <p className="text-sm text-white/80 mt-0.5">{lang === "ru" ? "Фото, аудио, карта, шпаргалка, тест" : lang === "en" ? "Photo, audio, map, cheat sheet, mock" : "Rasm, audio, xarita, shpargalka, sinov"}</p>
+                    </div>
+                  </Link>
+                </div>
+
                 {/* Top Stats Grid */}
                 <div className="grid sm:grid-cols-3 lg:grid-cols-6 gap-4">
                   {[
