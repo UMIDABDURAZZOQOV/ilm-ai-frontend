@@ -99,6 +99,17 @@ export async function cheatSheet(
   });
 }
 
+export async function translateExplain(
+  userId: number,
+  language: string,
+  filename?: string
+): Promise<{ markdown: string; sources: string[] }> {
+  return apiFetch("/studio/translate", {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId, language, filename: filename ?? null }),
+  });
+}
+
 export async function mockFromMaterials(
   userId: number,
   language: string,
