@@ -27,6 +27,19 @@ export async function getStudioFiles(userId: number): Promise<{ files: string[] 
   return apiFetch(`/studio/files/${userId}`);
 }
 
+export interface SearchHit {
+  filename: string;
+  text: string;
+  score: number;
+}
+
+export async function searchMaterials(userId: number, query: string): Promise<{ results: SearchHit[]; no_materials?: boolean }> {
+  return apiFetch("/studio/search", {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId, query }),
+  });
+}
+
 export interface StudyDocument {
   filename: string;
   chunks: number;
