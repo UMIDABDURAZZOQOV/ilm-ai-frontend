@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Mic, Send, Volume2, Trash2, Sparkles, Radio, FileText, ArrowRight, ImagePlus, X, Layers } from "lucide-react";
+import { Loader2, Mic, Send, Volume2, Trash2, Sparkles, Radio, FileText, ArrowRight, ImagePlus, X, Layers, Baby, Brain } from "lucide-react";
 import Link from "next/link";
 import { useI18n } from "@/hooks/useI18n";
+import { rephraseAnswer } from "@/lib/assistantApi";
 import { textFlashcards, type Flashcard } from "@/lib/studioApi";
 import {
   askAssistant,
@@ -193,6 +194,21 @@ export default function AssistantDashboard({ user, onNavigate }: AssistantDashbo
     }
   }
 
+  const [rephraseLoading, setRephraseLoading] = useState<string | null>(null);
+  async function rephrase(i: number, content: string, mode: "simpler" | "deeper") {
+    const key = `${i}-${mode}`;
+    if (rephraseLoading !== null) return;
+    setRephraseLoading(key);
+    try {
+      const { answer } = await rephraseAnswer(user.id, content, mode, lang);
+      setMessages((prev) => [...prev, { role: "assistant", content: answer }]);
+    } catch {
+      /* silent — original answer stays */
+    } finally {
+      setRephraseLoading(null);
+    }
+  }
+
   async function makeFlashcards(i: number, content: string) {
     if (cardsLoading !== null) return;
     setCardsLoading(i);
@@ -378,6 +394,22 @@ export default function AssistantDashboard({ user, onNavigate }: AssistantDashbo
                           {lang === "ru" ? "В карточки" : lang === "en" ? "To flashcards" : "Flashcard qil"}
                         </button>
                       )}
+                      <button
+                        onClick={() => rephrase(i, msg.content, "simpler")}
+                        disabled={rephraseLoading !== null}
+                        className="flex items-center gap-1 text-xs text-slate-400 hover:text-primary"
+                      >
+                        {rephraseLoading === `${i}-simpler` ? <Loader2 className="h-3 w-3 animate-spin" /> : <Baby className="h-3 w-3" />}
+                        {lang === "ru" ? "Проще" : lang === "en" ? "Simpler" : "Soddaroq"}
+                      </button>
+                      <button
+                        onClick={() => rephrase(i, msg.content, "deeper")}
+                        disabled={rephraseLoading !== null}
+                        className="flex items-center gap-1 text-xs text-slate-400 hover:text-primary"
+                      >
+                        {rephraseLoading === `${i}-deeper` ? <Loader2 className="h-3 w-3 animate-spin" /> : <Brain className="h-3 w-3" />}
+                        {lang === "ru" ? "Глубже" : lang === "en" ? "Deeper" : "Chuqurroq"}
+                      </button>
                     </div>
                   )}
 

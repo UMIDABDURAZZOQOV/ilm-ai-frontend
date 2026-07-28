@@ -63,6 +63,19 @@ export async function askAssistantImage(
   return apiFetch("/assistant/ask-image", { method: "POST", body: form });
 }
 
+/** Re-explain a previous answer at a different level (simpler or deeper). */
+export async function rephraseAnswer(
+  userId: number,
+  text: string,
+  mode: "simpler" | "deeper",
+  language: string
+): Promise<{ answer: string }> {
+  return apiFetch("/assistant/rephrase", {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId, text, mode, language }),
+  });
+}
+
 /** A proactive daily briefing from the companion, built from the learner's state. */
 export async function getAssistantBriefing(
   userId: number
