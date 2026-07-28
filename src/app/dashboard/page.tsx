@@ -944,6 +944,7 @@ function DashboardContent() {
                       { href: "/sat/ielts", label: "IELTS", sub: "All four skills", icon: BookText, color: "text-violet-600" },
                       { href: "/sat/college", label: "College App", sub: "6,000+ universities", icon: Building2, color: "text-teal-600" },
                       { href: "/skills", label: "Fanlar", sub: "Ona tili, Tarix va boshqalar", icon: Trophy, color: "text-emerald-600" },
+                      { href: "/course", label: "Materialdan kurs", sub: "Yuklagan materialingizdan kurs", icon: Sparkles, color: "text-violet-600" },
                     ].map((p) => (
                       <Link
                         key={p.href}
