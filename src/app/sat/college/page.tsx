@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { GraduationCap, Search, Bookmark, SlidersHorizontal, MapPin, X, Globe2, Loader2 } from "lucide-react";
+import { GraduationCap, Search, Bookmark, SlidersHorizontal, MapPin, X, Globe2, Loader2, Wand2 } from "lucide-react";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { collegeCountry, collegeRegion, type College } from "@/lib/colleges";
 import { loadColleges } from "@/lib/collegesData";
@@ -105,11 +105,16 @@ export default function CollegeBrowsePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-black flex items-center gap-3">
-          <GraduationCap className="h-7 w-7 text-[#0d3b4f] dark:text-amber-400" /> Browse Colleges
-        </h1>
-        <p className="text-slate-500 mt-1">Compare US and European universities — admission stats, SAT scores, and famous faculty.</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-3xl font-black flex items-center gap-3">
+            <GraduationCap className="h-7 w-7 text-[#0d3b4f] dark:text-amber-400" /> Browse Colleges
+          </h1>
+          <p className="text-slate-500 mt-1">Compare US and European universities — admission stats, SAT scores, and famous faculty.</p>
+        </div>
+        <Link href="/sat/college/essay" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold text-white bg-gradient-to-br from-teal-500 to-cyan-600 shadow-lg shrink-0">
+          <Wand2 className="h-4 w-4" /> Essay Coach
+        </Link>
       </div>
 
       {/* Region selector: US vs Europe */}
