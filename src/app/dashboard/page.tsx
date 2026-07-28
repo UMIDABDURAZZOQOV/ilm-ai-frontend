@@ -1022,22 +1022,23 @@ function DashboardContent() {
 
                 {/* New: build a course or open the Studio, straight from your materials */}
                 <div className="grid sm:grid-cols-2 gap-4">
-                  <Link href="/course" className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 to-indigo-600 p-5 text-white shadow-lg">
-                    <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
-                    <div className="relative">
-                      <Sparkles className="h-6 w-6 mb-2" />
-                      <p className="font-bold text-lg leading-tight">{lang === "ru" ? "Курс из материалов" : lang === "en" ? "Course from materials" : "Materialdan kurs"}</p>
-                      <p className="text-sm text-white/80 mt-0.5">{lang === "ru" ? "Ilm AI построит курс из ваших PDF" : lang === "en" ? "Ilm AI builds a course from your PDFs" : "Ilm AI yuklagan PDF'dan kurs yasaydi"}</p>
-                    </div>
-                  </Link>
-                  <Link href="/studio" className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-rose-500 to-pink-600 p-5 text-white shadow-lg">
-                    <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
-                    <div className="relative">
-                      <Sparkles className="h-6 w-6 mb-2" />
-                      <p className="font-bold text-lg leading-tight">Ilm AI Studio</p>
-                      <p className="text-sm text-white/80 mt-0.5">{lang === "ru" ? "Фото, аудио, карта, шпаргалка, тест" : lang === "en" ? "Photo, audio, map, cheat sheet, mock" : "Rasm, audio, xarita, shpargalka, sinov"}</p>
-                    </div>
-                  </Link>
+                  {[
+                    { href: "/course", grad: "from-violet-600 to-indigo-600", title: lang === "ru" ? "Курс из материалов" : lang === "en" ? "Course from materials" : "Materialdan kurs", sub: lang === "ru" ? "Ilm AI построит курс из ваших PDF" : lang === "en" ? "Ilm AI builds a course from your PDFs" : "Ilm AI yuklagan PDF'dan kurs yasaydi" },
+                    { href: "/studio", grad: "from-rose-500 to-pink-600", title: "Ilm AI Studio", sub: lang === "ru" ? "Фото, аудио, карта, шпаргалка, тест" : lang === "en" ? "Photo, audio, map, cheat sheet, mock" : "Rasm, audio, xarita, shpargalka, sinov" },
+                  ].map((c) => (
+                    <motion.div key={c.href} whileHover={{ y: -4, scale: 1.015 }} whileTap={{ scale: 0.99 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}>
+                      <Link href={c.href} className={`group relative overflow-hidden rounded-3xl bg-gradient-to-br ${c.grad} p-5 text-white shadow-lg block hover:shadow-2xl`}>
+                        <motion.div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" animate={{ scale: [1, 1.25, 1] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} />
+                        <div className="relative">
+                          <motion.div animate={{ rotate: [0, 10, -6, 0] }} transition={{ duration: 3, repeat: Infinity, repeatDelay: 2 }}>
+                            <Sparkles className="h-6 w-6 mb-2" />
+                          </motion.div>
+                          <p className="font-bold text-lg leading-tight">{c.title}</p>
+                          <p className="text-sm text-white/80 mt-0.5">{c.sub}</p>
+                        </div>
+                      </Link>
+                    </motion.div>
+                  ))}
                 </div>
 
                 {/* Top Stats Grid */}

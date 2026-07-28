@@ -153,9 +153,24 @@ export default function FocusPage() {
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <div className="text-5xl font-black tabular-nums">{fmt(left)}</div>
+              <motion.div
+                className="text-5xl font-black tabular-nums"
+                animate={running ? { scale: [1, 1.04, 1] } : { scale: 1 }}
+                transition={running ? { duration: 2, repeat: Infinity, ease: "easeInOut" } : {}}
+              >
+                {fmt(left)}
+              </motion.div>
               {rounds > 0 && <div className="text-xs text-neutral-400 mt-1">🍅 {rounds}</div>}
             </div>
+            {/* Soft glow pulse while the timer runs. */}
+            {running && (
+              <motion.div
+                className="absolute inset-0 rounded-full pointer-events-none -z-10"
+                style={{ boxShadow: `0 0 60px 0 ${isFocus ? "#6366F1" : "#F59E0B"}` }}
+                animate={{ opacity: [0.15, 0.4, 0.15] }}
+                transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+              />
+            )}
           </div>
 
           <div className="flex items-center justify-center gap-3 mb-6">
