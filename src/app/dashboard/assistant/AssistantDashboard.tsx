@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Mic, Send, Volume2, Trash2, Sparkles, Radio, FileText, ArrowRight } from "lucide-react";
+import { Loader2, Mic, Send, Volume2, Trash2, Sparkles, Radio, FileText, ArrowRight, ImagePlus, X } from "lucide-react";
 import Link from "next/link";
 import { useI18n } from "@/hooks/useI18n";
 import {
   askAssistant,
+  askAssistantImage,
+  getAssistantBriefing,
+  getAssistantMaterials,
   speakText,
   getAssistantHistory,
   clearAssistantHistory,
@@ -16,8 +19,13 @@ import LiveVoiceOverlay from "./LiveVoiceOverlay";
 import { MarkdownText } from "@/components/MarkdownText";
 
 // The chat carries a little more than the stored transcript: the companion may
-// attach an in-app action button and cite which uploaded materials it used.
-type ChatMessage = AssistantMessage & { action?: AssistantAction | null; sources?: string[] };
+// attach an in-app action button, cite which uploaded materials it used, and
+// suggest follow-up questions.
+type ChatMessage = AssistantMessage & {
+  action?: AssistantAction | null;
+  sources?: string[];
+  followups?: string[];
+};
 
 interface User {
   id: number;
@@ -39,7 +47,12 @@ export default function AssistantDashboard({ user, onNavigate }: AssistantDashbo
   const [isListening, setIsListening] = useState(false);
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
   const [showLive, setShowLive] = useState(false);
+  const [briefing, setBriefing] = useState<{ text: string; action: AssistantAction | null } | null>(null);
+  const [files, setFiles] = useState<string[]>([]);
+  const [scopeFile, setScopeFile] = useState<string>(""); // "" = all materials
+  const [pendingImage, setPendingImage] = useState<{ blob: Blob; preview: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,6 +66,13 @@ export default function AssistantDashboard({ user, onNavigate }: AssistantDashbo
       .finally(() => {
         if (!cancelled) setHistoryLoading(false);
       });
+    // Proactive briefing + the learner's uploaded documents (for chat-with-a-doc).
+    getAssistantBriefing(user.id)
+      .then((d) => { if (!cancelled && d.briefing) setBriefing({ text: d.briefing, action: d.action }); })
+      .catch(() => {});
+    getAssistantMaterials(user.id)
+      .then((d) => { if (!cancelled) setFiles(d.files || []); })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -112,14 +132,19 @@ export default function AssistantDashboard({ user, onNavigate }: AssistantDashbo
   }
 
   async function handleSend() {
-    if (!input.trim() || sending) return;
+    if (sending) return;
+    // An attached image takes the multimodal path (question optional).
+    if (pendingImage) {
+      return sendImage();
+    }
+    if (!input.trim()) return;
     const question = input;
     setInput("");
     setMessages((prev) => [...prev, { role: "user", content: question }]);
     setSending(true);
     try {
-      const { answer, action, sources } = await askAssistant(user.id, question, lang);
-      setMessages((prev) => [...prev, { role: "assistant", content: answer, action, sources }]);
+      const { answer, action, sources, followups } = await askAssistant(user.id, question, lang, scopeFile || null);
+      setMessages((prev) => [...prev, { role: "assistant", content: answer, action, sources, followups }]);
     } catch (err: any) {
       if (err?.status === 403) {
         alert(t("assistant_limit_reached"));
@@ -131,6 +156,61 @@ export default function AssistantDashboard({ user, onNavigate }: AssistantDashbo
     } finally {
       setSending(false);
     }
+  }
+
+  function onPickImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setPendingImage({ blob: f, preview: URL.createObjectURL(f) });
+    if (imageInputRef.current) imageInputRef.current.value = "";
+  }
+
+  async function sendImage() {
+    if (!pendingImage) return;
+    const question = input.trim();
+    const img = pendingImage;
+    setInput("");
+    setPendingImage(null);
+    setMessages((prev) => [...prev, { role: "user", content: question ? `🖼️ ${question}` : "🖼️" }]);
+    setSending(true);
+    try {
+      const { answer, action, followups } = await askAssistantImage(user.id, question, lang, img.blob);
+      setMessages((prev) => [...prev, { role: "assistant", content: answer, action, followups }]);
+    } catch (err: any) {
+      if (err?.status === 403) {
+        alert(t("assistant_limit_reached"));
+        onNavigate("subscription");
+        setMessages((prev) => prev.slice(0, -1));
+      } else {
+        setMessages((prev) => [...prev, { role: "assistant", content: `${t("assistant_error_prefix")} ${err?.message ?? ""}` }]);
+      }
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function askFollowup(q: string) {
+    setInput(q);
+    // Send on the next tick so the input state is set for handleSend's guard.
+    setTimeout(() => {
+      setInput("");
+      setMessages((prev) => [...prev, { role: "user", content: q }]);
+      setSending(true);
+      askAssistant(user.id, q, lang, scopeFile || null)
+        .then(({ answer, action, sources, followups }) =>
+          setMessages((prev) => [...prev, { role: "assistant", content: answer, action, sources, followups }])
+        )
+        .catch((err: any) => {
+          if (err?.status === 403) {
+            alert(t("assistant_limit_reached"));
+            onNavigate("subscription");
+            setMessages((prev) => prev.slice(0, -1));
+          } else {
+            setMessages((prev) => [...prev, { role: "assistant", content: `${t("assistant_error_prefix")} ${err?.message ?? ""}` }]);
+          }
+        })
+        .finally(() => setSending(false));
+    }, 0);
   }
 
   async function handleClearHistory() {
@@ -184,6 +264,21 @@ export default function AssistantDashboard({ user, onNavigate }: AssistantDashbo
 
       <div className="h-[calc(100vh-260px)] flex flex-col bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-200/50 dark:border-slate-800/50 overflow-hidden">
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4">
+          {/* Proactive daily briefing from the companion. */}
+          {briefing && (
+            <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <span className="text-xs font-bold text-primary">Ilm AI</span>
+              </div>
+              <MarkdownText>{briefing.text}</MarkdownText>
+              {briefing.action && (
+                <Link href={briefing.action.href} className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-primary text-white px-3 py-1.5 text-xs font-bold">
+                  {briefing.action.label} <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              )}
+            </div>
+          )}
           {historyLoading ? (
             <div className="flex items-center justify-center h-full">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -231,6 +326,21 @@ export default function AssistantDashboard({ user, onNavigate }: AssistantDashbo
                     </Link>
                   )}
 
+                  {/* Suggested follow-up questions — only under the latest reply. */}
+                  {msg.role === "assistant" && i === messages.length - 1 && msg.followups && msg.followups.length > 0 && !sending && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {msg.followups.map((q, qi) => (
+                        <button
+                          key={qi}
+                          onClick={() => askFollowup(q)}
+                          className="text-left text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 rounded-full px-3 py-1.5 transition-colors"
+                        >
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   {msg.role === "assistant" && (
                     <button
                       onClick={() => handleListenClick(i, msg.content)}
@@ -259,13 +369,53 @@ export default function AssistantDashboard({ user, onNavigate }: AssistantDashbo
         </div>
 
         <div className="p-4 border-t border-slate-200/50 dark:border-slate-800/50">
+          {/* Scope the chat to one uploaded document, or all materials. */}
+          {files.length > 0 && (
+            <div className="flex items-center gap-2 mb-2">
+              <FileText className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              <select
+                value={scopeFile}
+                onChange={(e) => setScopeFile(e.target.value)}
+                className="text-xs bg-slate-100 dark:bg-slate-800 rounded-lg px-2 py-1.5 text-slate-600 dark:text-slate-300 max-w-full"
+              >
+                <option value="">{lang === "ru" ? "Все материалы" : lang === "en" ? "All materials" : "Barcha materiallar"}</option>
+                {files.map((f) => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Pending image preview. */}
+          {pendingImage && (
+            <div className="relative inline-block mb-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={pendingImage.preview} alt="" className="h-20 rounded-xl border border-slate-200 dark:border-slate-700" />
+              <button
+                onClick={() => setPendingImage(null)}
+                className="absolute -top-1.5 -right-1.5 p-0.5 rounded-full bg-slate-700 text-white"
+                aria-label="remove"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+
+          <input ref={imageInputRef} type="file" accept="image/*" onChange={onPickImage} className="hidden" />
           <div className="relative flex items-center gap-2">
+            <button
+              onClick={() => imageInputRef.current?.click()}
+              className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-primary transition-colors"
+              aria-label={lang === "ru" ? "Прикрепить фото" : lang === "en" ? "Attach photo" : "Rasm biriktirish"}
+            >
+              <ImagePlus className="h-4 w-4" />
+            </button>
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder={t("assistant_placeholder")}
+              placeholder={pendingImage ? (lang === "ru" ? "Спросите об изображении..." : lang === "en" ? "Ask about the image..." : "Rasm haqida so'rang...") : t("assistant_placeholder")}
               className="flex-1 px-4 py-3 pr-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary"
             />
             <button
@@ -278,7 +428,7 @@ export default function AssistantDashboard({ user, onNavigate }: AssistantDashbo
             </button>
             <button
               onClick={handleSend}
-              disabled={!input.trim() || sending}
+              disabled={(!input.trim() && !pendingImage) || sending}
               className="p-3 rounded-xl bg-primary text-white disabled:opacity-40 transition-colors"
             >
               <Send className="h-4 w-4" />

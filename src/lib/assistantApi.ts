@@ -22,6 +22,8 @@ export interface AssistantAskResponse {
   action?: AssistantAction | null;
   /** Filenames of the learner's uploaded materials the answer drew from. */
   sources?: string[];
+  /** Suggested next questions the learner might tap. */
+  followups?: string[];
 }
 
 export interface AssistantSpeakResponse {
@@ -37,12 +39,40 @@ export interface AssistantSpeakResponse {
 export async function askAssistant(
   userId: number,
   question: string,
-  language: string
+  language: string,
+  filename?: string | null
 ): Promise<AssistantAskResponse> {
   return apiFetch("/assistant/ask", {
     method: "POST",
-    body: JSON.stringify({ user_id: userId, question, language }),
+    body: JSON.stringify({ user_id: userId, question, language, filename: filename ?? null }),
   });
+}
+
+/** Multimodal chat: attach an image with an optional question. */
+export async function askAssistantImage(
+  userId: number,
+  question: string,
+  language: string,
+  image: Blob
+): Promise<AssistantAskResponse> {
+  const form = new FormData();
+  form.append("user_id", String(userId));
+  form.append("question", question);
+  form.append("language", language);
+  form.append("image", image, "photo.jpg");
+  return apiFetch("/assistant/ask-image", { method: "POST", body: form });
+}
+
+/** A proactive daily briefing from the companion, built from the learner's state. */
+export async function getAssistantBriefing(
+  userId: number
+): Promise<{ briefing: string; action: AssistantAction | null }> {
+  return apiFetch(`/assistant/briefing/${userId}`);
+}
+
+/** Uploaded document filenames, for scoping the chat to one document. */
+export async function getAssistantMaterials(userId: number): Promise<{ files: string[] }> {
+  return apiFetch(`/studio/files/${userId}`);
 }
 
 /**
