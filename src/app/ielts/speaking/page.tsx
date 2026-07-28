@@ -7,6 +7,7 @@ import Link from "next/link";
 import { getSpeaking, submitSpeaking, getSpeakingSubmissions } from "@/lib/ieltsApi";
 import type { IeltsSpeaking, IeltsSpeakingSubmission } from "@/lib/ieltsApi";
 import { useAuth } from "@/hooks/useAuth";
+import FocusTimerWidget from "@/components/ui/FocusTimerWidget";
 
 export default function IeltsSpeakingPage() {
   const { user } = useAuth();
@@ -191,6 +192,7 @@ export default function IeltsSpeakingPage() {
 
   return (
     <div className="space-y-6">
+      <FocusTimerWidget />
       <div className="flex items-center gap-4">
         <button
           onClick={() => setCurrentTopic(null)}

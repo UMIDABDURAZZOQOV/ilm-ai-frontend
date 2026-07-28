@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import ThemeToggle from "@/components/ThemeToggle";
+import FocusTimerWidget from "@/components/ui/FocusTimerWidget";
 
 type NavItem = { href: string; label: string; icon: typeof Home; exact: boolean; group?: string };
 
@@ -206,6 +207,7 @@ export default function SatLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="sat-scope min-h-screen flex bg-white text-op-ink font-manrope">
+      <FocusTimerWidget />
       {/* Mobile top bar */}
       <div className="lg:hidden fixed top-0 inset-x-0 z-30 h-14 flex items-center gap-3 px-4 bg-op-teal text-white">
         <button onClick={() => setMobileOpen(true)} className="h-9 w-9 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors" aria-label="Menu">

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { startMockTest, completeMockTest } from "@/lib/ieltsApi";
 import type { IeltsMockTest } from "@/lib/ieltsApi";
 import { useAuth } from "@/hooks/useAuth";
+import FocusTimerWidget from "@/components/ui/FocusTimerWidget";
 
 export default function IeltsMockTestPage() {
   const { user } = useAuth();
@@ -187,6 +188,7 @@ export default function IeltsMockTestPage() {
 
   return (
     <div className="space-y-6">
+      <FocusTimerWidget />
       {/* Header */}
       <div className="flex items-center gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4">
         <button

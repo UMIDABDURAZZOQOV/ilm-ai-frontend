@@ -17,6 +17,7 @@ import {
 import Mascot from "@/components/skills/Mascot";
 import AiTutor from "@/components/skills/AiTutor";
 import Confetti from "@/components/skills/Confetti";
+import FocusTimerWidget from "@/components/ui/FocusTimerWidget";
 
 // "learning" is the Duolingo-style teach-first phase: the lesson's theory
 // cards are shown one at a time BEFORE any question appears.
@@ -252,6 +253,7 @@ export default function LessonSessionPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-neutral-950">
+      <FocusTimerWidget lang={lang} />
       <div className="flex items-center gap-4 px-4 py-3 border-b border-neutral-100 dark:border-neutral-900">
         <button onClick={() => router.back()} className="text-neutral-400 hover:text-neutral-700">
           <X className="w-6 h-6" />

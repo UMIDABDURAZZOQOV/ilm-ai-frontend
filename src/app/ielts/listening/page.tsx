@@ -8,6 +8,7 @@ import { getListening, getListeningQuestions } from "@/lib/ieltsApi";
 import type { IeltsListening, IeltsQuestion } from "@/lib/ieltsApi";
 import { useI18n } from "@/hooks/useI18n";
 import AiTutor from "@/components/skills/AiTutor";
+import FocusTimerWidget from "@/components/ui/FocusTimerWidget";
 
 export default function IeltsListeningPage() {
   const { lang } = useI18n();
@@ -94,6 +95,7 @@ export default function IeltsListeningPage() {
 
   return (
     <div className="space-y-6">
+      <FocusTimerWidget lang={lang} />
       <div className="flex items-center gap-4">
         <button
           onClick={() => setCurrentExercise(null)}

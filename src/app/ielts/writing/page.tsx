@@ -7,6 +7,7 @@ import Link from "next/link";
 import { getWriting, submitWriting, getWritingSubmissions } from "@/lib/ieltsApi";
 import type { IeltsWriting, IeltsWritingSubmission } from "@/lib/ieltsApi";
 import { useAuth } from "@/hooks/useAuth";
+import FocusTimerWidget from "@/components/ui/FocusTimerWidget";
 
 export default function IeltsWritingPage() {
   const { user } = useAuth();
@@ -129,6 +130,7 @@ export default function IeltsWritingPage() {
 
   return (
     <div className="space-y-6">
+      <FocusTimerWidget />
       <div className="flex items-center gap-4">
         <button
           onClick={() => setCurrentTask(null)}
