@@ -36,6 +36,7 @@ import DesmosCalculator from "@/components/sat/DesmosCalculator";
 import ReferenceSheet from "@/components/sat/ReferenceSheet";
 import Annotatable from "@/components/sat/Annotatable";
 import LineReader from "@/components/sat/LineReader";
+import FocusTimerWidget from "@/components/ui/FocusTimerWidget";
 
 interface PlanStep {
   section: string;
@@ -538,6 +539,7 @@ export default function SatSessionPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+      <FocusTimerWidget lang={lang} />
       <header className="h-14 shrink-0 border-b border-slate-200 dark:border-slate-800 flex items-center px-4 sm:px-6 gap-4">
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold truncate">

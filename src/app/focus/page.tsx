@@ -17,8 +17,9 @@ function tr(lang: string, uz: string, ru: string, en: string) {
   return lang === "ru" ? ru : lang === "en" ? en : uz;
 }
 
-const FOCUS_SECONDS = 25 * 60;
-const BREAK_SECONDS = 5 * 60;
+const FOCUS_OPTIONS = [25, 50];   // minutes
+const SHORT_BREAK = 5;            // minutes
+const LONG_BREAK = 10;            // minutes — auto after every 4 focus rounds
 
 function fmt(s: number) {
   const m = Math.floor(s / 60);
@@ -31,8 +32,10 @@ export default function FocusPage() {
   const { lang } = useI18n();
   const router = useRouter();
 
+  const [focusMin, setFocusMin] = useState(25);
+  const [breakKind, setBreakKind] = useState<"short" | "long">("short");
   const [phase, setPhase] = useState<"focus" | "break">("focus");
-  const [left, setLeft] = useState(FOCUS_SECONDS);
+  const [left, setLeft] = useState(25 * 60);
   const [running, setRunning] = useState(false);
   const [rounds, setRounds] = useState(0);
   const [quiz, setQuiz] = useState<PracticeQuestion[] | null>(null);
@@ -40,37 +43,52 @@ export default function FocusPage() {
   const [quizErr, setQuizErr] = useState("");
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const breakMin = breakKind === "long" ? LONG_BREAK : SHORT_BREAK;
+
   useEffect(() => {
     if (!isLoading && !user) router.push("/login");
   }, [user, isLoading, router]);
 
+  // Plain per-second countdown; the transition is handled separately so we never
+  // run side effects inside the state updater.
   useEffect(() => {
     if (!running) return;
-    tickRef.current = setInterval(() => {
-      setLeft((l) => {
-        if (l <= 1) {
-          // Phase finished.
-          if (phase === "focus") {
-            setRounds((r) => r + 1);
-            setPhase("break");
-            setRunning(false);
-            try { new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA=").play().catch(() => {}); } catch {}
-            return BREAK_SECONDS;
-          }
-          setPhase("focus");
-          setRunning(false);
-          return FOCUS_SECONDS;
-        }
-        return l - 1;
-      });
-    }, 1000);
+    tickRef.current = setInterval(() => setLeft((l) => Math.max(0, l - 1)), 1000);
     return () => { if (tickRef.current) clearInterval(tickRef.current); };
-  }, [running, phase]);
+  }, [running]);
+
+  // Phase transition when the countdown reaches zero.
+  useEffect(() => {
+    if (!running || left > 0) return;
+    setRunning(false);
+    try { new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA=").play().catch(() => {}); } catch {}
+    if (phase === "focus") {
+      const nr = rounds + 1;
+      setRounds(nr);
+      const kind = nr % 4 === 0 ? "long" : "short";   // a longer breather every 4th round
+      setBreakKind(kind);
+      setPhase("break");
+      setLeft((kind === "long" ? LONG_BREAK : SHORT_BREAK) * 60);
+    } else {
+      setPhase("focus");
+      setLeft(focusMin * 60);
+    }
+  }, [left, running, phase, rounds, focusMin]);
+
+  // Re-arm the clock when the learner changes the focus length while idle.
+  useEffect(() => {
+    if (phase === "focus" && !running) setLeft(focusMin * 60);
+  }, [focusMin]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ...or switches the break length while idle on a break.
+  useEffect(() => {
+    if (phase === "break" && !running) setLeft(breakMin * 60);
+  }, [breakKind]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function reset() {
     setRunning(false);
     setPhase("focus");
-    setLeft(FOCUS_SECONDS);
+    setLeft(focusMin * 60);
   }
 
   async function startBreakQuiz() {
@@ -116,7 +134,7 @@ export default function FocusPage() {
     );
   }
 
-  const total = phase === "focus" ? FOCUS_SECONDS : BREAK_SECONDS;
+  const total = (phase === "focus" ? focusMin : breakMin) * 60;
   const pct = ((total - left) / total) * 100;
   const isFocus = phase === "focus";
 
@@ -134,10 +152,39 @@ export default function FocusPage() {
         </div>
 
         <div className="text-center">
-          <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mb-6 ${isFocus ? "bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300" : "bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-300"}`}>
+          <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mb-4 ${isFocus ? "bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300" : "bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-300"}`}>
             {isFocus ? <Brain className="w-3.5 h-3.5" /> : <Coffee className="w-3.5 h-3.5" />}
-            {isFocus ? tr(lang, "Fokus", "Фокус", "Focus") : tr(lang, "Tanaffus", "Перерыв", "Break")}
+            {isFocus
+              ? tr(lang, "Fokus", "Фокус", "Focus")
+              : breakKind === "long"
+              ? tr(lang, "Uzoq tanaffus", "Длинный перерыв", "Long break")
+              : tr(lang, "Qisqa tanaffus", "Короткий перерыв", "Short break")}
           </div>
+
+          {/* Duration presets — only while paused, so a running timer isn't disturbed. */}
+          {!running && (
+            <div className="flex items-center justify-center gap-2 mb-6">
+              {isFocus
+                ? FOCUS_OPTIONS.map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => setFocusMin(m)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border-2 ${focusMin === m ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950 text-indigo-600" : "border-neutral-200 dark:border-neutral-800 text-neutral-500"}`}
+                    >
+                      {m} {tr(lang, "daq", "мин", "min")}
+                    </button>
+                  ))
+                : ([["short", SHORT_BREAK], ["long", LONG_BREAK]] as const).map(([kind, m]) => (
+                    <button
+                      key={kind}
+                      onClick={() => setBreakKind(kind)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border-2 ${breakKind === kind ? "border-amber-500 bg-amber-50 dark:bg-amber-950 text-amber-600" : "border-neutral-200 dark:border-neutral-800 text-neutral-500"}`}
+                    >
+                      {kind === "short" ? tr(lang, "Qisqa", "Короткий", "Short") : tr(lang, "Uzoq", "Длинный", "Long")} · {m} {tr(lang, "daq", "мин", "min")}
+                    </button>
+                  ))}
+            </div>
+          )}
 
           {/* Radial timer */}
           <div className="relative w-64 h-64 mx-auto mb-8">
@@ -203,7 +250,7 @@ export default function FocusPage() {
           )}
 
           <p className="text-xs text-neutral-400 mt-8">
-            {tr(lang, "25 daqiqa fokus, 5 daqiqa tanaffus. Telefonni chetga qo'ying va shu davrni faqat o'qishga bag'ishlang.", "25 минут фокуса, 5 минут перерыва.", "25 minutes focus, 5 minutes break. Put your phone away and study.")}
+            {tr(lang, "Fokus vaqtini (25/50) va tanaffusni (qisqa 5 / uzoq 10) tanlang. Har 4 fokusdan keyin uzoq tanaffus. Telefonni chetga qo'ying.", "Выберите фокус (25/50) и перерыв (5/10). Длинный перерыв каждые 4 раунда.", "Pick focus (25/50) and break (short 5 / long 10). A long break every 4 rounds.")}
           </p>
         </div>
       </div>
