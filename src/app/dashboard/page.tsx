@@ -56,6 +56,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import ThemeToggle from "@/components/ThemeToggle";
 import DailyTip from "@/components/ui/DailyTip";
 import OnboardingTour from "@/components/ui/OnboardingTour";
+import GamifyCard from "@/components/ui/GamifyCard";
 
 const PRESET_AVATARS = [
   "/avatars/avatar-1.svg",
@@ -1043,6 +1044,9 @@ function DashboardContent() {
                     </motion.div>
                   ))}
                 </div>
+
+                {/* Streak + XP earned across the whole app */}
+                {user && <GamifyCard userId={user.id} lang={lang} />}
 
                 {/* Daily study tip */}
                 <DailyTip lang={lang} />

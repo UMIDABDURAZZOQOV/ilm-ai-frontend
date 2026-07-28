@@ -17,3 +17,7 @@ export interface Insights {
 export async function getInsights(userId: number): Promise<Insights> {
   return apiFetch(`/insights/${userId}`);
 }
+
+export async function getGamifyStats(userId: number): Promise<{ xp_total: number; streak_days: number }> {
+  return apiFetch(`/insights/gamify/${userId}`);
+}
