@@ -27,6 +27,14 @@ export async function getStudioFiles(userId: number): Promise<{ files: string[] 
   return apiFetch(`/studio/files/${userId}`);
 }
 
+/** Turn any passage (e.g. a companion answer) into flashcards. */
+export async function textFlashcards(userId: number, text: string, language: string): Promise<{ flashcards: Flashcard[] }> {
+  return apiFetch("/studio/text-flashcards", {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId, text, language }),
+  });
+}
+
 export interface PhotoKit {
   title: string;
   summary: string;

@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Mic, Send, Volume2, Trash2, Sparkles, Radio, FileText, ArrowRight, ImagePlus, X } from "lucide-react";
+import { Loader2, Mic, Send, Volume2, Trash2, Sparkles, Radio, FileText, ArrowRight, ImagePlus, X, Layers } from "lucide-react";
 import Link from "next/link";
 import { useI18n } from "@/hooks/useI18n";
+import { textFlashcards, type Flashcard } from "@/lib/studioApi";
 import {
   askAssistant,
   askAssistantImage,
@@ -51,6 +52,9 @@ export default function AssistantDashboard({ user, onNavigate }: AssistantDashbo
   const [files, setFiles] = useState<string[]>([]);
   const [scopeFile, setScopeFile] = useState<string>(""); // "" = all materials
   const [pendingImage, setPendingImage] = useState<{ blob: Blob; preview: string } | null>(null);
+  const [cardsByMsg, setCardsByMsg] = useState<Record<number, Flashcard[]>>({});
+  const [cardsLoading, setCardsLoading] = useState<number | null>(null);
+  const [flipped, setFlipped] = useState<Record<string, boolean>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -186,6 +190,19 @@ export default function AssistantDashboard({ user, onNavigate }: AssistantDashbo
       }
     } finally {
       setSending(false);
+    }
+  }
+
+  async function makeFlashcards(i: number, content: string) {
+    if (cardsLoading !== null) return;
+    setCardsLoading(i);
+    try {
+      const { flashcards } = await textFlashcards(user.id, content, lang);
+      setCardsByMsg((prev) => ({ ...prev, [i]: flashcards }));
+    } catch {
+      /* silent — the answer is still on screen */
+    } finally {
+      setCardsLoading(null);
     }
   }
 
@@ -342,18 +359,49 @@ export default function AssistantDashboard({ user, onNavigate }: AssistantDashbo
                   )}
 
                   {msg.role === "assistant" && (
-                    <button
-                      onClick={() => handleListenClick(i, msg.content)}
-                      disabled={speakingIndex === i}
-                      className="mt-1 flex items-center gap-1 text-xs text-slate-400 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-100"
-                    >
-                      {speakingIndex === i ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Volume2 className="h-3 w-3" />
+                    <div className="mt-1 flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => handleListenClick(i, msg.content)}
+                        disabled={speakingIndex === i}
+                        className="flex items-center gap-1 text-xs text-slate-400 hover:text-primary disabled:opacity-100"
+                      >
+                        {speakingIndex === i ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
+                        {speakingIndex === i ? t("assistant_listening") : t("assistant_listen")}
+                      </button>
+                      {!cardsByMsg[i] && (
+                        <button
+                          onClick={() => makeFlashcards(i, msg.content)}
+                          disabled={cardsLoading === i}
+                          className="flex items-center gap-1 text-xs text-slate-400 hover:text-primary"
+                        >
+                          {cardsLoading === i ? <Loader2 className="h-3 w-3 animate-spin" /> : <Layers className="h-3 w-3" />}
+                          {lang === "ru" ? "В карточки" : lang === "en" ? "To flashcards" : "Flashcard qil"}
+                        </button>
                       )}
-                      {speakingIndex === i ? t("assistant_listening") : t("assistant_listen")}
-                    </button>
+                    </div>
+                  )}
+
+                  {/* Generated flashcards from this answer. */}
+                  {msg.role === "assistant" && cardsByMsg[i] && (
+                    <div className="mt-2 space-y-1.5 w-full max-w-full">
+                      {cardsByMsg[i].map((c, ci) => {
+                        const key = `${i}-${ci}`;
+                        return (
+                          <button
+                            key={ci}
+                            onClick={() => setFlipped((f) => ({ ...f, [key]: !f[key] }))}
+                            className="w-full text-left p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
+                          >
+                            <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{c.front}</p>
+                            {flipped[key] ? (
+                              <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">{c.back}</p>
+                            ) : (
+                              <p className="text-[11px] text-slate-400 mt-0.5">{lang === "ru" ? "Показать ответ" : lang === "en" ? "Reveal" : "Javobni ko'rish"}</p>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               </div>
