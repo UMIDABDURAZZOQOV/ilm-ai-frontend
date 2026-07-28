@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Camera, Headphones, Network, ScrollText, ClipboardList, Sparkles, Languages, NotebookPen } from "lucide-react";
+import { ArrowLeft, Loader2, Camera, Headphones, Network, ScrollText, ClipboardList, Sparkles, Languages, NotebookPen, FolderOpen } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/hooks/useI18n";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -15,12 +15,13 @@ import CheatSheetTool from "@/components/studio/CheatSheetTool";
 import MockTool from "@/components/studio/MockTool";
 import TranslateTool from "@/components/studio/TranslateTool";
 import NotesTool from "@/components/studio/NotesTool";
+import DocsTool from "@/components/studio/DocsTool";
 
 function tr(lang: string, uz: string, ru: string, en: string) {
   return lang === "ru" ? ru : lang === "en" ? en : uz;
 }
 
-type Tool = "photo" | "audio" | "map" | "cheat" | "mock" | "translate" | "notes";
+type Tool = "photo" | "audio" | "map" | "cheat" | "mock" | "translate" | "notes" | "docs";
 
 export default function StudioPage() {
   const { user, isLoading } = useAuth();
@@ -90,6 +91,13 @@ export default function StudioPage() {
       title: tr(lang, "Qo'lyozma → kutubxona", "Заметки → библиотека", "Notes → library"),
       sub: tr(lang, "Daftaringizni suratga olib materialga qo'shish", "Фото заметок в материалы", "Photograph notes into your materials"),
     },
+    {
+      id: "docs",
+      icon: FolderOpen,
+      color: "#64748B",
+      title: tr(lang, "Materiallarim", "Мои материалы", "My materials"),
+      sub: tr(lang, "Hujjatlarni ko'rish va o'chirish", "Просмотр и удаление документов", "View and delete your documents"),
+    },
   ];
 
   return (
@@ -149,6 +157,7 @@ export default function StudioPage() {
         {tool === "mock" && <MockTool lang={lang} userId={user.id} />}
         {tool === "translate" && <TranslateTool lang={lang} userId={user.id} />}
         {tool === "notes" && <NotesTool lang={lang} userId={user.id} />}
+        {tool === "docs" && <DocsTool lang={lang} userId={user.id} />}
       </div>
     </div>
   );

@@ -27,6 +27,20 @@ export async function getStudioFiles(userId: number): Promise<{ files: string[] 
   return apiFetch(`/studio/files/${userId}`);
 }
 
+export interface StudyDocument {
+  filename: string;
+  chunks: number;
+  topic: string;
+}
+
+export async function listDocuments(userId: number): Promise<{ documents: StudyDocument[] }> {
+  return apiFetch(`/files/documents/${userId}`);
+}
+
+export async function deleteDocument(userId: number, filename: string): Promise<{ removed_chunks: number }> {
+  return apiFetch(`/files/documents/${userId}?filename=${encodeURIComponent(filename)}`, { method: "DELETE" });
+}
+
 /** OCR handwritten/printed notes from a photo and add them to the materials library. */
 export async function notesToLibrary(
   userId: number,
