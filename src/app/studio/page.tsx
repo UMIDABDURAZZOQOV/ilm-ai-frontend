@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Camera, Headphones, Network, ScrollText, ClipboardList, Sparkles, Languages, NotebookPen, FolderOpen, Search } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -126,10 +127,15 @@ export default function StudioPage() {
 
         {!tool && (
           <>
-            <div className="flex items-center gap-2 mb-1">
-              <Sparkles className="w-6 h-6 text-violet-500" />
-              <h1 className="text-xl font-extrabold">Ilm AI Studio</h1>
-            </div>
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 mb-1">
+              <motion.div
+                animate={{ rotate: [0, 12, -8, 0], scale: [1, 1.15, 1] }}
+                transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 3 }}
+              >
+                <Sparkles className="w-6 h-6 text-violet-500" />
+              </motion.div>
+              <h1 className="text-xl font-extrabold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent">Ilm AI Studio</h1>
+            </motion.div>
             <p className="text-sm text-neutral-500 mb-6">
               {tr(
                 lang,
@@ -138,23 +144,36 @@ export default function StudioPage() {
                 "Turn your uploaded materials into powerful study tools."
               )}
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <motion.div
+              className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+              initial="hidden"
+              animate="show"
+              variants={{ show: { transition: { staggerChildren: 0.05 } } }}
+            >
               {tools.map((tl) => (
-                <button
+                <motion.button
                   key={tl.id}
+                  variants={{ hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0 } }}
+                  whileHover={{ y: -4, scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
                   onClick={() => setTool(tl.id)}
-                  className="flex items-start gap-3 p-4 rounded-2xl border-2 border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-left hover:border-violet-400 transition-colors"
+                  className="group flex items-start gap-3 p-4 rounded-2xl border-2 border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-left hover:border-violet-400 hover:shadow-lg hover:shadow-violet-500/10"
                 >
-                  <div className="w-11 h-11 rounded-xl grid place-items-center shrink-0" style={{ backgroundColor: `${tl.color}22` }}>
+                  <motion.div
+                    className="w-11 h-11 rounded-xl grid place-items-center shrink-0"
+                    style={{ backgroundColor: `${tl.color}22` }}
+                    whileHover={{ rotate: -6, scale: 1.08 }}
+                  >
                     <tl.icon className="w-5 h-5" style={{ color: tl.color }} />
-                  </div>
+                  </motion.div>
                   <div>
-                    <p className="font-bold text-sm">{tl.title}</p>
+                    <p className="font-bold text-sm group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">{tl.title}</p>
                     <p className="text-xs text-neutral-500 leading-snug">{tl.sub}</p>
                   </div>
-                </button>
+                </motion.button>
               ))}
-            </div>
+            </motion.div>
           </>
         )}
 

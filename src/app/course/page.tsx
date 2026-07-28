@@ -218,7 +218,13 @@ export default function CoursePage() {
 
             <div className="space-y-6">
               {course.chapters.map((chapter, ci) => (
-                <div key={ci}>
+                <motion.div
+                  key={ci}
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-40px" }}
+                  transition={{ duration: 0.4, delay: 0.05 * ci }}
+                >
                   <div className="flex items-center gap-2 mb-2">
                     <span className="grid place-items-center w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-950 text-violet-600 text-xs font-black">{ci + 1}</span>
                     <h3 className="font-extrabold text-sm">{chapter.title}</h3>
@@ -256,7 +262,7 @@ export default function CoursePage() {
                       );
                     })}
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>

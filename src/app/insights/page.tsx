@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { ArrowLeft, Loader2, TrendingUp, TrendingDown, FileText, Check, AlertTriangle, BarChart3 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/hooks/useI18n";
 import ThemeToggle from "@/components/ThemeToggle";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import { getInsights, type Insights } from "@/lib/insightsApi";
 
 function tr(lang: string, uz: string, ru: string, en: string) {
@@ -24,7 +26,17 @@ function Sparkline({ data }: { data: number[] }) {
   });
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-12" preserveAspectRatio="none">
-      <polyline points={pts.join(" ")} fill="none" stroke="#6366F1" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      <motion.polyline
+        points={pts.join(" ")}
+        fill="none"
+        stroke="#6366F1"
+        strokeWidth="2"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        initial={{ pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: 1.1, ease: "easeInOut" }}
+      />
     </svg>
   );
 }
@@ -80,23 +92,34 @@ export default function InsightsPage() {
         ) : (
           <div className="space-y-4">
             {/* Overall */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 text-center">
-                <div className="text-3xl font-black text-indigo-500">{data.quiz.overall_pct}%</div>
-                <div className="text-xs text-neutral-500 mt-0.5">{tr(lang, "O'rtacha", "Средний", "Average")}</div>
-              </div>
-              <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 text-center">
-                <div className="text-3xl font-black">{data.quiz.sessions}</div>
-                <div className="text-xs text-neutral-500 mt-0.5">{tr(lang, "Sessiyalar", "Сессии", "Sessions")}</div>
-              </div>
-              <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 text-center">
-                <div className={`text-3xl font-black inline-flex items-center gap-1 ${data.quiz.trend >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                  {data.quiz.trend >= 0 ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}
-                  {Math.abs(data.quiz.trend)}
-                </div>
-                <div className="text-xs text-neutral-500 mt-0.5">{tr(lang, "O'zgarish", "Тренд", "Trend")}</div>
-              </div>
-            </div>
+            <motion.div
+              className="grid grid-cols-3 gap-3"
+              initial="hidden"
+              animate="show"
+              variants={{ show: { transition: { staggerChildren: 0.08 } } }}
+            >
+              {[
+                <div key="a" className="rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 text-center">
+                  <div className="text-3xl font-black text-indigo-500"><AnimatedNumber value={data.quiz.overall_pct} suffix="%" /></div>
+                  <div className="text-xs text-neutral-500 mt-0.5">{tr(lang, "O'rtacha", "Средний", "Average")}</div>
+                </div>,
+                <div key="b" className="rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 text-center">
+                  <div className="text-3xl font-black"><AnimatedNumber value={data.quiz.sessions} /></div>
+                  <div className="text-xs text-neutral-500 mt-0.5">{tr(lang, "Sessiyalar", "Сессии", "Sessions")}</div>
+                </div>,
+                <div key="c" className="rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 text-center">
+                  <div className={`text-3xl font-black inline-flex items-center gap-1 ${data.quiz.trend >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                    {data.quiz.trend >= 0 ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}
+                    <AnimatedNumber value={Math.abs(data.quiz.trend)} />
+                  </div>
+                  <div className="text-xs text-neutral-500 mt-0.5">{tr(lang, "O'zgarish", "Тренд", "Trend")}</div>
+                </div>,
+              ].map((tile, i) => (
+                <motion.div key={i} variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }}>
+                  {tile}
+                </motion.div>
+              ))}
+            </motion.div>
 
             {/* Sparkline */}
             {data.quiz.recent_scores.length >= 2 && (
@@ -124,11 +147,16 @@ export default function InsightsPage() {
             {data.strong_topics.length > 0 && (
               <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50/50 dark:bg-emerald-950/40 p-4">
                 <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300 mb-2 flex items-center gap-1.5"><Check className="w-4 h-4" /> {tr(lang, "Kuchli mavzular", "Сильные темы", "Strong topics")}</p>
-                <div className="space-y-1.5">
-                  {data.strong_topics.map((t) => (
-                    <div key={t.topic} className="flex items-center justify-between text-sm">
-                      <span className="text-neutral-700 dark:text-neutral-200">{t.topic}</span>
-                      <span className="font-bold text-emerald-600">{t.accuracy}%</span>
+                <div className="space-y-2.5">
+                  {data.strong_topics.map((t, i) => (
+                    <div key={t.topic}>
+                      <div className="flex items-center justify-between text-sm mb-1">
+                        <span className="text-neutral-700 dark:text-neutral-200">{t.topic}</span>
+                        <span className="font-bold text-emerald-600">{t.accuracy}%</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 overflow-hidden">
+                        <motion.div className="h-full rounded-full bg-emerald-500" initial={{ width: 0 }} animate={{ width: `${t.accuracy}%` }} transition={{ duration: 0.8, delay: 0.1 * i, ease: "easeOut" }} />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -137,11 +165,16 @@ export default function InsightsPage() {
             {data.weak_topics.length > 0 && (
               <div className="rounded-2xl border border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/40 p-4">
                 <p className="text-sm font-bold text-amber-700 dark:text-amber-300 mb-2 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" /> {tr(lang, "Zaif mavzular", "Слабые темы", "Weak topics")}</p>
-                <div className="space-y-1.5">
-                  {data.weak_topics.map((t) => (
-                    <div key={t.topic} className="flex items-center justify-between text-sm">
-                      <span className="text-neutral-700 dark:text-neutral-200">{t.topic}</span>
-                      <span className="font-bold text-amber-600">{t.accuracy}%</span>
+                <div className="space-y-2.5">
+                  {data.weak_topics.map((t, i) => (
+                    <div key={t.topic}>
+                      <div className="flex items-center justify-between text-sm mb-1">
+                        <span className="text-neutral-700 dark:text-neutral-200">{t.topic}</span>
+                        <span className="font-bold text-amber-600">{t.accuracy}%</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-amber-100 dark:bg-amber-900/50 overflow-hidden">
+                        <motion.div className="h-full rounded-full bg-amber-500" initial={{ width: 0 }} animate={{ width: `${t.accuracy}%` }} transition={{ duration: 0.8, delay: 0.1 * i, ease: "easeOut" }} />
+                      </div>
                     </div>
                   ))}
                 </div>

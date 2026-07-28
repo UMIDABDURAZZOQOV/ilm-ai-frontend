@@ -7,6 +7,8 @@ import type { PracticeQuestion, PracticeResultItem } from "@/lib/skillTreeApi";
 import Mascot from "./Mascot";
 import AiTutor from "./AiTutor";
 import VoiceAnswer from "./VoiceAnswer";
+import Celebration from "@/components/ui/Celebration";
+import AnimatedNumber from "@/components/ui/AnimatedNumber";
 
 interface FinishSummary {
   xp_awarded: number;
@@ -111,30 +113,52 @@ export default function PracticeSession({
 
   if (finished) {
     const correct = resultsRef.current.filter((r) => r.is_correct).length;
+    const total = resultsRef.current.length || questions.length;
+    const perfect = total > 0 && correct === total;
     return (
-      <div className="flex flex-col items-center gap-4 py-10 text-center">
-        <Mascot mood="cheer" size={110} />
-        <h3 className="text-xl font-extrabold">
-          {lang === "ru" ? "Готово!" : lang === "en" ? "Done!" : "Tayyor!"}
-        </h3>
+      <div className="relative flex flex-col items-center gap-4 py-10 text-center">
+        <Celebration />
+        <motion.div
+          initial={{ scale: 0, rotate: -12 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: "spring", stiffness: 260, damping: 16 }}
+        >
+          <Mascot mood="cheer" size={110} />
+        </motion.div>
+        <motion.h3
+          className="text-xl font-extrabold"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          {perfect
+            ? (lang === "ru" ? "Идеально! 🎉" : lang === "en" ? "Perfect! 🎉" : "A'lo! 🎉")
+            : (lang === "ru" ? "Готово!" : lang === "en" ? "Done!" : "Tayyor!")}
+        </motion.h3>
         <div className="flex gap-8">
           <div>
-            <div className="text-2xl font-extrabold text-emerald-500">{correct}/{resultsRef.current.length || questions.length}</div>
+            <div className="text-2xl font-extrabold text-emerald-500">
+              <AnimatedNumber value={correct} duration={700} />/{total}
+            </div>
             <div className="text-xs text-neutral-500">{lang === "ru" ? "Правильно" : lang === "en" ? "Correct" : "To'g'ri"}</div>
           </div>
           <div>
-            <div className="text-2xl font-extrabold text-amber-500">+{finished.xp_awarded}</div>
+            <div className="text-2xl font-extrabold text-amber-500">
+              +<AnimatedNumber value={finished.xp_awarded} duration={700} />
+            </div>
             <div className="text-xs text-neutral-500">XP</div>
           </div>
         </div>
         {finished.extraLine && <p className="text-sm text-neutral-500">{finished.extraLine}</p>}
-        <button
+        <motion.button
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.96 }}
           onClick={onExit}
           className="mt-2 px-8 py-3 rounded-2xl font-bold text-white shadow-md"
           style={{ backgroundColor: accent }}
         >
           {lang === "ru" ? "Продолжить" : lang === "en" ? "Continue" : "Davom etish"}
-        </button>
+        </motion.button>
       </div>
     );
   }
