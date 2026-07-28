@@ -46,6 +46,9 @@ import {
   Moon,
   Monitor,
   Trophy,
+  Timer,
+  Layers,
+  BarChart3,
 } from "lucide-react";
 import { useTheme, type ThemeMode } from "@/hooks/useTheme";
 import { apiFetch } from "@/lib/api";
@@ -1058,6 +1061,43 @@ function DashboardContent() {
 
                 {/* Continue your course, if any */}
                 {user && <ResumeCard userId={user.id} lang={lang} />}
+
+                {/* Quick actions — the whole platform, one tap away */}
+                <div>
+                  <p className="text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-2">
+                    {lang === "ru" ? "Быстрый доступ" : lang === "en" ? "Quick access" : "Tezkor amallar"}
+                  </p>
+                  <motion.div
+                    className="grid grid-cols-2 sm:grid-cols-3 gap-3"
+                    initial="hidden" animate="show"
+                    variants={{ show: { transition: { staggerChildren: 0.05 } } }}
+                  >
+                    {[
+                      { onClick: () => setActivePanel("chat"), grad: "from-indigo-500 to-blue-500", icon: MessageSquare, label: lang === "ru" ? "AI-компаньон" : lang === "en" ? "AI companion" : "AI companion" },
+                      { href: "/focus", grad: "from-emerald-500 to-teal-500", icon: Timer, label: lang === "ru" ? "Фокус" : lang === "en" ? "Focus" : "Fokus rejimi" },
+                      { href: "/decks", grad: "from-violet-500 to-purple-500", icon: Layers, label: lang === "ru" ? "Карточки" : lang === "en" ? "Flashcards" : "Flashcardlar" },
+                      { href: "/insights", grad: "from-cyan-500 to-sky-500", icon: BarChart3, label: lang === "ru" ? "Аналитика" : lang === "en" ? "Insights" : "Tahlil" },
+                      { href: "/skills", grad: "from-orange-500 to-amber-500", icon: Trophy, label: lang === "ru" ? "Предметы" : lang === "en" ? "Subjects" : "Fanlar" },
+                      { href: "/sat", grad: "from-rose-500 to-red-500", icon: GraduationCap, label: "SAT · IELTS" },
+                    ].map((q, k) => {
+                      const inner = (
+                        <motion.div
+                          variants={{ hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0 } }}
+                          whileHover={{ y: -4, scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                          transition={{ type: "spring", stiffness: 400, damping: 22 }}
+                          className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${q.grad} p-4 text-white shadow-md cursor-pointer h-full`}
+                        >
+                          <div className="absolute -right-4 -bottom-4 opacity-20"><q.icon className="h-16 w-16" /></div>
+                          <q.icon className="h-6 w-6 mb-6" />
+                          <p className="font-bold text-sm leading-tight">{q.label}</p>
+                        </motion.div>
+                      );
+                      return q.href
+                        ? <Link key={k} href={q.href}>{inner}</Link>
+                        : <button key={k} onClick={q.onClick} className="text-left">{inner}</button>;
+                    })}
+                  </motion.div>
+                </div>
 
                 {/* Streak + XP earned across the whole app */}
                 {user && <GamifyCard userId={user.id} lang={lang} />}
