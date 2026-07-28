@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Network, Loader2, Sparkles } from "lucide-react";
 import { generateDiagram } from "@/lib/studioApi";
 import Mermaid from "@/components/ui/Mermaid";
+import ShareButton from "@/components/ui/ShareButton";
 
 function tr(lang: string, uz: string, ru: string, en: string) {
   return lang === "ru" ? ru : lang === "en" ? en : uz;
@@ -64,7 +65,10 @@ export default function DiagramTool({ lang, userId }: { lang: string; userId: nu
 
       {result && (
         <div className="mt-5">
-          {result.title && <h3 className="font-extrabold text-sm mb-2 flex items-center gap-1.5"><Network className="w-4 h-4 text-sky-500" /> {result.title}</h3>}
+          <div className="flex items-center justify-between mb-2">
+            {result.title ? <h3 className="font-extrabold text-sm flex items-center gap-1.5"><Network className="w-4 h-4 text-sky-500" /> {result.title}</h3> : <span />}
+            <ShareButton userId={userId} kind="diagram" title={result.title} payload={{ mermaid: result.mermaid }} lang={lang} />
+          </div>
           <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 bg-white">
             <Mermaid code={result.mermaid} />
           </div>

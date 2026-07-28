@@ -5,6 +5,7 @@ import { ScrollText, Loader2, Copy, Check, Printer } from "lucide-react";
 import { cheatSheet } from "@/lib/studioApi";
 import { MarkdownText } from "@/components/MarkdownText";
 import { printMarkdown } from "@/lib/printDoc";
+import ShareButton from "@/components/ui/ShareButton";
 
 function tr(lang: string, uz: string, ru: string, en: string) {
   return lang === "ru" ? ru : lang === "en" ? en : uz;
@@ -53,6 +54,7 @@ export default function CheatSheetTool({ lang, userId }: { lang: string; userId:
       ) : (
         <div>
           <div className="flex justify-end gap-4 mb-2">
+            <ShareButton userId={userId} kind="cheatsheet" title={tr(lang, "Shpargalka", "Шпаргалка", "Cheat sheet")} payload={{ markdown: md }} lang={lang} />
             <button onClick={() => printMarkdown(tr(lang, "Shpargalka", "Шпаргалка", "Cheat sheet"), md)} className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600 hover:text-amber-700">
               <Printer className="w-3.5 h-3.5" />
               {tr(lang, "PDF saqlash", "Сохранить PDF", "Save PDF")}

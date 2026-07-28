@@ -10,6 +10,7 @@ import { useI18n } from "@/hooks/useI18n";
 import ThemeToggle from "@/components/ThemeToggle";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import PracticeSession from "@/components/skills/PracticeSession";
+import ShareButton from "@/components/ui/ShareButton";
 import {
   getCourse,
   generateCourse,
@@ -201,9 +202,12 @@ export default function CoursePage() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-black">{course.title}</h2>
-              <button onClick={build} disabled={generating} className="text-xs font-bold text-violet-500 hover:text-violet-600 disabled:opacity-50">
-                {generating ? <Loader2 className="w-3.5 h-3.5 animate-spin inline" /> : tr(lang, "Qayta yasash", "Пересоздать", "Rebuild")}
-              </button>
+              <div className="flex items-center gap-4">
+                <ShareButton userId={user.id} kind="course" title={course.title} payload={{ title: course.title, chapters: course.chapters }} lang={lang} />
+                <button onClick={build} disabled={generating} className="text-xs font-bold text-violet-500 hover:text-violet-600 disabled:opacity-50">
+                  {generating ? <Loader2 className="w-3.5 h-3.5 animate-spin inline" /> : tr(lang, "Qayta yasash", "Пересоздать", "Rebuild")}
+                </button>
+              </div>
             </div>
 
             {course.sources.length > 0 && (
