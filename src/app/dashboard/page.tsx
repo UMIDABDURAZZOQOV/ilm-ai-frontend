@@ -946,6 +946,7 @@ function DashboardContent() {
                       { href: "/skills", label: "Fanlar", sub: "Ona tili, Tarix va boshqalar", icon: Trophy, color: "text-emerald-600" },
                       { href: "/course", label: "Materialdan kurs", sub: "Yuklagan materialingizdan kurs", icon: Sparkles, color: "text-violet-600" },
                       { href: "/studio", label: "Ilm AI Studio", sub: "Rasm, audio, xarita, shpargalka", icon: Sparkles, color: "text-rose-600" },
+                      { href: "/focus", label: "Fokus rejimi", sub: "Pomodoro + tanaffus viktorinasi", icon: Sparkles, color: "text-indigo-600" },
                     ].map((p) => (
                       <Link
                         key={p.href}
