@@ -4,6 +4,7 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 import TestModeBanner from "@/components/TestModeBanner";
 import CommandPalette from "@/components/ui/CommandPalette";
+import PwaRegister from "@/components/ui/PwaRegister";
 import "@/sentry.client.config";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -19,6 +20,13 @@ const sourceSerif = Source_Serif_4({ subsets: ["latin"], variable: "--font-serif
 export const metadata: Metadata = {
   title: "Ilm AI — Personal AI Learning Companion",
   description: "Learn anything from your own materials using AI",
+  manifest: "/manifest.json",
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Ilm AI" },
+  icons: { icon: "/icon-192.png", apple: "/icon-192.png" },
+};
+
+export const viewport = {
+  themeColor: "#4f46e5",
 };
 
 // Applied before React hydrates so there's no flash of the wrong theme —
@@ -52,6 +60,7 @@ export default function RootLayout({
         <Providers>
           <TestModeBanner />
           <CommandPalette />
+          <PwaRegister />
           {children}
         </Providers>
       </body>
