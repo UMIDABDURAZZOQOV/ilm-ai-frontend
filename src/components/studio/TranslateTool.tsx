@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Languages, Loader2 } from "lucide-react";
+import { Languages, Loader2, Printer } from "lucide-react";
 import { translateExplain } from "@/lib/studioApi";
 import { MarkdownText } from "@/components/MarkdownText";
+import { printMarkdown } from "@/lib/printDoc";
 
 function tr(lang: string, uz: string, ru: string, en: string) {
   return lang === "ru" ? ru : lang === "en" ? en : uz;
@@ -42,6 +43,11 @@ export default function TranslateTool({ lang, userId }: { lang: string; userId: 
         </button>
       ) : (
         <div>
+          <div className="flex justify-end mb-2">
+            <button onClick={() => printMarkdown(tr(lang, "Tarjima", "Перевод", "Translation"), md)} className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-500 hover:text-indigo-600">
+              <Printer className="w-3.5 h-3.5" /> {tr(lang, "PDF saqlash", "Сохранить PDF", "Save PDF")}
+            </button>
+          </div>
           <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 prose-sm max-w-none">
             <MarkdownText>{md}</MarkdownText>
           </div>
