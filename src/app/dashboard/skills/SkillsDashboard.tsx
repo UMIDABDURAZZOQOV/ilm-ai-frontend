@@ -45,6 +45,7 @@ import {
   getMixedReview,
   completeMistakes,
   getDailyChallenge,
+  getStreakFreezes,
   completeDailyChallenge,
   getLightningRound,
   completeLightning,
@@ -155,6 +156,7 @@ export default function SkillsDashboard({ user }: { user: User }) {
   const [practiceQuestions, setPracticeQuestions] = useState<PracticeQuestion[]>([]);
   const [practiceLoading, setPracticeLoading] = useState(false);
   const [dailyDone, setDailyDone] = useState(false);
+  const [freezes, setFreezes] = useState(0);
   // Placement test, offered only on language subjects (ingliz/koreys/fransuz tili).
   const [showLevelTest, setShowLevelTest] = useState(false);
   // End-of-unit checkpoint exam (all subjects) — passing it unlocks the next bob.
@@ -211,6 +213,7 @@ export default function SkillsDashboard({ user }: { user: User }) {
       .finally(() => setLoading(false));
     refreshSummary();
     getDailyChallenge(user.id).then((d) => setDailyDone(d.completed)).catch(() => {});
+    getStreakFreezes(user.id).then((d) => setFreezes(d.count)).catch(() => {});
   }, [loadTree, refreshSummary, user.id]);
 
   function onSelectLesson(lesson: SkillTreeLesson) {
@@ -1016,6 +1019,19 @@ export default function SkillsDashboard({ user }: { user: User }) {
       <div className="max-w-lg">
         <ExamCountdown lang={lang} userId={user.id} />
       </div>
+
+      {/* Streak freezes on hand — auto-earned every 7 days, auto-spent to save a streak. */}
+      {freezes > 0 && (
+        <div
+          className="max-w-lg mb-3 inline-flex items-center gap-2 rounded-2xl border border-sky-200 dark:border-sky-900 bg-sky-50 dark:bg-sky-950 px-3 py-2"
+          title={lang === "ru" ? "Заморозка сохранит серию за пропущенный день" : lang === "en" ? "A freeze saves your streak for one missed day" : "Muzlatish o'tkazib yuborilgan bir kun uchun streak'ni saqlaydi"}
+        >
+          <span className="text-lg">❄️</span>
+          <span className="text-sm font-bold text-sky-700 dark:text-sky-300">
+            {freezes} {lang === "ru" ? "заморозка серии" : lang === "en" ? "streak freeze" : "streak muzlatish"}
+          </span>
+        </div>
+      )}
 
       {/* Streak about to break — a nudge before midnight takes it. */}
       {summary && (summary.streak_days ?? 0) > 0 && todayXp === 0 && (

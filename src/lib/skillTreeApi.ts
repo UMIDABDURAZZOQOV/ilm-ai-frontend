@@ -390,6 +390,10 @@ export async function getExamCountdown(userId: number): Promise<ExamCountdown> {
   return apiFetch(`/skills/${userId}/exam-countdown`);
 }
 
+export async function getStreakFreezes(userId: number): Promise<{ count: number; cap: number }> {
+  return apiFetch(`/skills/${userId}/streak-freezes`);
+}
+
 export async function setExamDate(userId: number, targetDate: string): Promise<{ ok: boolean; target_date: string }> {
   return apiFetch(`/skills/${userId}/exam-date`, {
     method: "POST",
