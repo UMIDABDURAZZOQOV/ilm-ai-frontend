@@ -140,6 +140,23 @@ export async function cheatSheet(
   });
 }
 
+export async function generateDiagram(data: {
+  userId: number;
+  topic: string;
+  fromMaterials: boolean;
+  language: string;
+}): Promise<{ title: string; mermaid: string }> {
+  return apiFetch("/studio/diagram", {
+    method: "POST",
+    body: JSON.stringify({
+      user_id: data.userId,
+      topic: data.topic,
+      from_materials: data.fromMaterials,
+      language: data.language,
+    }),
+  });
+}
+
 export async function translateExplain(
   userId: number,
   language: string,

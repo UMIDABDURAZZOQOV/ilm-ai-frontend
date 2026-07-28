@@ -18,12 +18,13 @@ import TranslateTool from "@/components/studio/TranslateTool";
 import NotesTool from "@/components/studio/NotesTool";
 import DocsTool from "@/components/studio/DocsTool";
 import SearchTool from "@/components/studio/SearchTool";
+import DiagramTool from "@/components/studio/DiagramTool";
 
 function tr(lang: string, uz: string, ru: string, en: string) {
   return lang === "ru" ? ru : lang === "en" ? en : uz;
 }
 
-type Tool = "photo" | "audio" | "map" | "cheat" | "mock" | "translate" | "notes" | "docs" | "search";
+type Tool = "photo" | "audio" | "map" | "cheat" | "mock" | "translate" | "notes" | "docs" | "search" | "diagram";
 
 export default function StudioPage() {
   const { user, isLoading } = useAuth();
@@ -92,6 +93,13 @@ export default function StudioPage() {
       color: "#22C55E",
       title: tr(lang, "Qo'lyozma → kutubxona", "Заметки → библиотека", "Notes → library"),
       sub: tr(lang, "Daftaringizni suratga olib materialga qo'shish", "Фото заметок в материалы", "Photograph notes into your materials"),
+    },
+    {
+      id: "diagram",
+      icon: Network,
+      color: "#3B82F6",
+      title: tr(lang, "AI diagramma", "AI-диаграмма", "AI diagram"),
+      sub: tr(lang, "Mavzudan vizual sxema / mind-map", "Визуальная схема по теме", "Visual mind-map from a topic"),
     },
     {
       id: "search",
@@ -184,6 +192,7 @@ export default function StudioPage() {
         {tool === "mock" && <MockTool lang={lang} userId={user.id} />}
         {tool === "translate" && <TranslateTool lang={lang} userId={user.id} />}
         {tool === "notes" && <NotesTool lang={lang} userId={user.id} />}
+        {tool === "diagram" && <DiagramTool lang={lang} userId={user.id} />}
         {tool === "search" && <SearchTool lang={lang} userId={user.id} />}
         {tool === "docs" && <DocsTool lang={lang} userId={user.id} />}
       </div>
