@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Camera, Headphones, Network, ScrollText, ClipboardList, Sparkles, Languages } from "lucide-react";
+import { ArrowLeft, Loader2, Camera, Headphones, Network, ScrollText, ClipboardList, Sparkles, Languages, NotebookPen } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/hooks/useI18n";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -14,12 +14,13 @@ import KnowledgeMapTool from "@/components/studio/KnowledgeMapTool";
 import CheatSheetTool from "@/components/studio/CheatSheetTool";
 import MockTool from "@/components/studio/MockTool";
 import TranslateTool from "@/components/studio/TranslateTool";
+import NotesTool from "@/components/studio/NotesTool";
 
 function tr(lang: string, uz: string, ru: string, en: string) {
   return lang === "ru" ? ru : lang === "en" ? en : uz;
 }
 
-type Tool = "photo" | "audio" | "map" | "cheat" | "mock" | "translate";
+type Tool = "photo" | "audio" | "map" | "cheat" | "mock" | "translate" | "notes";
 
 export default function StudioPage() {
   const { user, isLoading } = useAuth();
@@ -82,6 +83,13 @@ export default function StudioPage() {
       title: tr(lang, "Tarjima + tushuntirish", "Перевод + объяснение", "Translate & explain"),
       sub: tr(lang, "Chet tilidagi materialni tarjima qilish", "Перевод материала на другом языке", "Translate foreign-language material"),
     },
+    {
+      id: "notes",
+      icon: NotebookPen,
+      color: "#22C55E",
+      title: tr(lang, "Qo'lyozma → kutubxona", "Заметки → библиотека", "Notes → library"),
+      sub: tr(lang, "Daftaringizni suratga olib materialga qo'shish", "Фото заметок в материалы", "Photograph notes into your materials"),
+    },
   ];
 
   return (
@@ -140,6 +148,7 @@ export default function StudioPage() {
         {tool === "cheat" && <CheatSheetTool lang={lang} userId={user.id} />}
         {tool === "mock" && <MockTool lang={lang} userId={user.id} />}
         {tool === "translate" && <TranslateTool lang={lang} userId={user.id} />}
+        {tool === "notes" && <NotesTool lang={lang} userId={user.id} />}
       </div>
     </div>
   );

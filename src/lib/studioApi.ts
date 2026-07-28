@@ -27,6 +27,20 @@ export async function getStudioFiles(userId: number): Promise<{ files: string[] 
   return apiFetch(`/studio/files/${userId}`);
 }
 
+/** OCR handwritten/printed notes from a photo and add them to the materials library. */
+export async function notesToLibrary(
+  userId: number,
+  image: Blob,
+  topic = "Notes"
+): Promise<{ message: string; filename: string; chunks: number; text: string }> {
+  const form = new FormData();
+  form.append("file", image, "notes.jpg");
+  return apiFetch(`/files/upload-image?user_id=${userId}&topic=${encodeURIComponent(topic)}`, {
+    method: "POST",
+    body: form,
+  });
+}
+
 /** Turn any passage (e.g. a companion answer) into flashcards. */
 export async function textFlashcards(userId: number, text: string, language: string): Promise<{ flashcards: Flashcard[] }> {
   return apiFetch("/studio/text-flashcards", {
