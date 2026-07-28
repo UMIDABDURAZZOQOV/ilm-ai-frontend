@@ -54,6 +54,7 @@ import AssistantDashboard from "./assistant/AssistantDashboard";
 import ReviewDashboard from "./review/ReviewDashboard";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import ThemeToggle from "@/components/ThemeToggle";
+import DailyTip from "@/components/ui/DailyTip";
 
 const PRESET_AVATARS = [
   "/avatars/avatar-1.svg",
@@ -1040,6 +1041,9 @@ function DashboardContent() {
                     </motion.div>
                   ))}
                 </div>
+
+                {/* Daily study tip */}
+                <DailyTip lang={lang} />
 
                 {/* Top Stats Grid */}
                 <div className="grid sm:grid-cols-3 lg:grid-cols-6 gap-4">

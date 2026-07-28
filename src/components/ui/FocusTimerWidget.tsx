@@ -5,12 +5,39 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Timer, Play, Pause, RotateCcw, ChevronDown } from "lucide-react";
 
 /**
- * A compact, draggable-free floating focus timer that can be dropped onto any page
- * (e.g. inside the SAT exam) so learners can time a focused study/exam block without
- * leaving the screen. Collapses to a small pill; a full Pomodoro cycle lives on the
- * dedicated /focus page — this is the lightweight in-context version.
+ * A compact floating focus timer that can be dropped onto any page (SAT/IELTS
+ * exam, Fanlar lesson, ...). Its state lives in localStorage keyed by a wall-clock
+ * end time, so it keeps running across page navigations and survives a refresh —
+ * every mount just reads the shared state. A full Pomodoro cycle lives on /focus.
  */
 const OPTIONS = [25, 50]; // minutes
+const KEY = "ilm_focus_timer_v1";
+
+type Persisted = {
+  mins: number;
+  running: boolean;
+  endsAt: number | null; // ms epoch when it will hit zero (while running)
+  pausedLeft: number;    // seconds left while paused
+  open: boolean;
+};
+
+function load(): Persisted {
+  if (typeof window === "undefined") return { mins: 25, running: false, endsAt: null, pausedLeft: 25 * 60, open: false };
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) return { open: false, ...(JSON.parse(raw) as Persisted) };
+  } catch { /* ignore */ }
+  return { mins: 25, running: false, endsAt: null, pausedLeft: 25 * 60, open: false };
+}
+
+function save(p: Persisted) {
+  try { localStorage.setItem(KEY, JSON.stringify(p)); } catch { /* ignore */ }
+}
+
+function remaining(p: Persisted): number {
+  if (p.running && p.endsAt) return Math.max(0, Math.round((p.endsAt - Date.now()) / 1000));
+  return p.pausedLeft;
+}
 
 function fmt(s: number) {
   const m = Math.floor(s / 60);
@@ -18,35 +45,48 @@ function fmt(s: number) {
 }
 
 export default function FocusTimerWidget({ lang = "uz" }: { lang?: string }) {
+  const [state, setState] = useState<Persisted>(() => (typeof window === "undefined" ? load() : load()));
+  const [left, setLeft] = useState(() => remaining(state));
   const [open, setOpen] = useState(false);
-  const [mins, setMins] = useState(25);
-  const [left, setLeft] = useState(25 * 60);
-  const [running, setRunning] = useState(false);
   const [done, setDone] = useState(false);
   const ref = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Hydrate from storage on mount (so a running timer resumes seamlessly).
   useEffect(() => {
-    if (!running) return;
-    ref.current = setInterval(() => setLeft((l) => Math.max(0, l - 1)), 1000);
+    const p = load();
+    setState(p);
+    setLeft(remaining(p));
+  }, []);
+
+  // Tick from the wall-clock end time, so it stays accurate across pages/tabs.
+  useEffect(() => {
+    if (!state.running) return;
+    ref.current = setInterval(() => {
+      const r = remaining(state);
+      setLeft(r);
+      if (r <= 0) {
+        setDone(true);
+        const np = { ...state, running: false, endsAt: null, pausedLeft: 0 };
+        setState(np); save(np);
+        try { new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA=").play().catch(() => {}); } catch {}
+      }
+    }, 500);
     return () => { if (ref.current) clearInterval(ref.current); };
-  }, [running]);
+  }, [state]);
 
-  useEffect(() => {
-    if (running && left === 0) {
-      setRunning(false);
-      setDone(true);
-      try { new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA=").play().catch(() => {}); } catch {}
-    }
-  }, [left, running]);
+  function update(p: Persisted) { setState(p); save(p); setLeft(remaining(p)); }
 
-  useEffect(() => {
-    if (!running) { setLeft(mins * 60); setDone(false); }
-  }, [mins]); // eslint-disable-line react-hooks/exhaustive-deps
+  function start() {
+    setDone(false);
+    update({ ...state, running: true, endsAt: Date.now() + left * 1000, pausedLeft: left });
+  }
+  function pause() { update({ ...state, running: false, endsAt: null, pausedLeft: left }); }
+  function reset() { setDone(false); update({ ...state, running: false, endsAt: null, pausedLeft: state.mins * 60 }); }
+  function setMins(m: number) { setDone(false); update({ ...state, mins: m, running: false, endsAt: null, pausedLeft: m * 60 }); }
 
-  function reset() { setRunning(false); setLeft(mins * 60); setDone(false); }
   const tr = (uz: string, ru: string, en: string) => (lang === "ru" ? ru : lang === "en" ? en : uz);
-  const total = mins * 60;
-  const pct = ((total - left) / total) * 100;
+  const total = state.mins * 60;
+  const pct = total ? ((total - left) / total) * 100 : 0;
 
   if (!open) {
     return (
@@ -55,7 +95,7 @@ export default function FocusTimerWidget({ lang = "uz" }: { lang?: string }) {
         className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-1.5 rounded-full bg-indigo-600 text-white shadow-lg px-3.5 py-2.5 text-sm font-bold hover:bg-indigo-700"
       >
         <Timer className="h-4 w-4" />
-        {running ? fmt(left) : tr("Fokus", "Фокус", "Focus")}
+        {state.running ? fmt(left) : tr("Fokus", "Фокус", "Focus")}
       </button>
     );
   }
@@ -87,13 +127,13 @@ export default function FocusTimerWidget({ lang = "uz" }: { lang?: string }) {
         <div className="h-full rounded-full bg-indigo-500 transition-all" style={{ width: `${pct}%` }} />
       </div>
 
-      {!running && (
+      {!state.running && (
         <div className="flex items-center justify-center gap-1.5 mb-2">
           {OPTIONS.map((m) => (
             <button
               key={m}
               onClick={() => setMins(m)}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border ${mins === m ? "border-indigo-500 text-indigo-600 bg-indigo-50 dark:bg-indigo-950" : "border-neutral-200 dark:border-neutral-800 text-neutral-500"}`}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border ${state.mins === m ? "border-indigo-500 text-indigo-600 bg-indigo-50 dark:bg-indigo-950" : "border-neutral-200 dark:border-neutral-800 text-neutral-500"}`}
             >
               {m}m
             </button>
@@ -103,11 +143,11 @@ export default function FocusTimerWidget({ lang = "uz" }: { lang?: string }) {
 
       <div className="flex items-center gap-2">
         <button
-          onClick={() => { if (done) reset(); else setRunning((r) => !r); }}
+          onClick={() => { if (done) reset(); else state.running ? pause() : start(); }}
           className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 text-white py-2 text-sm font-bold hover:bg-indigo-700"
         >
-          {done ? <RotateCcw className="h-4 w-4" /> : running ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
-          {done ? tr("Qayta", "Заново", "Again") : running ? tr("Pauza", "Пауза", "Pause") : tr("Boshlash", "Старт", "Start")}
+          {done ? <RotateCcw className="h-4 w-4" /> : state.running ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
+          {done ? tr("Qayta", "Заново", "Again") : state.running ? tr("Pauza", "Пауза", "Pause") : tr("Boshlash", "Старт", "Start")}
         </button>
         <button onClick={reset} className="p-2 rounded-xl border border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:text-neutral-800 dark:hover:text-white">
           <RotateCcw className="h-4 w-4" />
