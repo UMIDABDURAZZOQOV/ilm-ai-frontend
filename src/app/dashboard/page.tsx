@@ -390,7 +390,13 @@ function DashboardContent() {
       setUploadTopic("");
       fetchInitialData();
     } catch (err: any) {
-      setUploadStatus({ msg: err.message, type: "error" });
+      const raw = String(err?.message || "");
+      const friendly = /failed to fetch|networkerror|load failed/i.test(raw)
+        ? (lang === "ru" ? "Сервер не ответил — попробуйте ещё раз (возможно, он просыпался)."
+           : lang === "en" ? "The server didn't respond — please try again (it may have been waking up)."
+           : "Server javob bermadi — qayta urinib ko'ring (u uyg'onayotgan bo'lishi mumkin).")
+        : raw;
+      setUploadStatus({ msg: friendly, type: "error" });
     } finally {
       setLoading(false);
     }
