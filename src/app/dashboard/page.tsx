@@ -950,14 +950,14 @@ function DashboardContent() {
                   <div className="absolute right-0 mt-2 w-56 z-50 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
                     {[
                       { href: "/sat", label: "SAT", sub: "Digital SAT prep", icon: GraduationCap, color: "text-blue-600" },
-                      { href: "/sat/ielts", label: "IELTS", sub: "All four skills", icon: BookText, color: "text-violet-600" },
-                      { href: "/sat/college", label: "College App", sub: "6,000+ universities", icon: Building2, color: "text-teal-600" },
-                      { href: "/skills", label: "Fanlar", sub: "Ona tili, Tarix va boshqalar", icon: Trophy, color: "text-emerald-600" },
-                      { href: "/course", label: "Materialdan kurs", sub: "Yuklagan materialingizdan kurs", icon: Sparkles, color: "text-violet-600" },
-                      { href: "/studio", label: "Ilm AI Studio", sub: "Rasm, audio, xarita, shpargalka", icon: Sparkles, color: "text-rose-600" },
-                      { href: "/focus", label: "Fokus rejimi", sub: "Pomodoro + tanaffus viktorinasi", icon: Sparkles, color: "text-indigo-600" },
-                      { href: "/insights", label: "O'rganish tahlili", sub: "Qamrov, natijalar, mavzular", icon: Sparkles, color: "text-cyan-600" },
-                      { href: "/decks", label: "Flashcard to'plamlari", sub: "Takrorlash bilan yodlash (SRS)", icon: Sparkles, color: "text-violet-600" },
+                      { href: "/sat/ielts", label: "IELTS", sub: lang === "ru" ? "Все 4 навыка" : lang === "uz" ? "To'rt ko'nikma" : "All four skills", icon: BookText, color: "text-violet-600" },
+                      { href: "/sat/college", label: "College App", sub: lang === "ru" ? "6000+ вузов" : lang === "uz" ? "6000+ universitet" : "6,000+ universities", icon: Building2, color: "text-teal-600" },
+                      { href: "/skills", label: lang === "ru" ? "Предметы" : lang === "en" ? "Subjects" : "Fanlar", sub: lang === "ru" ? "Родной язык, История и др." : lang === "en" ? "Native language, History & more" : "Ona tili, Tarix va boshqalar", icon: Trophy, color: "text-emerald-600" },
+                      { href: "/course", label: lang === "ru" ? "Курс из материалов" : lang === "en" ? "Course from materials" : "Materialdan kurs", sub: lang === "ru" ? "Курс из ваших материалов" : lang === "en" ? "A course from your materials" : "Yuklagan materialingizdan kurs", icon: Sparkles, color: "text-violet-600" },
+                      { href: "/studio", label: "Ilm AI Studio", sub: lang === "ru" ? "Фото, аудио, карта, шпаргалка" : lang === "en" ? "Photo, audio, map, cheat sheet" : "Rasm, audio, xarita, shpargalka", icon: Sparkles, color: "text-rose-600" },
+                      { href: "/focus", label: lang === "ru" ? "Фокус-режим" : lang === "en" ? "Focus mode" : "Fokus rejimi", sub: lang === "ru" ? "Помодоро + тест на перерыве" : lang === "en" ? "Pomodoro + break quiz" : "Pomodoro + tanaffus viktorinasi", icon: Sparkles, color: "text-indigo-600" },
+                      { href: "/insights", label: lang === "ru" ? "Аналитика обучения" : lang === "en" ? "Learning insights" : "O'rganish tahlili", sub: lang === "ru" ? "Охват, результаты, темы" : lang === "en" ? "Coverage, results, topics" : "Qamrov, natijalar, mavzular", icon: Sparkles, color: "text-cyan-600" },
+                      { href: "/decks", label: lang === "ru" ? "Колоды карточек" : lang === "en" ? "Flashcard decks" : "Flashcard to'plamlari", sub: lang === "ru" ? "Учить с повторением (SRS)" : lang === "en" ? "Learn with spaced repetition" : "Takrorlash bilan yodlash (SRS)", icon: Sparkles, color: "text-violet-600" },
                     ].map((p) => (
                       <Link
                         key={p.href}

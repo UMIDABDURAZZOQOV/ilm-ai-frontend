@@ -9,6 +9,9 @@ export default function GoogleCallbackPage() {
   const router = useRouter();
   const { login } = useAuth();
   const [error, setError] = useState("");
+  // The backend may be cold-starting (Render free plan); after a few seconds tell
+  // the user it's waking up rather than leaving a silent spinner that looks frozen.
+  const [slow, setSlow] = useState(false);
   // Google's authorization code is single-use. React's Strict Mode (dev only)
   // deliberately double-invokes effects, which would otherwise send the same
   // code to the backend twice and fail the second exchange with
@@ -18,6 +21,8 @@ export default function GoogleCallbackPage() {
   useEffect(() => {
     if (hasRun.current) return;
     hasRun.current = true;
+
+    const slowTimer = setTimeout(() => setSlow(true), 6000);
 
     const handleCallback = async () => {
       try {
@@ -70,7 +75,8 @@ export default function GoogleCallbackPage() {
       }
     };
 
-    handleCallback();
+    handleCallback().finally(() => clearTimeout(slowTimer));
+    return () => clearTimeout(slowTimer);
   }, [router, login]);
 
   return (
@@ -91,10 +97,12 @@ export default function GoogleCallbackPage() {
               </div>
             </div>
             <h2 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "8px" }}>
-              Authenticating...
+              {slow ? "Server uyg'onmoqda…" : "Authenticating..."}
             </h2>
             <p style={{ color: "#9ca3af", fontSize: "0.875rem" }}>
-              Please wait while we complete your Google authentication
+              {slow
+                ? "Server bir muddat uxlagan edi — biroz kuting, deyarli tayyor."
+                : "Please wait while we complete your Google authentication"}
             </p>
           </>
         )}

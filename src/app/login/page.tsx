@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,6 +20,16 @@ export default function LoginPage() {
   const { login } = useAuth();
   const { t } = useI18n();
   const router = useRouter();
+
+  // Pre-warm the backend as soon as the login page opens. Render's free plan
+  // spins the service down after idle; the first request (e.g. the Google OAuth
+  // token exchange) then blocks ~30-60s while it cold-starts. Firing /health now,
+  // before the user finishes typing / completes Google, gives it a head start so
+  // the actual login isn't the one that pays the wake-up cost.
+  useEffect(() => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    fetch(`${apiUrl}/health`, { cache: "no-store" }).catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
