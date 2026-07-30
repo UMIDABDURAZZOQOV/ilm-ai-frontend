@@ -383,12 +383,18 @@ function DashboardContent() {
       });
 
       setUploadStatus({
-        msg: `Successfully uploaded ${data.filename}`,
+        msg: data.message || `Successfully uploaded ${data.filename}`,
         type: "success",
       });
       setSelectedFile(null);
       setUploadTopic("");
+      // Indexing runs in the background; refresh the list now and again shortly
+      // so the document appears once it finishes embedding.
       fetchInitialData();
+      if (data.processing) {
+        setTimeout(fetchInitialData, 8000);
+        setTimeout(fetchInitialData, 20000);
+      }
     } catch (err: any) {
       const raw = String(err?.message || "");
       const friendly = /failed to fetch|networkerror|load failed/i.test(raw)
