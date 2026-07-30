@@ -382,18 +382,44 @@ function DashboardContent() {
         body: formData,
       });
 
-      setUploadStatus({
-        msg: data.message || `Successfully uploaded ${data.filename}`,
-        type: "success",
-      });
       setSelectedFile(null);
       setUploadTopic("");
-      // Indexing runs in the background; refresh the list now and again shortly
-      // so the document appears once it finishes embedding.
-      fetchInitialData();
+
       if (data.processing) {
-        setTimeout(fetchInitialData, 8000);
-        setTimeout(fetchInitialData, 20000);
+        // Two-stage feedback: "accepted, indexing…" now, then "your material is
+        // ready!" once the background embedding finishes. We detect completion by
+        // polling the documents list for the uploaded filename.
+        const fname = data.filename;
+        const waitMsg = lang === "ru"
+          ? `«${fname}» принят — идёт обработка, подождите…`
+          : lang === "en"
+          ? `"${fname}" received — processing, please wait…`
+          : `«${fname}» qabul qilindi — tayyorlanmoqda, biroz kuting…`;
+        setUploadStatus({ msg: waitMsg, type: "success" });
+
+        const started = Date.now();
+        const poll = async () => {
+          try {
+            const docs: any = await apiFetch(`/files/documents/${user.id}`);
+            if ((docs.documents || []).some((d: any) => d.filename === fname)) {
+              setUploadStatus({
+                msg: lang === "ru" ? "✅ Ваш материал готов!" : lang === "en" ? "✅ Your material is ready!" : "✅ Materialingiz tayyor!",
+                type: "success",
+              });
+              fetchInitialData();
+              return;
+            }
+          } catch { /* keep polling */ }
+          if (Date.now() - started < 150000) setTimeout(poll, 4000);
+          else setUploadStatus({
+            msg: lang === "ru" ? "Обработка занимает больше времени — скоро будет готово." : lang === "en" ? "Indexing is taking a while — it'll be ready soon." : "Tayyorlash biroz cho'zildi — tez orada tayyor bo'ladi.",
+            type: "success",
+          });
+        };
+        setTimeout(poll, 4000);
+      } else {
+        setUploadStatus({ msg: data.message || `Successfully uploaded ${data.filename}`, type: "success" });
+        fetchInitialData();
       }
     } catch (err: any) {
       const raw = String(err?.message || "");
