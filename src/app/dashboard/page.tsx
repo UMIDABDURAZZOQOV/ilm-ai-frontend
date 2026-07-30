@@ -49,6 +49,7 @@ import {
   Timer,
   Layers,
   BarChart3,
+  ArrowLeft,
 } from "lucide-react";
 import { useTheme, type ThemeMode } from "@/hooks/useTheme";
 import { apiFetch } from "@/lib/api";
@@ -1660,15 +1661,38 @@ function DashboardContent() {
                       {t("your_score")}: {score}/{quizResult.length}
                     </h3>
                     <p className="text-slate-500 mb-6 text-sm">{t("dash_quiz")} {t("chart_title")}</p>
-                    <button
-                      onClick={handleGenerateQuiz}
-                      className="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-xl font-semibold hover:opacity-90 transition-all inline-flex items-center gap-2"
-                    >
-                      <RotateCcw className="h-4 w-4" /> {t("restart_quiz")}
-                    </button>
+                    <div className="flex flex-wrap items-center justify-center gap-3">
+                      <button
+                        onClick={() => {
+                          // Back to the test setup screen so a fresh test can be made.
+                          setQuizResult([]);
+                          setCurrentQuestionIndex(0);
+                          setScore(0);
+                          setSelectedAnswer(null);
+                          setAnsweredQuestions([]);
+                          setUserAnswers({});
+                        }}
+                        className="px-6 py-3 border border-slate-300 dark:border-slate-700 rounded-xl font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all inline-flex items-center gap-2"
+                      >
+                        <ArrowLeft className="h-4 w-4" /> {lang === "ru" ? "Назад" : lang === "en" ? "Back" : "Orqaga"}
+                      </button>
+                      <button
+                        onClick={handleGenerateQuiz}
+                        className="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-xl font-semibold hover:opacity-90 transition-all inline-flex items-center gap-2"
+                      >
+                        <RotateCcw className="h-4 w-4" /> {lang === "ru" ? "Новый тест" : lang === "en" ? "New test" : "Yangi test"}
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                    {/* Exit back to the test setup */}
+                    <button
+                      onClick={() => { setQuizResult([]); setCurrentQuestionIndex(0); setScore(0); setSelectedAnswer(null); setAnsweredQuestions([]); setUserAnswers({}); }}
+                      className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                    >
+                      <ArrowLeft className="h-4 w-4" /> {lang === "ru" ? "Назад" : lang === "en" ? "Back" : "Orqaga"}
+                    </button>
                     {/* Progress Bar */}
                     <div className="mb-6">
                       <div className="flex justify-between items-center mb-2">
