@@ -908,7 +908,9 @@ function DashboardContent() {
           ))}
         </nav>
 
-        {isSidebarOpen && (
+        {/* Premium upsell hidden while everything is free (is_premium is true for
+            all in growth mode); reappears automatically if the paywall returns. */}
+        {isSidebarOpen && !subscriptionStatus?.is_premium && (
           <button
             onClick={() => setActivePanel("subscription")}
             className="mx-4 mb-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-primary/40 hover:bg-white/[0.07] transition-all text-left group"
@@ -916,15 +918,11 @@ function DashboardContent() {
             <div className="flex items-center gap-2 mb-1">
               <Sparkles className="h-4 w-4 text-accent" />
               <span className="text-xs font-bold text-white">
-                {subscriptionStatus?.is_premium
-                  ? t("subscription_premium")
-                  : lang === "uz" ? "Premium'ga o'ting" : lang === "ru" ? "Перейти на Premium" : "Go Premium"}
+                {lang === "uz" ? "Premium'ga o'ting" : lang === "ru" ? "Перейти на Premium" : "Go Premium"}
               </span>
             </div>
             <p className="text-[11px] text-slate-400 leading-snug">
-              {subscriptionStatus?.is_premium
-                ? t("subscription_hint")
-                : lang === "uz" ? "Cheklovsiz kvizlar, yuklamalar va tahlillar" : lang === "ru" ? "Безлимитные тесты, файлы и аналитика" : "Unlimited quizzes, uploads & analytics"}
+              {lang === "uz" ? "Cheklovsiz kvizlar, yuklamalar va tahlillar" : lang === "ru" ? "Безлимитные тесты, файлы и аналитика" : "Unlimited quizzes, uploads & analytics"}
             </p>
           </button>
         )}
