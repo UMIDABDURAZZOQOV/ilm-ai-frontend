@@ -18,7 +18,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const router = useRouter();
 
   // Pre-warm the backend as soon as the login page opens. Render's free plan
@@ -69,21 +69,37 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError("");
-    try {
-      const redirectUri = `${window.location.origin}/auth/google-callback`;
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-      const res = await fetch(`${apiUrl}/auth/google-login?redirect_uri=${encodeURIComponent(redirectUri)}`);
-      const data = await res.json();
-      if (data.auth_url) {
-        window.location.href = data.auth_url;
-      } else {
-        setError("Google login manzilini olishda xato.");
+    const tr = (uz: string, ru: string, en: string) => (lang === "ru" ? ru : lang === "en" ? en : uz);
+    const redirectUri = `${window.location.origin}/auth/google-callback`;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    const url = `${apiUrl}/auth/google-login?redirect_uri=${encodeURIComponent(redirectUri)}`;
+
+    // The backend may be cold-starting (Render free plan), so the first fetch can
+    // fail with "Failed to fetch". Retry with backoff (~30s total) instead of
+    // giving up — a woken backend answers within a few seconds. On a network
+    // failure (not an HTTP error) we keep trying and show a "waking up" message.
+    const delays = [0, 3000, 5000, 7000, 9000, 9000];
+    for (let i = 0; i < delays.length; i++) {
+      if (delays[i]) await new Promise((r) => setTimeout(r, delays[i]));
+      try {
+        const res = await fetch(url, { cache: "no-store" });
+        const data = await res.json();
+        if (data.auth_url) {
+          window.location.href = data.auth_url;
+          return;
+        }
+        setError(tr("Google login manzilini olishda xato.", "Ошибка получения ссылки Google.", "Couldn't get the Google login link."));
+        setLoading(false);
+        return;
+      } catch {
+        if (i < delays.length - 1) {
+          setError(tr("Server uyg'onmoqda, biroz kuting…", "Сервер просыпается, подождите…", "Server is waking up, please wait…"));
+          continue;
+        }
+        setError(tr("Server javob bermadi — birozdan so'ng qayta urinib ko'ring.", "Сервер не ответил — попробуйте чуть позже.", "The server didn't respond — please try again shortly."));
       }
-    } catch (err: any) {
-      setError("Google login ishlamadi: " + err.message);
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   return (

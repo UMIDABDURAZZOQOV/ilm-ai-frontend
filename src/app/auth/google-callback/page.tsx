@@ -47,11 +47,24 @@ export default function GoogleCallbackPage() {
         // Exchange the code for tokens with the backend using GET request
         const redirectUri = `${window.location.origin}/auth/google-callback`;
         const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/auth/google-callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state || "")}&redirect_uri=${encodeURIComponent(redirectUri)}`;
-        
-        const response = await fetch(apiUrl);
-        const data = await response.json();
 
-        if (!response.ok) {
+        // Retry on a network failure (backend cold-starting) — but only on a true
+        // "Failed to fetch", never after a real HTTP response (the auth code is
+        // single-use, so we must not re-send it once the backend has seen it).
+        const delays = [0, 3000, 5000, 7000];
+        let response: Response | null = null;
+        for (let i = 0; i < delays.length; i++) {
+          if (delays[i]) await new Promise((r) => setTimeout(r, delays[i]));
+          try {
+            response = await fetch(apiUrl);
+            break;
+          } catch (netErr) {
+            if (i === delays.length - 1) throw netErr;
+          }
+        }
+        const data = await response!.json();
+
+        if (!response!.ok) {
           throw new Error(data.detail || "Authentication failed");
         }
 
