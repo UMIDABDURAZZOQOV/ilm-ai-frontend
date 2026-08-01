@@ -23,6 +23,9 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Ilm AI" },
   icons: { icon: "/icon-192.png", apple: "/icon-192.png" },
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
 };
 
 export const viewport = {
