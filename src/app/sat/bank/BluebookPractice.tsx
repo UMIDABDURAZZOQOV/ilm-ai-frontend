@@ -172,7 +172,7 @@ export default function BluebookPractice({
                       : sel ? "border-op-blue bg-op-blue text-white"
                       : "border-op-faint text-op-slate"
                     }`}>{optionLetter(opt, oi)}</span>
-                    <MathText className="font-serif-sat text-[15.5px] leading-[1.5] text-op-ink flex-1">{optionBody(opt)}</MathText>
+                    <MathText className={`font-serif-sat text-[15.5px] leading-[1.5] flex-1 ${showCorrect || showWrong || sel ? "text-[#1B2430]" : "text-op-ink"}`}>{optionBody(opt)}</MathText>
                   </button>
                 );
               })}
@@ -191,7 +191,7 @@ export default function BluebookPractice({
                 {isCorrect ? "Correct! " : "Incorrect. "}
               </b>
               {!isCorrect && q.correct_answer && (
-                <span className="text-op-ink">Correct answer: <b>{optionBody(q.correct_answer)}</b>. </span>
+                <span className="text-[#1B2430]">Correct answer: <b>{optionBody(q.correct_answer)}</b>. </span>
               )}
               {q.explanation && <MathText className="text-[#33373E]">{q.explanation}</MathText>}
             </motion.div>
