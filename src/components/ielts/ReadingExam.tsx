@@ -375,8 +375,11 @@ export function QuestionRow({
           onChange={(e) => onChange(e.target.value)}
           className="border border-slate-300 dark:border-neutral-700 rounded-lg px-2 py-1 bg-transparent"
         >
-          <option value="">{q.number}</option>
-          {(q.options ?? []).map((_, i) => {
+          {/* Blank placeholder — never the question number, which read as a bogus choice. */}
+          <option value="">—</option>
+          {/* Letter choices A, B, C… The option box (A–F/A–G) drives how many; when the
+              data didn't carry it, fall back to A–H so every answer is still selectable. */}
+          {Array.from({ length: q.options && q.options.length ? q.options.length : 8 }, (_, i) => {
             const letter = String.fromCharCode(65 + i);
             return (
               <option key={letter} value={letter}>
