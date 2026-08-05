@@ -80,8 +80,9 @@ export default function GoogleCallbackPage() {
           oauth_provider_id: data.oauth_provider_id,
         });
 
-        // Redirect to dashboard
-        router.push("/dashboard");
+        // New users (and existing ones who never set a name+age) must complete a
+        // short onboarding before entering the app; everyone else goes straight in.
+        router.push(data.needs_onboarding ? "/onboarding" : "/dashboard");
       } catch (err: any) {
         setError(err.message || "Authentication failed");
         setTimeout(() => router.push("/login"), 3000);
