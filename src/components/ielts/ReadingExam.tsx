@@ -96,8 +96,23 @@ export default function ReadingExam({
     }
   }, [answers, storageKey]);
 
+  // Group consecutive questions that share an instruction (like the real paper),
+  // then drop any group we can't render from the data we have (missing option
+  // boxes / maps) so only fully-working questions ever show or count.
+  const groups = useMemo(() => {
+    const out: { instruction: string | null; items: ExamQuestion[] }[] = [];
+    for (const q of questions) {
+      const ins = q.group_instruction ?? null;
+      const last = out[out.length - 1];
+      if (last && last.instruction === ins) last.items.push(q);
+      else out.push({ instruction: ins, items: [q] });
+    }
+    return out.filter((g) => isIeltsGroupRenderable(g.items));
+  }, [questions]);
+  const visibleQuestions = useMemo(() => groups.flatMap((g) => g.items), [groups]);
+
   // The band is a property of the whole paper (40 questions), never of one part.
-  const scored = scoreQuestions ?? questions;
+  const scored = scoreQuestions ?? visibleQuestions;
   const raw = useMemo(
     () => scored.reduce((n, q) => (isCorrect(answers[q.number] || "", q.correct_answer) ? n + 1 : n), 0),
     [answers, scored]
@@ -123,17 +138,6 @@ export default function ReadingExam({
     });
   }
 
-  // Group consecutive questions that share an instruction, the way the real paper does.
-  const groups = useMemo(() => {
-    const out: { instruction: string | null; items: ExamQuestion[] }[] = [];
-    for (const q of questions) {
-      const ins = q.group_instruction ?? null;
-      const last = out[out.length - 1];
-      if (last && last.instruction === ins) last.items.push(q);
-      else out.push({ instruction: ins, items: [q] });
-    }
-    return out;
-  }, [questions]);
 
   return (
     <div className="flex flex-col h-full">
@@ -278,7 +282,7 @@ export default function ReadingExam({
                   </tr>
                 </thead>
                 <tbody>
-                  {questions.map((q) => {
+                  {visibleQuestions.map((q) => {
                     const mine = answers[q.number] || "";
                     const ok = isCorrect(mine, q.correct_answer);
                     const bg = !mine
@@ -320,6 +324,25 @@ export default function ReadingExam({
 }
 
 /** Renders one question in whichever official format it uses. Shared with Listening. */
+/** True when a question group can't actually be answered from the data we have,
+ * so it should be hidden rather than shown broken:
+ *  - matching / heading with no option box (the A–F list learners choose from)
+ *  - map / diagram labelling, stored as `completion` whose answers are single
+ *    letters (A–G) — unusable without the map image we don't have.
+ * Hiding these keeps IELTS practice clean (only fully-working questions show). */
+export function isIeltsGroupRenderable(items: ExamQuestion[]): boolean {
+  const first = items[0];
+  if (!first) return false;
+  const t = first.question_type;
+  if (t === "matching" || t === "heading") {
+    return !!(first.options && first.options.length > 0);
+  }
+  if (t === "completion" && items.every((q) => /^[A-Z]$/.test((q.correct_answer || "").trim()))) {
+    return false;
+  }
+  return true;
+}
+
 export function QuestionRow({
   q,
   value,

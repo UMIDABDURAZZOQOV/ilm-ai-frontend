@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronUp, KeyRound, X } from "lucide-react";
 import { bandColor, formatBand, rawToBand } from "@/lib/ieltsBand";
 import QuestionTable from "./QuestionTable";
-import { QuestionRow, isCorrect, type ExamQuestion } from "./ReadingExam";
+import { QuestionRow, isCorrect, isIeltsGroupRenderable, type ExamQuestion } from "./ReadingExam";
 
 export interface ListeningSection {
   section: number;              // 1–4
@@ -86,8 +86,23 @@ export default function ListeningExam({
     }
   }, [answers, storageKey]);
 
+  // Group consecutive questions that share an instruction, then drop any group we
+  // can't render from the data we have (missing option boxes / maps) so only
+  // fully-working questions ever show or count.
+  const groups = useMemo(() => {
+    const out: { instruction: string | null; items: ExamQuestion[] }[] = [];
+    for (const q of questions) {
+      const ins = q.group_instruction ?? null;
+      const last = out[out.length - 1];
+      if (last && last.instruction === ins) last.items.push(q);
+      else out.push({ instruction: ins, items: [q] });
+    }
+    return out.filter((g) => isIeltsGroupRenderable(g.items));
+  }, [questions]);
+  const visibleQuestions = useMemo(() => groups.flatMap((g) => g.items), [groups]);
+
   // The band is a property of the whole paper (40 questions), never of one part.
-  const scored = scoreQuestions ?? questions;
+  const scored = scoreQuestions ?? visibleQuestions;
 
   function setAnswer(number: number, value: string) {
     if (onAnswerChange) onAnswerChange(number, value);
@@ -98,17 +113,6 @@ export default function ListeningExam({
     [answers, scored]
   );
   const band = rawToBand(Math.round((raw / Math.max(1, scored.length)) * 40), "listening");
-
-  const groups = useMemo(() => {
-    const out: { instruction: string | null; items: ExamQuestion[] }[] = [];
-    for (const q of questions) {
-      const ins = q.group_instruction ?? null;
-      const last = out[out.length - 1];
-      if (last && last.instruction === ins) last.items.push(q);
-      else out.push({ instruction: ins, items: [q] });
-    }
-    return out;
-  }, [questions]);
 
   /** The grids whose gaps all belong to this group of questions. */
   function tableFor(items: ExamQuestion[]): string[][][] {
@@ -276,7 +280,7 @@ export default function ListeningExam({
                   </tr>
                 </thead>
                 <tbody>
-                  {questions.map((q) => {
+                  {visibleQuestions.map((q) => {
                     const mine = answers[q.number] || "";
                     const ok = isCorrect(mine, q.correct_answer);
                     const bg = !mine
