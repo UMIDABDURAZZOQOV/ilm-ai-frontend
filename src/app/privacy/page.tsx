@@ -97,7 +97,7 @@ export default function PrivacyPage() {
       <Section title="8. Bog'lanish">
         <p>
           Savollar bo&apos;lsa biz bilan bog&apos;laning:{" "}
-          <b>support@ilmai.uz</b> {/* TODO: haqiqiy qo'llab-quvvatlash emailingizga almashtiring */}
+          <b>ashirovzulfiqor2@gmail.com</b>
         </p>
       </Section>
 
