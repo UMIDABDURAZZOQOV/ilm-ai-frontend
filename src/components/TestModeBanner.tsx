@@ -3,21 +3,24 @@
 import { useEffect, useState } from "react";
 import { X, AlertTriangle } from "lucide-react";
 import { useI18n } from "@/hooks/useI18n";
+import { usePathname } from "next/navigation";
+import { shouldShowTestModeBanner } from "@/lib/test-mode-visibility";
 
 /**
- * Slim site-wide "test mode" notice shown at the very top of every page.
+ * Test-mode notice for interactive site pages, excluding public policy documents.
  * Dismissible per browser session (sessionStorage) so it reappears on the next
  * visit but doesn't nag during one session.
  */
 export default function TestModeBanner() {
   const { lang } = useI18n();
+  const pathname = usePathname();
   const [hidden, setHidden] = useState(true);
 
   useEffect(() => {
     setHidden(sessionStorage.getItem("ilm_testmode_dismissed") === "1");
   }, []);
 
-  if (hidden) return null;
+  if (hidden || !shouldShowTestModeBanner(pathname)) return null;
 
   const text =
     lang === "ru"
