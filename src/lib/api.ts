@@ -41,7 +41,10 @@ function sameSession(expected: SessionData | null): boolean {
 }
 
 function assertActiveSession(expected: SessionData | null): void {
-  if (!sameSession(expected)) {
+  const current = getSession();
+  // A normal token rotation does not change the account owning an API result.
+  // Refresh writes below still require the exact initiating credentials.
+  if (Boolean(current) !== Boolean(expected) || current?.id !== expected?.id) {
     throw new Error("Your account changed during this request. Please try again.");
   }
 }
@@ -64,6 +67,25 @@ async function refreshAccessToken(session: SessionData): Promise<SessionData | n
   };
   saveSession(updated);
   return updated;
+}
+
+let refreshInFlight: { session: SessionData; promise: Promise<SessionData | null> } | null = null;
+
+async function getRefreshedSession(session: SessionData): Promise<SessionData | null> {
+  const current = getSession();
+  if (!current || current.id !== session.id) return null;
+  // A sibling request may already have completed the rotation.
+  if (current.access_token !== session.access_token || current.refresh_token !== session.refresh_token) return current;
+  if (refreshInFlight?.session.id === session.id && refreshInFlight.session.refresh_token === session.refresh_token) {
+    return refreshInFlight.promise;
+  }
+  const entry = { session, promise: refreshAccessToken(session) };
+  refreshInFlight = entry;
+  try {
+    return await entry.promise;
+  } finally {
+    if (refreshInFlight === entry) refreshInFlight = null;
+  }
 }
 
 /**
@@ -111,7 +133,7 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   trackApiCall(method, path, res.status, duration);
 
   if (res.status === 401 && session?.refresh_token) {
-    const refreshed = await refreshAccessToken(session);
+    const refreshed = await getRefreshedSession(session);
     assertActiveSession(refreshed ?? session);
     if (refreshed) {
       session = refreshed;

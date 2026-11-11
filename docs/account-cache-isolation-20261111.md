@@ -22,6 +22,13 @@ state when the identity changes and observes other-tab session changes.
 Refresh writes and returned API results must still belong to the initiating
 session; unchanged-account refresh and normal auth errors retain their behavior.
 
+An additional parallel-request review found that comparing returned results
+against exact token bytes rejected valid same-account responses after rotation.
+Results now check account ownership, while credential writes retain the strict
+snapshot check. Parallel expired requests share one in-flight refresh, and a
+sibling's already-rotated token is reused. Two further regressions cover these
+normal same-owner flows alongside all previous logout/cross-account cases.
+
 These client keys prevent accidental mixing, not unauthorized access to a
 server. Existing server-side token verification and owner checks remain required.
 The client does not authenticate anyone from a display name, email or cache key.

@@ -261,6 +261,39 @@ test('unchanged current account can refresh and receive its response normally', 
   assert.equal(api.getSession().access_token, 'synthetic-new');
 });
 
+test('parallel expired requests share one refresh without rejecting the same account', async () => {
+  const h = harness(), api = h.load('src/lib/api.ts');
+  api.saveSession({ id: 101, access_token: 'synthetic-expired', refresh_token: 'synthetic-refresh' });
+  let refreshes = 0;
+  h.setFetch(async (url, options) => {
+    if (url.endsWith('/auth/refresh')) {
+      refreshes++;
+      return { ok: true, json: async () => ({ access_token: 'synthetic-new', refresh_token: 'synthetic-new-refresh' }) };
+    }
+    if (options.headers.Authorization === 'Bearer synthetic-expired') return { status: 401, ok: false, json: async () => ({}) };
+    return { status: 200, ok: true, json: async () => ({ owner: 101 }) };
+  });
+  const results = await Promise.all([api.apiFetch('/synthetic-one'), api.apiFetch('/synthetic-two')]);
+  assert.equal(refreshes, 1);
+  assert.deepEqual(results.map(r => r.owner), [101, 101]);
+});
+
+test('normal in-flight success survives a concurrent token refresh for the same owner', async () => {
+  const h = harness(), api = h.load('src/lib/api.ts');
+  api.saveSession({ id: 101, access_token: 'synthetic-expired', refresh_token: 'synthetic-refresh' });
+  let resolveSlow;
+  h.setFetch(async (url, options) => {
+    if (url.endsWith('/synthetic-slow')) return new Promise(resolve => { resolveSlow = resolve; });
+    if (url.endsWith('/auth/refresh')) return { ok: true, json: async () => ({ access_token: 'synthetic-new', refresh_token: 'synthetic-new-refresh' }) };
+    if (options.headers.Authorization === 'Bearer synthetic-expired') return { status: 401, ok: false, json: async () => ({}) };
+    return { status: 200, ok: true, json: async () => ({ owner: 101 }) };
+  });
+  const slow = api.apiFetch('/synthetic-slow');
+  await api.apiFetch('/synthetic-fast');
+  resolveSlow({ status: 200, ok: true, json: async () => ({ owner: 101 }) });
+  assert.equal((await slow).owner, 101);
+});
+
 test('public requests and unchanged-account auth errors retain their behavior', async () => {
   const h = harness(), api = h.load('src/lib/api.ts');
   h.owner(null);
