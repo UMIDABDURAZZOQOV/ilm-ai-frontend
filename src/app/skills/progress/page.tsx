@@ -74,7 +74,7 @@ export default function ProgressDashboard() {
         <h1 className="text-3xl font-black flex items-center gap-3 mb-1">
           <TrendingUp className="h-7 w-7 text-emerald-500" /> Mening progressim
         </h1>
-        <p className="text-slate-500 mb-6">Har bir fan bo'yicha o'zlashtirish darajasi va kuchsiz mavzular.</p>
+        <p className="text-slate-500 mb-6">Har bir fan bo&apos;yicha o&apos;zlashtirish darajasi va kuchsiz mavzular.</p>
 
         {error && <p className="text-red-600 text-sm">{error}</p>}
         {!rows && !error && (
@@ -87,7 +87,7 @@ export default function ProgressDashboard() {
             <div className="grid grid-cols-3 gap-3 mb-6">
               <div className="rounded-2xl border border-slate-200 dark:border-neutral-800 p-4 text-center">
                 <div className="text-3xl font-black" style={{ color: band(overall) }}>{overall}%</div>
-                <div className="text-xs text-slate-500 mt-1">O'rtacha o'zlashtirish</div>
+                <div className="text-xs text-slate-500 mt-1">O&apos;rtacha o&apos;zlashtirish</div>
               </div>
               <div className="rounded-2xl border border-slate-200 dark:border-neutral-800 p-4 text-center">
                 <div className="text-3xl font-black">{started.length}<span className="text-lg text-slate-400">/{rows.length}</span></div>

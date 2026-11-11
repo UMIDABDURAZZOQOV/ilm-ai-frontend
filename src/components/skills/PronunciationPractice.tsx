@@ -122,7 +122,7 @@ export default function PronunciationPractice({
 
       {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
       {!phrases && !error && <div className="grid place-items-center py-16"><Loader2 className="w-6 h-6 animate-spin text-neutral-400" /></div>}
-      {phrases && phrases.length === 0 && <p className="text-sm text-neutral-500">Hozircha ibora yo'q.</p>}
+      {phrases && phrases.length === 0 && <p className="text-sm text-neutral-500">Hozircha ibora yo&apos;q.</p>}
 
       {phrase && (
         <div className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 p-6">

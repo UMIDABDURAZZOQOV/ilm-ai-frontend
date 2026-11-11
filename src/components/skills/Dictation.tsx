@@ -77,7 +77,7 @@ export default function Dictation({
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       {!phrases && !error && <div className="grid place-items-center py-16"><Loader2 className="w-6 h-6 animate-spin text-neutral-400" /></div>}
-      {phrases && phrases.length === 0 && <p className="text-sm text-neutral-500">Hozircha ibora yo'q.</p>}
+      {phrases && phrases.length === 0 && <p className="text-sm text-neutral-500">Hozircha ibora yo&apos;q.</p>}
 
       {phrase && (
         <div className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-800 p-6">
@@ -102,7 +102,7 @@ export default function Dictation({
           {checked && (
             <div className="mt-3">
               <div className={`flex items-center gap-2 text-sm font-bold ${isCorrect ? "text-emerald-600" : "text-red-500"}`}>
-                {isCorrect ? <><Check className="w-4 h-4" /> To'g'ri!</> : <><X className="w-4 h-4" /> To'g'ri javob:</>}
+                {isCorrect ? <><Check className="w-4 h-4" /> To&apos;g&apos;ri!</> : <><X className="w-4 h-4" /> To&apos;g&apos;ri javob:</>}
               </div>
               {!isCorrect && <p className="text-[15px] font-semibold mt-1">{phrase.text}</p>}
               <p className="text-xs text-neutral-500 mt-1">{phrase.uz}</p>
@@ -125,7 +125,7 @@ export default function Dictation({
       )}
 
       {done && (
-        <p className="text-center text-sm font-bold mt-4 text-neutral-500">{correctCount} / {phrases!.length} to'g'ri yozildi</p>
+        <p className="text-center text-sm font-bold mt-4 text-neutral-500">{correctCount} / {phrases!.length} to&apos;g&apos;ri yozildi</p>
       )}
     </div>
   );

@@ -88,8 +88,8 @@ export default function EssayCoachPage() {
       </div>
 
       {error === "short" && <p className="text-sm text-amber-600">Write a bit more first.</p>}
-      {error === "limit" && <p className="text-sm text-amber-600">You've reached your AI usage limit.</p>}
-      {error === "failed" && <p className="text-sm text-red-500">Couldn't review it — please try again.</p>}
+      {error === "limit" && <p className="text-sm text-amber-600">You&apos;ve reached your AI usage limit.</p>}
+      {error === "failed" && <p className="text-sm text-red-500">Couldn&apos;t review it — please try again.</p>}
 
       {review && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-5 mt-2">

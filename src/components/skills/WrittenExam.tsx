@@ -74,7 +74,7 @@ export default function WrittenExam({
         <>
           <div className="rounded-2xl border-2 border-neutral-900 dark:border-neutral-600 p-4 mb-4">
             <p className="font-bold whitespace-pre-line">{prompt}</p>
-            <p className="text-xs text-neutral-500 mt-2">Kamida {minWords} so'z</p>
+            <p className="text-xs text-neutral-500 mt-2">Kamida {minWords} so&apos;z</p>
           </div>
 
           <textarea
@@ -85,7 +85,7 @@ export default function WrittenExam({
             className="w-full h-64 rounded-2xl border border-neutral-300 dark:border-neutral-700 bg-transparent p-3 text-[15px] leading-relaxed resize-none"
           />
           <div className="flex items-center justify-between mt-2">
-            <span className={`text-xs ${words >= minWords ? "text-emerald-600" : "text-neutral-400"}`}>{words} so'z</span>
+            <span className={`text-xs ${words >= minWords ? "text-emerald-600" : "text-neutral-400"}`}>{words} so&apos;z</span>
             {!result && (
               <button onClick={submit} disabled={busy || words < 10}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-bold text-sm disabled:opacity-50">

@@ -447,7 +447,7 @@ export default function PracticeSession({
                       Explain this step by step
                     </button>
                     <button className="border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 bg-transparent rounded-full px-4 py-2 text-sm font-bold hover:bg-blue-50 dark:hover:bg-blue-900/20">
-                      What's the best strategy for this?
+                      What&apos;s the best strategy for this?
                     </button>
                   </div>
                   <div className="text-xs text-slate-400 mt-auto text-center">Each conversation costs 💧 1 orb</div>

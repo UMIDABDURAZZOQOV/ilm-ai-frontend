@@ -140,7 +140,7 @@ export default function AdaptivePractice({
       {done && (
         <div className="text-center py-10">
           <div className="text-5xl mb-3">{correct >= TOTAL * 0.7 ? "🏆" : "💪"}</div>
-          <p className="font-black text-lg">{correct} / {count} to'g'ri</p>
+          <p className="font-black text-lg">{correct} / {count} to&apos;g&apos;ri</p>
           <button onClick={onBack} className="mt-4 px-5 py-2.5 rounded-xl bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-bold text-sm">Tugatish</button>
         </div>
       )}

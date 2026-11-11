@@ -61,7 +61,7 @@ export default function Flashcards({
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       {!cards && !error && <div className="grid place-items-center py-16"><Loader2 className="w-6 h-6 animate-spin text-neutral-400" /></div>}
-      {cards && cards.length === 0 && <p className="text-sm text-neutral-500">Bu fanda hozircha kartochka yo'q.</p>}
+      {cards && cards.length === 0 && <p className="text-sm text-neutral-500">Bu fanda hozircha kartochka yo&apos;q.</p>}
 
       {card && (
         <>
@@ -74,7 +74,7 @@ export default function Flashcards({
               <>
                 <div className="text-xl font-black">{card.front}</div>
                 <div className="text-xs text-neutral-400 mt-4">{card.lesson}</div>
-                <div className="text-[11px] text-neutral-400 mt-1 flex items-center gap-1"><RotateCcw className="w-3 h-3" /> ko'rish uchun bosing</div>
+                <div className="text-[11px] text-neutral-400 mt-1 flex items-center gap-1"><RotateCcw className="w-3 h-3" /> ko&apos;rish uchun bosing</div>
               </>
             ) : (
               <div className="text-[15px] whitespace-pre-line leading-relaxed">{card.back}</div>

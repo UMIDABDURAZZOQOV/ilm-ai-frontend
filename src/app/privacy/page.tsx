@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export const metadata = {
   title: "Maxfiylik siyosati — Ilm AI",
   description: "Ilm AI qanday ma'lumot yig'adi, ishlatadi va himoya qiladi.",
@@ -11,7 +13,7 @@ export default function PrivacyPage() {
   const updated = "2026-08-06";
   return (
     <main style={{ maxWidth: 760, margin: "0 auto", padding: "48px 22px 96px", lineHeight: 1.7 }}>
-      <a href="/" style={{ opacity: 0.7, textDecoration: "none", fontWeight: 600 }}>‹ Ilm AI</a>
+      <Link href="/" style={{ opacity: 0.7, textDecoration: "none", fontWeight: 600 }}>‹ Ilm AI</Link>
       <h1 style={{ fontSize: "2rem", fontWeight: 800, margin: "18px 0 6px" }}>Maxfiylik siyosati</h1>
       <p style={{ opacity: 0.6, marginTop: 0 }}>Oxirgi yangilanish: {updated}</p>
 

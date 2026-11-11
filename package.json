@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test:ui": "node --test scripts/test-mode-visibility.test.mjs"
   },
   "dependencies": {
     "@formkit/auto-animate": "^0.10.0",
@@ -18,7 +20,7 @@
     "framer-motion": "^11.2.10",
     "lucide-react": "^0.378.0",
     "mermaid": "^11.16.0",
-    "next": "14.2.3",
+    "next": "15.5.29",
     "react": "^18",
     "react-dom": "^18",
     "react-parallax-tilt": "^1.7.333",
@@ -30,9 +32,20 @@
     "@types/react-dom": "^18",
     "autoprefixer": "^10.5.0",
     "eslint": "^8",
-    "eslint-config-next": "14.2.3",
+    "eslint-config-next": "15.5.29",
     "postcss": "^8.5.15",
     "tailwindcss": "^3.4.19",
     "typescript": "^5"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.32"
+    },
+    "mermaid": {
+      "katex": "0.18.2"
+    },
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "11.0.1"
+    }
   }
 }
