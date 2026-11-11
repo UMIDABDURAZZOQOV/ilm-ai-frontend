@@ -1,6 +1,8 @@
 // Client-side vocabulary progress, kept in localStorage. Per-device for now —
 // can move to the backend later if cross-device sync is needed.
 
+import { getSession } from "./api";
+import { readOwnedCache, writeOwnedCache } from "./ownedStudyCache";
 import { VOCAB } from "./vocab";
 
 export type VocabStatus = "new" | "learning" | "mastered";
@@ -12,7 +14,7 @@ type ProgressMap = Record<string, VocabStatus>;
 function read(): ProgressMap {
   if (typeof window === "undefined") return {};
   try {
-    const raw = window.localStorage.getItem(KEY);
+    const raw = readOwnedCache(window.localStorage, getSession()?.id, KEY);
     return raw ? (JSON.parse(raw) as ProgressMap) : {};
   } catch {
     return {};
@@ -21,7 +23,7 @@ function read(): ProgressMap {
 
 function write(map: ProgressMap) {
   try {
-    window.localStorage.setItem(KEY, JSON.stringify(map));
+    writeOwnedCache(window.localStorage, getSession()?.id, KEY, JSON.stringify(map));
   } catch {
     // storage full / unavailable — practice still works for the session
   }

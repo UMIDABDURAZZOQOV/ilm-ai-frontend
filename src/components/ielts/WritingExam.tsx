@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useOwnedStudyAnswers } from "@/hooks/useOwnedStudyAnswers";
 import { ChevronUp, Loader2 } from "lucide-react";
 import { bandColor, formatBand } from "@/lib/ieltsBand";
 
@@ -34,43 +36,28 @@ function countWords(s: string) {
  * IELTS Writing: prompt (+ chart) on the left, answer box on the right with a
  * live word count and AI band feedback — mirrors the real paper's layout.
  */
-export default function WritingExam({
-  task,
-  storageKey,
-  onSubmit,
-}: {
+interface WritingExamProps {
   task: WritingTask;
   storageKey: string;
   /** Wire to the backend's Gemini rubric grader. */
   onSubmit: (text: string) => Promise<WritingFeedback>;
-}) {
-  const [text, setText] = useState("");
+}
+
+export default function WritingExam(props: WritingExamProps) {
+  const { user } = useAuth();
+  return <OwnedWritingExam key={`${user?.id ?? "signed-out"}:${props.storageKey}`} {...props} />;
+}
+
+function OwnedWritingExam({ task, storageKey, onSubmit }: WritingExamProps) {
+  const { user, isLoading } = useAuth();
+  const { answers, setAnswers } = useOwnedStudyAnswers(storageKey, user?.id, !isLoading);
+  const text = answers[0] ?? "";
+  const setText = (value: string) => setAnswers({ 0: value });
   const [feedback, setFeedback] = useState<WritingFeedback | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [showSample, setShowSample] = useState(false);
   const [showFeedback, setShowFeedback] = useState(true);
-  const loaded = useRef(false);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) setText(saved);
-    } catch {
-      /* ignore */
-    }
-    loaded.current = true;
-  }, [storageKey]);
-
-  useEffect(() => {
-    if (!loaded.current) return;
-    try {
-      localStorage.setItem(storageKey, text);
-    } catch {
-      /* ignore */
-    }
-  }, [text, storageKey]);
-
   const words = useMemo(() => countWords(text), [text]);
   const short = words > 0 && words < task.min_words;
 

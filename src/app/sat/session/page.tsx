@@ -19,6 +19,7 @@ import {
   Calculator,
   SquareSigma,
 } from "lucide-react";
+import { readOwnedCache, writeOwnedCache, removeOwnedCache } from "@/lib/ownedStudyCache";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/hooks/useI18n";
 import AiTutor from "@/components/skills/AiTutor";
@@ -123,7 +124,7 @@ export default function SatSessionPage() {
 
   useEffect(() => {
     try {
-      const raw = sessionStorage.getItem("sat_session");
+      const raw = readOwnedCache(sessionStorage, user?.id, "sat_session");
       if (!raw) return setPhase("missing");
       const parsed: StoredSession = JSON.parse(raw);
       if (!parsed?.session?.questions?.length) return setPhase("missing");
@@ -133,7 +134,7 @@ export default function SatSessionPage() {
     } catch {
       setPhase("missing");
     }
-  }, []);
+  }, [user?.id]);
 
   const session = stored?.session ?? null;
   const questions: Question[] = session?.questions ?? [];
@@ -209,18 +210,18 @@ export default function SatSessionPage() {
           setPhase("section_break");
         } else {
           setPhase("done");
-          sessionStorage.removeItem("sat_session");
+          removeOwnedCache(sessionStorage, user?.id, "sat_session");
         }
       } else {
         setPhase("done");
-        sessionStorage.removeItem("sat_session");
+        removeOwnedCache(sessionStorage, user?.id, "sat_session");
       }
     } catch (err: any) {
       setSubmitError(err.message || "Could not submit the session. Please try again.");
       setPhase("exam");
       finishingRef.current = false;
     }
-  }, [session, stored, plan, questions, answers, question, bankTimeFor]);
+  }, [session, stored, plan, questions, answers, question, bankTimeFor, user?.id]);
 
   const startNextSection = useCallback(async () => {
     if (!stored || !plan || !user) return;
@@ -244,7 +245,7 @@ export default function SatSessionPage() {
         plan: { ...plan, index: plan.index + 1 },
       };
       setStored(updated);
-      sessionStorage.setItem("sat_session", JSON.stringify(updated));
+      writeOwnedCache(sessionStorage, user.id, "sat_session", JSON.stringify(updated));
       // Reset all per-section exam state.
       setCurrent(0);
       setAnswers({});

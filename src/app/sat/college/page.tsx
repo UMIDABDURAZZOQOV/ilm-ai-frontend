@@ -9,11 +9,14 @@ import { collegeCountry, collegeRegion, type College } from "@/lib/colleges";
 import { loadColleges } from "@/lib/collegesData";
 import { CollegeLogo } from "./CollegeLogo";
 
+import { getSession } from "@/lib/api";
+import { readOwnedCache, writeOwnedCache } from "@/lib/ownedStudyCache";
+
 const SAVED_KEY = "college_saved";
 
 function readSaved(): string[] {
   if (typeof window === "undefined") return [];
-  try { return JSON.parse(window.localStorage.getItem(SAVED_KEY) || "[]"); } catch { return []; }
+  try { return JSON.parse(readOwnedCache(window.localStorage, getSession()?.id, SAVED_KEY) || "[]"); } catch { return []; }
 }
 
 const REGIONS = [
@@ -74,7 +77,7 @@ export default function CollegeBrowsePage() {
   function toggleSave(id: string) {
     setSaved((prev) => {
       const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
-      try { window.localStorage.setItem(SAVED_KEY, JSON.stringify(next)); } catch {}
+      try { writeOwnedCache(window.localStorage, getSession()?.id, SAVED_KEY, JSON.stringify(next)); } catch {}
       return next;
     });
   }

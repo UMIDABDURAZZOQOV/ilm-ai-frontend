@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, Fragment, useContext, useEffect, useState } from "react";
 import { clearSession, getSession, saveSession, type SessionData } from "@/lib/api";
 import { setUserContext, trackUserAction, addBreadcrumb } from "@/lib/sentry";
 
@@ -47,6 +47,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(toUser(saved));
     }
     setIsLoading(false);
+    const syncSession = (event: StorageEvent) => {
+      if (event.key !== "ilm_session" && event.key !== null) return;
+      const session = getSession();
+      setUser(session?.access_token ? toUser(session) : null);
+    };
+    window.addEventListener("storage", syncSession);
+    return () => window.removeEventListener("storage", syncSession);
   }, []);
 
   const login = (userData: User) => {
@@ -85,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ user, login, logout, isLoading }}>
-      {children}
+      <Fragment key={user?.id ?? "signed-out"}>{children}</Fragment>
     </AuthContext.Provider>
   );
 }

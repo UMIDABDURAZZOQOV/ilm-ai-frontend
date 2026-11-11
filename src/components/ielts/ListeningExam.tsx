@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useOwnedStudyAnswers } from "@/hooks/useOwnedStudyAnswers";
 import { ChevronUp, KeyRound, X } from "lucide-react";
 import { bandColor, formatBand, rawToBand } from "@/lib/ieltsBand";
 import QuestionTable from "./QuestionTable";
@@ -42,14 +44,14 @@ export default function ListeningExam({
   /** Every question in the skill, when the band must be computed over all of them. */
   scoreQuestions?: ExamQuestion[];
 }) {
-  const [ownAnswers, setOwnAnswers] = useState<Record<number, string>>({});
+  const { user, isLoading } = useAuth();
   const controlled = controlledAnswers !== undefined;
+  const { answers: ownAnswers, setAnswers: setOwnAnswers, savedAt } =
+    useOwnedStudyAnswers(storageKey, user?.id, !controlled && !isLoading);
   const answers = controlled ? controlledAnswers! : ownAnswers;
   const [showScript, setShowScript] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
   const [showUnanswered, setShowUnanswered] = useState(false);
-  const [savedAt, setSavedAt] = useState<string | null>(null);
-  const loaded = useRef(false);
   const audioRefs = useRef<(HTMLAudioElement | null)[]>([]);
 
   // A part that was ripped in two plays as one continuous recording: starting any
@@ -64,27 +66,6 @@ export default function ListeningExam({
       if (el && i !== index) el.pause();
     });
   }
-
-  useEffect(() => {
-    if (controlled) return;          // the parent persists in controlled mode
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) setOwnAnswers(JSON.parse(raw));
-    } catch {
-      /* ignore */
-    }
-    loaded.current = true;
-  }, [storageKey]);
-
-  useEffect(() => {
-    if (!loaded.current || controlled) return;
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(answers));
-      setSavedAt(new Date().toLocaleString());
-    } catch {
-      /* ignore */
-    }
-  }, [answers, storageKey]);
 
   // Group consecutive questions that share an instruction, then drop any group we
   // can't render from the data we have (missing option boxes / maps) so only

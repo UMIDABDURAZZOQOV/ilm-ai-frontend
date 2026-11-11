@@ -9,6 +9,9 @@ import { type College } from "@/lib/colleges";
 import { loadCollege } from "@/lib/collegesData";
 import { CollegeLogo } from "../CollegeLogo";
 
+import { getSession } from "@/lib/api";
+import { readOwnedCache, writeOwnedCache } from "@/lib/ownedStudyCache";
+
 const SAVED_KEY = "college_saved";
 
 function StatBar({ label, value }: { label: string; value: number }) {
@@ -62,16 +65,16 @@ export default function CollegeDetailPage() {
   useEffect(() => {
     loadCollege(id).then((c) => { setCollege(c); setLoading(false); });
     try {
-      const arr: string[] = JSON.parse(window.localStorage.getItem(SAVED_KEY) || "[]");
+      const arr: string[] = JSON.parse(readOwnedCache(window.localStorage, getSession()?.id, SAVED_KEY) || "[]");
       setSaved(arr.includes(id));
     } catch {}
   }, [id]);
 
   function toggleSave() {
     try {
-      const arr: string[] = JSON.parse(window.localStorage.getItem(SAVED_KEY) || "[]");
+      const arr: string[] = JSON.parse(readOwnedCache(window.localStorage, getSession()?.id, SAVED_KEY) || "[]");
       const next = arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
-      window.localStorage.setItem(SAVED_KEY, JSON.stringify(next));
+      writeOwnedCache(window.localStorage, getSession()?.id, SAVED_KEY, JSON.stringify(next));
       setSaved(next.includes(id));
     } catch {}
   }

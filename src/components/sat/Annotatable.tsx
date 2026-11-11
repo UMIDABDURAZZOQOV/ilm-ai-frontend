@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { readOwnedCache, writeOwnedCache, removeOwnedCache } from "@/lib/ownedStudyCache";
 import { Highlighter, StickyNote, Trash2 } from "lucide-react";
 
 /**
@@ -61,6 +63,7 @@ export default function Annotatable({
   children: React.ReactNode;
   className?: string;
 }) {
+  const { user } = useAuth();
   const ref = useRef<HTMLDivElement | null>(null);
   const [anns, setAnns] = useState<Annotation[]>([]);
   const [popover, setPopover] = useState<{ x: number; y: number; start: number; end: number; text: string } | null>(null);
@@ -70,24 +73,24 @@ export default function Annotatable({
   // Load / persist per question.
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(`annot-${storageKey}`);
+      const raw = readOwnedCache(localStorage, user?.id, `annot-${storageKey}`);
       setAnns(raw ? JSON.parse(raw) : []);
     } catch {
       setAnns([]);
     }
     setPopover(null);
     setNoteFor(null);
-  }, [storageKey]);
+  }, [storageKey, user?.id]);
 
   const persist = useCallback((next: Annotation[]) => {
     setAnns(next);
     try {
-      if (next.length) localStorage.setItem(`annot-${storageKey}`, JSON.stringify(next));
-      else localStorage.removeItem(`annot-${storageKey}`);
+      if (next.length) writeOwnedCache(localStorage, user?.id, `annot-${storageKey}`, JSON.stringify(next));
+      else removeOwnedCache(localStorage, user?.id, `annot-${storageKey}`);
     } catch {
       /* quota — annotations are a convenience */
     }
-  }, [storageKey]);
+  }, [storageKey, user?.id]);
 
   // Paint the highlights with the CSS Custom Highlight API after every change.
   useEffect(() => {

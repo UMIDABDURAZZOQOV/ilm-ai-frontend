@@ -7,6 +7,8 @@
  * as it is earned, and the home page only reads.
  */
 import { roundBand } from "./ieltsBand";
+import { getSession } from "./api";
+import { studyCacheKey } from "./ownedStudyCache";
 
 export type IeltsSkill = "listening" | "reading" | "writing" | "speaking";
 export const IELTS_SKILLS: IeltsSkill[] = ["listening", "reading", "writing", "speaking"];
@@ -18,8 +20,8 @@ export interface SkillResult {
   answered: number;
 }
 
-const key = (book: number, test: number, skill: IeltsSkill) =>
-  `ielts-score-${book}-${test}-${skill}`;
+const key = (book: number, test: number, skill: IeltsSkill, ownerId?: number | null) =>
+  studyCacheKey(ownerId, `ielts-score-${book}-${test}-${skill}`);
 
 /**
  * Store a band, or clear it when nothing has been answered.
@@ -32,11 +34,14 @@ export function saveSkillResult(
   book: number,
   test: number,
   skill: IeltsSkill,
-  result: SkillResult
+  result: SkillResult,
+  ownerId: number | null | undefined = getSession()?.id
 ): void {
+  const scoped = key(book, test, skill, ownerId);
+  if (!scoped || getSession()?.id !== ownerId) return;
   try {
-    if (result.answered <= 0) localStorage.removeItem(key(book, test, skill));
-    else localStorage.setItem(key(book, test, skill), JSON.stringify(result));
+    if (result.answered <= 0) localStorage.removeItem(scoped);
+    else localStorage.setItem(scoped, JSON.stringify(result));
   } catch {
     /* quota — the score is a convenience, not the exam */
   }
@@ -47,8 +52,10 @@ export function loadSkillResult(
   test: number,
   skill: IeltsSkill
 ): SkillResult | null {
+  const scoped = key(book, test, skill, getSession()?.id);
+  if (!scoped) return null;
   try {
-    const raw = localStorage.getItem(key(book, test, skill));
+    const raw = localStorage.getItem(scoped);
     return raw ? (JSON.parse(raw) as SkillResult) : null;
   } catch {
     return null;

@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { bandColor, formatBand, rawToBand } from "@/lib/ieltsBand";
 import { isCorrect, type ExamQuestion } from "./ReadingExam";
+import { useAuth } from "@/hooks/useAuth";
+import { useOwnedStudyAnswers } from "@/hooks/useOwnedStudyAnswers";
 import { saveSkillResult } from "@/lib/ieltsScores";
 
 export interface SkillSection {
@@ -49,29 +51,9 @@ export default function SkillExam({
   bottomExtra?: ReactNode;
 }) {
   const [active, setActive] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const { user, isLoading } = useAuth();
+  const { answers, setAnswers, ready } = useOwnedStudyAnswers(storageKey, user?.id, !isLoading);
   const [showScores, setShowScores] = useState(false);
-  const loaded = useRef(false);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) setAnswers(JSON.parse(raw));
-    } catch {
-      /* ignore corrupt cache */
-    }
-    loaded.current = true;
-  }, [storageKey]);
-
-  useEffect(() => {
-    if (!loaded.current) return;
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(answers));
-    } catch {
-      /* quota — not fatal */
-    }
-  }, [answers, storageKey]);
-
   const all = sections.flatMap((s) => s.questions);
   const correct = all.filter((q) => isCorrect(answers[q.number] || "", q.correct_answer)).length;
   const answered = all.filter((q) => (answers[q.number] || "").trim()).length;
@@ -80,9 +62,9 @@ export default function SkillExam({
   // Publish the band for the test card. Recomputing it there would mean refetching
   // every paper just to draw the home page.
   useEffect(() => {
-    if (!loaded.current || !book || !test) return;
-    saveSkillResult(book, test, skill, { band, correct, total: all.length, answered });
-  }, [band, correct, answered, all.length, book, test, skill]);
+    if (!ready || !user || !book || !test) return;
+    saveSkillResult(book, test, skill, { band, correct, total: all.length, answered }, user.id);
+  }, [band, correct, answered, all.length, book, test, skill, ready, user]);
 
   const onAnswerChange = (n: number, v: string) => setAnswers((a) => ({ ...a, [n]: v }));
   const section = sections[active];

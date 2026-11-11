@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useOwnedStudyAnswers } from "@/hooks/useOwnedStudyAnswers";
 import { BookOpen, FileText, Highlighter, KeyRound, X } from "lucide-react";
 import { bandColor, formatBand, rawToBand } from "@/lib/ieltsBand";
 import QuestionTable from "./QuestionTable";
@@ -65,37 +67,16 @@ export default function ReadingExam({
   /** Every question in the skill, when the band must be computed over all of them. */
   scoreQuestions?: ExamQuestion[];
 }) {
-  const [ownAnswers, setOwnAnswers] = useState<Record<number, string>>({});
+  const { user, isLoading } = useAuth();
   const controlled = controlledAnswers !== undefined;
+  const { answers: ownAnswers, setAnswers: setOwnAnswers, savedAt } =
+    useOwnedStudyAnswers(storageKey, user?.id, !controlled && !isLoading);
   const answers = controlled ? controlledAnswers! : ownAnswers;
   const [showKeys, setShowKeys] = useState(false);
   const [showUnanswered, setShowUnanswered] = useState(false);
   const [guided, setGuided] = useState(false);
-  const [savedAt, setSavedAt] = useState<string | null>(null);
-  const loaded = useRef(false);
 
   // ── autosave ──────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (controlled) return;          // the parent persists in controlled mode
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) setOwnAnswers(JSON.parse(raw));
-    } catch {
-      /* ignore corrupt cache */
-    }
-    loaded.current = true;
-  }, [storageKey]);
-
-  useEffect(() => {
-    if (!loaded.current || controlled) return;
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(answers));
-      setSavedAt(new Date().toLocaleString());
-    } catch {
-      /* quota — not fatal */
-    }
-  }, [answers, storageKey]);
-
   // Group consecutive questions that share an instruction (like the real paper),
   // then drop any group we can't render from the data we have (missing option
   // boxes / maps) so only fully-working questions ever show or count.

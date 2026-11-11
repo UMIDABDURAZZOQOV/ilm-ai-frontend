@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Loader2, Timer, BookOpen, FunctionSquare, Clock, ListChecks, FileText } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { writeOwnedCache } from "@/lib/ownedStudyCache";
 import { startSession } from "@/lib/satIeltsApi";
 
 // One step of a mock = one pure section, never mixing Math with Reading.
@@ -76,8 +77,8 @@ export default function MockTestPage() {
         duration_seconds: first.minutes * 60,
       });
       // The exam page reads this handoff; `plan` drives multi-section mocks.
-      sessionStorage.setItem(
-        "sat_session",
+      writeOwnedCache(
+        sessionStorage, user.id, "sat_session",
         JSON.stringify({
           session: res,
           mode: "mock",

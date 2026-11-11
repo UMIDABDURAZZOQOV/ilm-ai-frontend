@@ -33,6 +33,19 @@ export function clearSession() {
   localStorage.removeItem(SESSION_KEY);
 }
 
+function sameSession(expected: SessionData | null): boolean {
+  const current = getSession();
+  if (!expected || !current) return expected === current;
+  return current.id === expected.id && current.access_token === expected.access_token
+    && current.refresh_token === expected.refresh_token;
+}
+
+function assertActiveSession(expected: SessionData | null): void {
+  if (!sameSession(expected)) {
+    throw new Error("Your account changed during this request. Please try again.");
+  }
+}
+
 async function refreshAccessToken(session: SessionData): Promise<SessionData | null> {
   const res = await fetch(`${API_BASE}/auth/refresh`, {
     method: "POST",
@@ -41,6 +54,9 @@ async function refreshAccessToken(session: SessionData): Promise<SessionData | n
   });
   if (!res.ok) return null;
   const data = await res.json();
+  // Logout/account switching while refresh is in flight must never restore the
+  // previous identity or overwrite the newly selected account's credentials.
+  if (!sameSession(session)) return null;
   const updated = {
     ...session,
     access_token: data.access_token,
@@ -67,7 +83,7 @@ export function getUnverifiedEmail(err: unknown): string | null {
 }
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
-  const session = getSession();
+  let session = getSession();
   const headers: Record<string, string> = {
     ...(options.headers as Record<string, string>),
   };
@@ -88,6 +104,7 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   // finished quizzes/lessons didn't show up until a manual page refresh.
   // Placed before ...options so a caller can still opt out explicitly.
   let res = await fetch(`${API_BASE}${path}`, { cache: "no-store", ...options, headers });
+  assertActiveSession(session);
   const duration = performance.now() - startTime;
 
   // Track API call with Sentry
@@ -95,7 +112,9 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
 
   if (res.status === 401 && session?.refresh_token) {
     const refreshed = await refreshAccessToken(session);
+    assertActiveSession(refreshed ?? session);
     if (refreshed) {
+      session = refreshed;
       headers["Authorization"] = `Bearer ${refreshed.access_token}`;
       const retryStartTime = performance.now();
       res = await fetch(`${API_BASE}${path}`, { cache: "no-store", ...options, headers });
@@ -105,6 +124,7 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   }
 
   const data = await res.json().catch(() => ({}));
+  assertActiveSession(session);
 
   if (!res.ok) {
     const errorMsg = data.detail || data.error || `Request failed (${res.status})`;
