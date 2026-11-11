@@ -204,9 +204,10 @@ export interface PronunciationPhrase {
 
 export async function getPronunciationPhrases(
   userId: number,
-  subjectSlug: string
+  subjectSlug: string,
+  signal?: AbortSignal
 ): Promise<{ phrases: PronunciationPhrase[]; language: string }> {
-  return apiFetch(`/skills/${userId}/pronunciation?subject=${subjectSlug}`);
+  return apiFetch(`/skills/${userId}/pronunciation?subject=${subjectSlug}`, { signal });
 }
 
 export async function scorePronunciation(data: {

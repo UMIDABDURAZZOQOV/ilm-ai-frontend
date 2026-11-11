@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, XCircle, Clock, ChevronRight, Flag, Grid3x3, Bookmark, RotateCcw, MessageSquare, BookOpen, Info, Calculator, Highlighter, MoreHorizontal, ArrowLeft } from "lucide-react";
 import {
@@ -23,7 +23,11 @@ interface PracticeSessionProps {
 type AnsweredMap = Record<number, string>; // questionId → submitted answer
 type FlaggedMap = Record<number, boolean>; // questionId → flagged status
 
-export default function PracticeSession({
+export default function PracticeSession(props: PracticeSessionProps) {
+  return <PracticeSessionContent key={props.session.session_id} {...props} />;
+}
+
+function PracticeSessionContent({
   session,
   questions,
   examType,
@@ -39,26 +43,33 @@ export default function PracticeSession({
   );
   const [result, setResult] = useState<SessionResult | null>(null);
   const [completing, setCompleting] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
   const [showQuestionGrid, setShowQuestionGrid] = useState(false);
   const [aiTab, setAiTab] = useState<"ask" | "explain" | "info">("ask");
   const [aiInput, setAiInput] = useState("");
   const [aiMessages, setAiMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
   const [showAiPanel, setShowAiPanel] = useState(true);
   const startTimeRef = useRef<number>(Date.now());
+  const mounted = useRef(true);
+  const finishPending = useRef(false);
+  const submitPending = useRef(false);
+  const autoFinishStarted = useRef(false);
+  const finishRequest = useRef<AbortController | null>(null);
+  const submitRequest = useRef<AbortController | null>(null);
 
-  // ── Timer ──────────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!session.timed || timeLeft === null || result) return;
-    if (timeLeft <= 0) {
-      handleFinishSession();
-      return;
-    }
-    const id = setTimeout(() => setTimeLeft((t) => (t !== null ? t - 1 : null)), 1000);
-    return () => clearTimeout(id);
-  }, [timeLeft, result]);
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      finishRequest.current?.abort();
+      submitRequest.current?.abort();
+    };
+  }, []);
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const currentQuestion = questions[currentIdx];
+  const currentQuestionId = useRef<number | null>(null);
+  currentQuestionId.current = currentQuestion?.id ?? null;
   const isAnswered = currentQuestion
     ? answeredMap[currentQuestion.id] !== undefined
     : false;
@@ -67,21 +78,27 @@ export default function PracticeSession({
   const elapsed = () => Math.round((Date.now() - startTimeRef.current) / 1000) * 1000;
 
   const handleSubmitAnswer = async () => {
-    if (!selectedAnswer || isAnswered || submitting) return;
+    if (!selectedAnswer || isAnswered || submitPending.current) return;
+    submitPending.current = true;
+    const controller = new AbortController();
+    submitRequest.current = controller;
     setSubmitting(true);
+    setRequestError(null);
     try {
       await submitAnswer(session.session_id, {
         question_id: currentQuestion.id,
         answer: selectedAnswer,
         elapsed_ms: elapsed(),
-      });
+      }, controller.signal);
+      if (!mounted.current || controller.signal.aborted) return;
       setAnsweredMap((prev) => ({ ...prev, [currentQuestion.id]: selectedAnswer }));
       startTimeRef.current = Date.now();
-      setSelectedAnswer("");
-    } catch (err: any) {
-      console.error("submitAnswer error:", err);
+      if (currentQuestionId.current === currentQuestion.id) setSelectedAnswer("");
+    } catch {
+      if (mounted.current && !controller.signal.aborted) setRequestError("Your answer could not be submitted. Please try again.");
     } finally {
-      setSubmitting(false);
+      submitPending.current = false;
+      if (mounted.current) setSubmitting(false);
     }
   };
 
@@ -114,19 +131,38 @@ export default function PracticeSession({
     }
   };
 
-  const handleFinishSession = async () => {
-    if (completing) return;
+  const handleFinishSession = useCallback(async () => {
+    if (finishPending.current) return;
+    finishPending.current = true;
+    const controller = new AbortController();
+    finishRequest.current = controller;
     setCompleting(true);
+    setRequestError(null);
     try {
-      const res = await completeSession(session.session_id);
+      const res = await completeSession(session.session_id, controller.signal);
+      if (!mounted.current || controller.signal.aborted) return;
       setResult(res);
       onComplete(res);
-    } catch (err: any) {
-      console.error("completeSession error:", err);
+    } catch {
+      if (mounted.current && !controller.signal.aborted) setRequestError("The session could not be completed. Please try again.");
     } finally {
-      setCompleting(false);
+      finishPending.current = false;
+      if (mounted.current) setCompleting(false);
     }
-  };
+  }, [session.session_id, onComplete]);
+
+  useEffect(() => {
+    if (!session.timed || timeLeft === null || result) return;
+    if (timeLeft <= 0) {
+      if (!autoFinishStarted.current) {
+        autoFinishStarted.current = true;
+        void handleFinishSession();
+      }
+      return;
+    }
+    const id = setTimeout(() => setTimeLeft((t) => (t !== null ? t - 1 : null)), 1000);
+    return () => clearTimeout(id);
+  }, [timeLeft, result, session.timed, handleFinishSession]);
 
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -363,6 +399,7 @@ export default function PracticeSession({
           )}
 
           {/* Action buttons */}
+          {requestError && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{requestError}</p>}
           <div className="flex gap-2 mt-auto">
             {!isAnswered && (
               <button

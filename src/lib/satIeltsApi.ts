@@ -341,11 +341,13 @@ export async function startSession(
  */
 export async function submitAnswer(
   sessionId: number,
-  data: AnswerSubmissionParams
+  data: AnswerSubmissionParams,
+  signal?: AbortSignal
 ): Promise<AnswerSubmissionResponse> {
   return apiFetch(`/sat-ielts/sessions/${sessionId}/answer`, {
     method: "POST",
     body: JSON.stringify(data),
+    signal,
   });
 }
 
@@ -354,10 +356,12 @@ export async function submitAnswer(
  * POST /sat-ielts/sessions/{sessionId}/complete
  */
 export async function completeSession(
-  sessionId: number
+  sessionId: number,
+  signal?: AbortSignal
 ): Promise<SessionResult> {
   return apiFetch(`/sat-ielts/sessions/${sessionId}/complete`, {
     method: "POST",
+    signal,
   });
 }
 

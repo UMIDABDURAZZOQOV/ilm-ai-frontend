@@ -10,23 +10,24 @@ interface I18nContextType {
 }
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
+const DEFAULT_LANGUAGE: Lang = "uz";
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = useState<Lang>("uz");
+  const [lang, setLangState] = useState<Lang>(DEFAULT_LANGUAGE);
 
   useEffect(() => {
-    const saved = localStorage.getItem("ilm_lang") as Lang;
-    if (saved && TRANSLATIONS[saved]) {
-      setLangState(saved);
-      document.documentElement.lang = saved;
-    } else {
-      document.documentElement.lang = lang;
-    }
+    let restored = DEFAULT_LANGUAGE;
+    try {
+      const saved = localStorage.getItem("ilm_lang") as Lang;
+      if (saved && TRANSLATIONS[saved]) restored = saved;
+    } catch { /* Public documents must work when browser storage is disabled. */ }
+    setLangState(restored);
+    document.documentElement.lang = restored;
   }, []);
 
   const setLang = (newLang: Lang) => {
     setLangState(newLang);
-    localStorage.setItem("ilm_lang", newLang);
+    try { localStorage.setItem("ilm_lang", newLang); } catch { /* Keep the selected language in memory. */ }
     document.documentElement.lang = newLang;
   };
 

@@ -37,7 +37,7 @@ function VerifyEmailForm() {
 
   useEffect(() => {
     startCooldown(RESEND_COOLDOWN);
-  }, []);
+  }, [startCooldown]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
@@ -285,13 +285,7 @@ function DashboardContent() {
     }
   }, [user, authLoading, router]);
 
-  useEffect(() => {
-    if (user) {
-      fetchInitialData();
-    }
-  }, [user]);
-
-  const fetchInitialData = async () => {
+  const fetchInitialData = useCallback(async () => {
     try {
       const fileData = await apiFetch(`/files/list?user_id=${user?.id}`);
       setFiles(fileData.files || []);
@@ -358,7 +352,11 @@ function DashboardContent() {
     } catch {
       // ignore initial load errors
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) void fetchInitialData();
+  }, [user, fetchInitialData]);
 
   const handleFileUpload = async () => {
     if (!selectedFile || !user) return;

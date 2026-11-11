@@ -17,8 +17,10 @@ export default function TestModeBanner() {
   const [hidden, setHidden] = useState(true);
 
   useEffect(() => {
-    setHidden(sessionStorage.getItem("ilm_testmode_dismissed") === "1");
-  }, []);
+    if (!shouldShowTestModeBanner(pathname)) { setHidden(true); return; }
+    try { setHidden(sessionStorage.getItem("ilm_testmode_dismissed") === "1"); }
+    catch { setHidden(false); }
+  }, [pathname]);
 
   if (hidden || !shouldShowTestModeBanner(pathname)) return null;
 
@@ -35,7 +37,7 @@ export default function TestModeBanner() {
       <span>{text}</span>
       <button
         onClick={() => {
-          sessionStorage.setItem("ilm_testmode_dismissed", "1");
+          try { sessionStorage.setItem("ilm_testmode_dismissed", "1"); } catch { /* Dismiss for this mounted page even without persistence. */ }
           setHidden(true);
         }}
         aria-label="Close"

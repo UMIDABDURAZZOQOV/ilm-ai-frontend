@@ -156,7 +156,9 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
         : typeof errorMsg === "object" && errorMsg !== null && "message" in errorMsg
         ? String((errorMsg as { message: unknown }).message)
         : JSON.stringify(errorMsg);
-    trackError(new Error(readableMsg), {
+    // Validation bodies can contain submitted answers or personal fields.
+    // Keep those details local; telemetry only needs the response status.
+    trackError(new Error(`API request failed (${res.status})`), {
       endpoint: path,
       method,
       status: res.status,

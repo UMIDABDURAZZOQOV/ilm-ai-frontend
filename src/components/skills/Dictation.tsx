@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ChevronLeft, Loader2, Volume2, Check, X } from "lucide-react";
 import { getPronunciationPhrases, type PronunciationPhrase } from "@/lib/skillTreeApi";
 
@@ -25,8 +25,10 @@ export default function Dictation({
   subjectName: string;
   onBack: () => void;
 }) {
-  const [phrases, setPhrases] = useState<PronunciationPhrase[] | null>(null);
-  const [language, setLanguage] = useState("");
+  const requestKey = `${userId}:${subjectSlug}`;
+  const [bank, setBank] = useState<{ key: string; phrases: PronunciationPhrase[]; language: string } | null>(null);
+  const phrases = bank?.key === requestKey ? bank.phrases : null;
+  const language = bank?.key === requestKey ? bank.language : "";
   const [index, setIndex] = useState(0);
   const [typed, setTyped] = useState("");
   const [checked, setChecked] = useState(false);
@@ -34,24 +36,31 @@ export default function Dictation({
   const [error, setError] = useState("");
 
   useEffect(() => {
-    getPronunciationPhrases(userId, subjectSlug)
-      .then((d) => { setPhrases(d.phrases); setLanguage(d.language); })
-      .catch(() => setError("Iboralarni yuklab bo'lmadi."));
-  }, [userId, subjectSlug]);
+    const controller = new AbortController();
+    setIndex(0); setTyped(""); setChecked(false); setCorrectCount(0); setError("");
+    getPronunciationPhrases(userId, subjectSlug, controller.signal)
+      .then((data) => { if (!controller.signal.aborted) setBank({ key: requestKey, ...data }); })
+      .catch(() => { if (!controller.signal.aborted) setError("Iboralarni yuklab bo'lmadi."); });
+    return () => controller.abort();
+  }, [userId, subjectSlug, requestKey]);
 
   const phrase = phrases?.[index];
   const isCorrect = phrase ? norm(typed) === norm(phrase.text) : false;
 
-  const play = () => {
+  const play = useCallback(() => {
     if (!phrase || typeof window === "undefined" || !window.speechSynthesis) return;
     const u = new SpeechSynthesisUtterance(phrase.text);
     u.lang = language === "Korean" ? "ko-KR" : language === "French" ? "fr-FR" : "en-US";
     u.rate = 0.85;
+    window.speechSynthesis.cancel();
     window.speechSynthesis.speak(u);
-  };
+  }, [phrase, language]);
 
   // Auto-play the first phrase once loaded, and each new one.
-  useEffect(() => { if (phrase) play(); /* eslint-disable-next-line */ }, [phrase]);
+  useEffect(() => {
+    if (phrase) play();
+    return () => { if (typeof window !== "undefined") window.speechSynthesis?.cancel(); };
+  }, [phrase, play]);
 
   const check = () => {
     if (checked || !phrase) return;

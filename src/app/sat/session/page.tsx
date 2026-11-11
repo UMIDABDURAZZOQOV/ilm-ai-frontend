@@ -137,7 +137,7 @@ export default function SatSessionPage() {
   }, [user?.id]);
 
   const session = stored?.session ?? null;
-  const questions: Question[] = session?.questions ?? [];
+  const questions: Question[] = useMemo(() => session?.questions ?? [], [session?.questions]);
   const question = questions[current] ?? null;
   const timed = !!session?.timed && !!session?.duration_seconds;
   const remaining = timed ? (session!.duration_seconds as number) - elapsed : null;

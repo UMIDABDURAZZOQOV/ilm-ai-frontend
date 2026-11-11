@@ -33,10 +33,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // layout.tsx already applied the right class before paint — this just
   // syncs React state to match, so the toggle UI shows the right selection).
   useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY) as ThemeMode | null;
+    let stored: ThemeMode | null = null;
+    try { stored = window.localStorage.getItem(STORAGE_KEY) as ThemeMode | null; } catch { /* Storage is optional for public pages. */ }
     const mode = stored && SUPPORTED.includes(stored) ? stored : "system";
     setThemeModeState(mode);
-    setResolvedTheme(mode === "system" ? resolveSystemTheme() : mode);
+    const next = mode === "system" ? resolveSystemTheme() : mode;
+    setResolvedTheme(next);
+    applyThemeClass(next);
   }, []);
 
   // Track OS preference changes while in "system" mode.
@@ -55,7 +58,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   function setThemeMode(mode: ThemeMode) {
     if (!SUPPORTED.includes(mode)) return;
     setThemeModeState(mode);
-    window.localStorage.setItem(STORAGE_KEY, mode);
+    try { window.localStorage.setItem(STORAGE_KEY, mode); } catch { /* Theme changes still work in memory. */ }
     const next = mode === "system" ? resolveSystemTheme() : mode;
     setResolvedTheme(next);
     applyThemeClass(next);

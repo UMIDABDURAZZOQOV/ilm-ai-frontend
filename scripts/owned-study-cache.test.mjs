@@ -22,12 +22,22 @@ function memoryStorage() {
 function harness() {
   const storage = memoryStorage();
   const cache = new Map();
+  const telemetryErrors = [];
   let auth = { user: { id: 101 }, isLoading: false };
   let fetchHandler = () => { throw new Error('Network forbidden in owned-cache regression'); };
   const listeners = new Map();
+  const sessionStorage = memoryStorage();
+  const classes = new Set();
+  let pathname = '/privacy';
+  const spoken = [];
+  const speech = { spoken, cancellations: 0, speak: utterance => spoken.push(utterance), cancel() { this.cancellations++; } };
+  const document = { documentElement: { lang: 'uz', classList: { add: value => classes.add(value), remove: value => classes.delete(value) } } };
   const sandbox = { console, localStorage: storage, window: { localStorage: storage,
     addEventListener: (type, listener) => listeners.set(type, listener),
-    removeEventListener: type => listeners.delete(type) }, process: { env: {} },
+    removeEventListener: type => listeners.delete(type), speechSynthesis: speech,
+    matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }) }, process: { env: {} },
+    document, sessionStorage, AbortController,
+    SpeechSynthesisUtterance: class { constructor(text) { this.text = text; } },
     performance, FormData, Date, setTimeout, clearTimeout,
     fetch: (...args) => fetchHandler(...args) };
   const context = vm.createContext(sandbox);
@@ -45,9 +55,13 @@ function harness() {
     const module = { exports: {} }; cache.set(path, module);
     function localRequire(id) {
       if (id === '@/hooks/useAuth') return { useAuth: () => auth };
-      if (id === './sentry' || id === '@/lib/sentry') return { trackApiCall() {}, trackError() {}, setUserContext() {}, trackUserAction() {}, addBreadcrumb() {} };
+      if (id === './sentry' || id === '@/lib/sentry') return { trackApiCall() {}, trackError(error, context) { telemetryErrors.push({ message: error.message, context }); }, setUserContext() {}, trackUserAction() {}, addBreadcrumb() {} };
       if (id === 'react' || id === 'react/jsx-runtime') return require(id);
+      if (id === 'next/navigation') return { usePathname: () => pathname };
+      if (id === 'next/link') return { __esModule: true, default: ({ children, ...props }) => React.createElement('a', props, children) };
+      if (id === 'framer-motion') return { motion: new Proxy({}, { get: (_target, name) => name }), AnimatePresence: ({ children }) => children };
       if (id === 'lucide-react') return new Proxy({}, { get: () => () => null });
+      if (id === './AiAnalysisPanel') return { __esModule: true, default: () => null };
       if (id === './QuestionTable') return { __esModule: true, default: () => null };
       if (id.startsWith('@/')) return load(id);
       if (id.startsWith('.')) return load(resolve(dirname(path), id));
@@ -62,9 +76,205 @@ function harness() {
     if (id) api.saveSession({ id }); else api.clearSession();
   }
   owner(101);
-  return { storage, load, owner, listeners, setFetch: handler => { fetchHandler = handler; } };
+  return { storage, sessionStorage, document, speech, load, owner, listeners, telemetryErrors,
+    setTimers: (schedule, cancel) => { sandbox.setTimeout = schedule; sandbox.clearTimeout = cancel; },
+    setPathname: value => { pathname = value; }, setFetch: handler => { fetchHandler = handler; } };
 }
 const plain = value => JSON.parse(JSON.stringify(value));
+
+test('API telemetry excludes private backend validation details while preserving local errors', async () => {
+  const h = harness(), api = h.load('src/lib/api.ts');
+  const detail = [{ input: 'synthetic-private-answer', message: 'synthetic-private-profile' }];
+  h.setFetch(async () => ({ status: 422, ok: false, json: async () => ({ detail }) }));
+  await assert.rejects(api.apiFetch('/synthetic-validation'), error => {
+    assert.equal(error.status, 422);
+    assert.deepEqual(plain(error.detail), detail);
+    return true;
+  });
+  assert.equal(h.telemetryErrors.length, 1);
+  assert.equal(h.telemetryErrors[0].message, 'API request failed (422)');
+  assert.ok(!JSON.stringify(h.telemetryErrors).includes('synthetic-private'));
+});
+
+test('public locale remains usable when browser storage cannot be read or written', () => {
+  const h = harness(), locale = h.load('src/hooks/useI18n.tsx');
+  h.storage.getItem = () => { throw Error('synthetic disabled storage'); };
+  h.storage.setItem = () => { throw Error('synthetic quota'); };
+  let context, view;
+  function Probe() { context = locale.useI18n(); return React.createElement('output', null, context.lang); }
+  act(() => { view = create(React.createElement(locale.I18nProvider, null, React.createElement(Probe))); });
+  assert.equal(context.lang, 'uz');
+  act(() => context.setLang('ru'));
+  assert.equal(context.lang, 'ru'); assert.equal(h.document.documentElement.lang, 'ru');
+  act(() => view.unmount());
+});
+
+test('public theme remains usable when browser storage is disabled', () => {
+  const h = harness(), theme = h.load('src/hooks/useTheme.tsx');
+  h.storage.getItem = () => { throw Error('synthetic disabled storage'); };
+  h.storage.setItem = () => { throw Error('synthetic quota'); };
+  let context, view;
+  function Probe() { context = theme.useTheme(); return React.createElement('output', null, context.resolvedTheme); }
+  act(() => { view = create(React.createElement(theme.ThemeProvider, null, React.createElement(Probe))); });
+  act(() => context.setThemeMode('light'));
+  assert.equal(context.resolvedTheme, 'light');
+  act(() => view.unmount());
+});
+
+test('privacy banner never reads blocked session storage; interactive dismissal survives quota', () => {
+  const h = harness(), locale = h.load('src/hooks/useI18n.tsx');
+  const Banner = h.load('src/components/TestModeBanner.tsx').default;
+  h.sessionStorage.getItem = () => { throw Error('synthetic disabled session storage'); };
+  h.sessionStorage.setItem = () => { throw Error('synthetic quota'); };
+  let view;
+  const render = () => React.createElement(locale.I18nProvider, null, React.createElement(Banner));
+  act(() => { view = create(render()); }); assert.equal(view.toJSON(), null);
+  h.setPathname('/'); act(() => view.update(render()));
+  assert.ok(view.root.findByType('button'));
+  act(() => view.root.findByType('button').props.onClick()); assert.equal(view.toJSON(), null);
+  act(() => view.unmount());
+});
+
+test('dictation drops old-subject responses and aborts their fetch on navigation', async () => {
+  const h = harness(), Dictation = h.load('src/components/skills/Dictation.tsx').default;
+  const pending = new Map();
+  h.setFetch((url, options) => new Promise(resolve => pending.set(url.split('subject=')[1], { resolve, signal: options.signal })));
+  const props = { userId: 101, subjectSlug: 'old', subjectName: 'Old', onBack() {} };
+  let view;
+  act(() => { view = create(React.createElement(Dictation, props)); });
+  act(() => view.update(React.createElement(Dictation, { ...props, subjectSlug: 'new', subjectName: 'New' })));
+  await act(async () => pending.get('new').resolve({ status: 200, ok: true, json: async () => ({ phrases: [{ text: 'bonjour', uz: 'synthetic-new' }], language: 'French' }) }));
+  await act(async () => pending.get('old').resolve({ status: 200, ok: true, json: async () => ({ phrases: [{ text: 'old-private-phrase', uz: 'synthetic-old' }], language: 'English' }) }));
+  assert.ok(!JSON.stringify(view.toJSON()).includes('synthetic-old'));
+  assert.equal(h.speech.spoken.at(-1).text, 'bonjour');
+  assert.equal(h.speech.spoken.at(-1).lang, 'fr-FR');
+  assert.equal(pending.get('old').signal?.aborted, true);
+  act(() => view.unmount()); assert.equal(pending.get('new').signal.aborted, true);
+});
+
+test('dictation hides loaded old content immediately while the next subject loads', async () => {
+  const h = harness(), Dictation = h.load('src/components/skills/Dictation.tsx').default;
+  h.setFetch(async url => url.includes('subject=old') ? { status: 200, ok: true, json: async () => ({ phrases: [{ text: 'old-target', uz: 'old-translation' }], language: 'English' }) } : new Promise(() => {}));
+  let view;
+  const props = { userId: 101, subjectSlug: 'old', subjectName: 'Old', onBack() {} };
+  await act(async () => { view = create(React.createElement(Dictation, props)); });
+  const before = h.speech.spoken.length;
+  act(() => view.update(React.createElement(Dictation, { ...props, subjectSlug: 'new', subjectName: 'New' })));
+  assert.equal(view.root.findAllByType('input').length, 0);
+  assert.equal(h.speech.spoken.length, before);
+  act(() => view.unmount()); assert.ok(h.speech.cancellations > 0);
+});
+
+test('practice finish coalesces same-tick duplicate clicks into one completion', async () => {
+  const h = harness(), Practice = h.load('src/app/dashboard/sat-ielts/PracticeSession.tsx').default;
+  let completions = 0, resolveComplete, onComplete = 0, requestSignal;
+  h.setFetch(async (url, options) => {
+    if (url.endsWith('/answer')) return { status: 200, ok: true, json: async () => ({}) };
+    if (url.endsWith('/complete')) {
+      completions++; requestSignal = options.signal;
+      return new Promise(resolve => { resolveComplete = resolve; });
+    }
+    throw Error('Unexpected synthetic practice request');
+  });
+  let view;
+  const props = { session: { session_id: 77, timed: false, duration_seconds: null }, examType: 'SAT',
+    questions: [{ id: 1, question_type: 'mcq', options: ['synthetic-choice'], question_text: 'Synthetic question', correct_answer: 'synthetic-choice' }], onComplete() { onComplete++; } };
+  act(() => { view = create(React.createElement(Practice, props)); });
+  const option = view.root.findAllByType('button').find(node => node.findAllByType('span').some(span => span.props.children === 'synthetic-choice'));
+  act(() => option.props.onClick());
+  await act(async () => { await view.root.findAllByType('button').find(node => node.props.children === 'Submit').props.onClick(); });
+  const finish = view.root.findAllByType('button').find(node => node.props.children === 'Finish').props.onClick;
+  let first, second; act(() => { first = finish(); second = finish(); });
+  assert.equal(completions, 1);
+  await act(async () => { resolveComplete({ status: 200, ok: true, json: async () => ({ score_pct: 100, questions_total: 1, questions_correct: 1, per_question: [] }) }); await Promise.all([first, second]); });
+  assert.equal(onComplete, 1);
+  act(() => view.unmount()); assert.equal(requestSignal.aborted, true);
+});
+
+async function readyPractice(h, onComplete = () => {}) {
+  const Practice = h.load('src/app/dashboard/sat-ielts/PracticeSession.tsx').default;
+  let view;
+  const props = { session: { session_id: 77, timed: false, duration_seconds: null }, examType: 'SAT',
+    questions: [{ id: 1, question_type: 'mcq', options: ['synthetic-choice'], question_text: 'Synthetic question', correct_answer: 'synthetic-choice' }], onComplete };
+  act(() => { view = create(React.createElement(Practice, props)); });
+  act(() => view.root.findAllByType('button').find(node => node.findAllByType('span').some(span => span.props.children === 'synthetic-choice')).props.onClick());
+  await act(async () => view.root.findAllByType('button').find(node => node.props.children === 'Submit').props.onClick());
+  return { view, props, Practice };
+}
+
+test('practice retains a submitted answer and offers safe retry after completion fails', async () => {
+  const h = harness(); let completions = 0, completed = 0;
+  h.setFetch(async url => {
+    if (url.endsWith('/answer')) return { status: 200, ok: true, json: async () => ({}) };
+    if (++completions === 1) return { status: 503, ok: false, json: async () => ({ detail: 'synthetic-private-server-detail' }) };
+    return { status: 200, ok: true, json: async () => ({ score_pct: 100, questions_total: 1, questions_correct: 1, per_question: [] }) };
+  });
+  const { view } = await readyPractice(h, () => completed++);
+  const finish = () => view.root.findAllByType('button').find(node => node.props.children === 'Finish');
+  await act(async () => finish().props.onClick());
+  assert.equal(completed, 0); assert.equal(completions, 1);
+  assert.ok(view.root.findAll(node => node.props.role === 'alert').some(node => JSON.stringify(node.props.children).includes('try again')));
+  assert.ok(!JSON.stringify(view.toJSON()).includes('synthetic-private-server-detail'));
+  await act(async () => finish().props.onClick());
+  assert.equal(completions, 2); assert.equal(completed, 1);
+  act(() => view.unmount());
+});
+
+test('unmounted practice aborts completion and cannot report a stale result', async () => {
+  const h = harness(); let resolveComplete, signal, completed = 0;
+  h.setFetch(async (url, options) => url.endsWith('/answer') ? { status: 200, ok: true, json: async () => ({}) } : new Promise(resolve => { resolveComplete = resolve; signal = options.signal; }));
+  const { view } = await readyPractice(h, () => completed++);
+  let pending;
+  act(() => { pending = view.root.findAllByType('button').find(node => node.props.children === 'Finish').props.onClick(); });
+  act(() => view.unmount()); assert.equal(signal.aborted, true);
+  await act(async () => { resolveComplete({ status: 200, ok: true, json: async () => ({ score_pct: 100 }) }); await pending; });
+  assert.equal(completed, 0);
+});
+
+test('expired practice does not retry a failed finish on an unrelated parent rerender', async () => {
+  const h = harness(), Practice = h.load('src/app/dashboard/sat-ielts/PracticeSession.tsx').default;
+  let tick, requests = 0, view;
+  h.setTimers(callback => { tick = callback; return 1; }, () => {});
+  h.setFetch(async () => { requests++; return { status: 503, ok: false, json: async () => ({ detail: 'synthetic unavailable' }) }; });
+  const props = { session: { session_id: 77, timed: true, duration_seconds: 1 }, examType: 'SAT',
+    questions: [{ id: 1, question_type: 'mcq', options: ['synthetic-choice'], question_text: 'Synthetic question', correct_answer: 'synthetic-choice' }], onComplete() {} };
+  act(() => { view = create(React.createElement(Practice, props)); });
+  await act(async () => tick()); assert.equal(requests, 1);
+  await act(async () => view.update(React.createElement(Practice, { ...props, onComplete() {} })));
+  assert.equal(requests, 1);
+  act(() => view.unmount());
+});
+
+test('same-tick answer submission is coalesced and its request aborts on unmount', async () => {
+  const h = harness(), Practice = h.load('src/app/dashboard/sat-ielts/PracticeSession.tsx').default;
+  let requests = 0, resolveAnswer, signal, view;
+  h.setFetch((_url, options) => { requests++; signal = options.signal; return new Promise(resolve => { resolveAnswer = resolve; }); });
+  const props = { session: { session_id: 77, timed: false, duration_seconds: null }, examType: 'SAT',
+    questions: [{ id: 1, question_type: 'mcq', options: ['synthetic-choice'], question_text: 'Synthetic question', correct_answer: 'synthetic-choice' }], onComplete() {} };
+  act(() => { view = create(React.createElement(Practice, props)); });
+  act(() => view.root.findAllByType('button').find(node => node.findAllByType('span').some(span => span.props.children === 'synthetic-choice')).props.onClick());
+  const submit = view.root.findAllByType('button').find(node => node.props.children === 'Submit').props.onClick;
+  let first, second; act(() => { first = submit(); second = submit(); });
+  assert.equal(requests, 1);
+  act(() => view.unmount()); assert.equal(signal.aborted, true);
+  await act(async () => { resolveAnswer({ status: 200, ok: true, json: async () => ({}) }); await Promise.all([first, second]); });
+});
+
+test('actual public privacy document survives disabled storage and exposes its deletion resource', () => {
+  const h = harness(), locale = h.load('src/hooks/useI18n.tsx'), theme = h.load('src/hooks/useTheme.tsx');
+  const auth = h.load('src/hooks/useAuth.tsx'), Banner = h.load('src/components/TestModeBanner.tsx').default;
+  const Privacy = h.load('src/app/privacy/page.tsx').default;
+  h.storage.getItem = () => { throw Error('synthetic disabled storage'); };
+  h.sessionStorage.getItem = () => { throw Error('synthetic disabled session storage'); };
+  let view;
+  act(() => { view = create(React.createElement(theme.ThemeProvider, null,
+    React.createElement(locale.I18nProvider, null, React.createElement(auth.AuthProvider, null,
+      React.createElement(React.Fragment, null, React.createElement(Banner), React.createElement(Privacy)))))); });
+  assert.ok(JSON.stringify(view.toJSON()).includes('Maxfiylik siyosati'));
+  assert.ok(!JSON.stringify(view.toJSON()).includes('test rejimida'));
+  assert.ok(view.root.findAllByType('a').some(node => node.props.href === 'https://ilm-ai-backend-256x.onrender.com/account-deletion'));
+  act(() => view.unmount());
+});
 
 test('actual IELTS scores: A → logout → B → A never shares a band or deletes A', () => {
   const h = harness(), scores = h.load('src/lib/ieltsScores.ts');

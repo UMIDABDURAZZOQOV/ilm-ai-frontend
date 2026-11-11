@@ -84,7 +84,7 @@ export default function PrivacyPage() {
       <Section title="6. Sizning huquqlaringiz">
         <ul>
           <li>Ma&apos;lumotlaringizni ko&apos;rish va tuzatish.</li>
-          <li>Hisobingizni va ma&apos;lumotlaringizni o&apos;chirish (ilova ichida yoki biz bilan bog&apos;lanib).</li>
+          <li>Hisobingizni va ma&apos;lumotlaringizni o&apos;chirish (ilova ichida yoki biz bilan bog&apos;lanib). <a href="https://ilm-ai-backend-256x.onrender.com/account-deletion" style={{ textDecoration: "underline" }}>Akkauntni o&apos;chirish so&apos;rovi</a>.</li>
           <li>Bildirishnomalarni o&apos;chirish.</li>
         </ul>
       </Section>
